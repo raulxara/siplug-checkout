@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./.docker/node/Dockerfile.DEV
+    container_name: siplug-checkout-api-app
+    restart: unless-stopped
+    ports:
+      - "8085:3000"
+    volumes:
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    working_dir: /usr/src/app
+    command: npm run start:dev
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - siplug_checkout_network
+
+  db:
+    image: mysql:8.0
+    container_name: siplug-checkout-api-db
+    restart: unless-stopped
+    ports:
+      - "3335:3306"
+    environment:
+      MYSQL_DATABASE: siplug_checkout
+      MYSQL_USER: siplug_checkout_user
+      MYSQL_PASSWORD: siplug_checkout_password
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./.docker/mysql/data:/var/lib/mysql
+    networks:
+      - siplug_checkout_network
+
+networks:
+  siplug_checkout_network:
+    driver: bridge
