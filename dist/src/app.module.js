@@ -11,6 +11,16 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const prisma_module_1 = require("./infra/database/prisma/prisma.module");
 const health_module_1 = require("./modules/health/health.module");
+const offices_module_1 = require("./modules/offices/offices.module");
+const profiles_module_1 = require("./modules/profiles/profiles.module");
+const clients_module_1 = require("./modules/clients/clients.module");
+const user_customers_module_1 = require("./modules/user-customers/user-customers.module");
+const positions_module_1 = require("./modules/positions/positions.module");
+const permissions_module_1 = require("./modules/permissions/permissions.module");
+const position_permissions_module_1 = require("./modules/position-permissions/position-permissions.module");
+const user_positions_module_1 = require("./modules/user-positions/user-positions.module");
+const security_module_1 = require("./modules/security/security.module");
+const register_permission_module_1 = require("./use-cases/register-permission/register-permission.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -22,6 +32,16 @@ exports.AppModule = AppModule = __decorate([
             }),
             prisma_module_1.PrismaModule,
             health_module_1.HealthModule,
+            offices_module_1.OfficesModule,
+            profiles_module_1.ProfilesModule,
+            clients_module_1.ClientsModule,
+            user_customers_module_1.UserCustomersModule,
+            positions_module_1.PositionsModule,
+            permissions_module_1.PermissionsModule,
+            position_permissions_module_1.PositionPermissionsModule,
+            user_positions_module_1.UserPositionsModule,
+            security_module_1.SecurityModule,
+            register_permission_module_1.RegisterPermissionModule,
         ],
     })
 ], AppModule);

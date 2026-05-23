@@ -5,3 +5,1070 @@ generator client {
 datasource db {
   provider = "mysql"
 }
+
+model Office {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  name     String  @db.VarChar(255)
+  slug     String  @db.VarChar(150)
+  language String? @db.VarChar(20)
+  currency String? @db.VarChar(10)
+
+  address_street       String? @db.VarChar(255)
+  address_number       String? @db.VarChar(100)
+  address_complement   String? @db.VarChar(255)
+  address_neighborhood String? @db.VarChar(255)
+  address_city         String? @db.VarChar(150)
+  address_state        String? @db.VarChar(100)
+  address_country      String? @db.VarChar(100)
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  clients              Client[]
+  office_employees     OfficeEmployee[]
+  positions            Position[]
+  permissions          Permission[]
+  api_credentials      ApiCredential[]
+  payment_customers    PaymentCustomer[]
+  checkout_sessions    CheckoutSession[]
+  payment_transactions PaymentTransaction[]
+  payment_refunds      PaymentRefund[]
+  split_recipients     PaymentSplitRecipient[]
+  split_rules          PaymentSplitRule[]
+  subscription_plans   SubscriptionPlan[]
+  subscriptions        Subscription[]
+  idempotency_keys     PaymentIdempotencyKey[]
+  payment_requests     PaymentRequest[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("offices")
+}
+
+model Profile {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  first_name String  @db.VarChar(255)
+  last_name  String  @db.VarChar(255)
+  email      String  @db.VarChar(255)
+  phone      String? @db.VarChar(50)
+
+  document_type  String? @db.VarChar(50)
+  document_value String? @db.VarChar(100)
+
+  address_street       String? @db.VarChar(255)
+  address_number       String? @db.VarChar(100)
+  address_complement   String? @db.VarChar(255)
+  address_neighborhood String? @db.VarChar(255)
+  address_city         String? @db.VarChar(150)
+  address_state        String? @db.VarChar(100)
+  address_country      String? @db.VarChar(100)
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office_employees  OfficeEmployee[]
+  user_customers    UserCustomer[]
+  payment_customers PaymentCustomer[]
+
+  @@index([email])
+  @@index([document_type, document_value])
+  @@index([status])
+  @@map("profiles")
+}
+
+model Client {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id   String? @db.Char(36)
+  customer_id String? @db.Char(36)
+
+  user_type String @db.VarChar(100)
+  username  String @db.VarChar(255)
+  password  String @db.Text
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office Office? @relation(fields: [office_id], references: [unique_id])
+
+  user_customers       UserCustomer[]
+  api_credentials      ApiCredential[]
+  payment_customers    PaymentCustomer[]
+  checkout_sessions    CheckoutSession[]
+  payment_transactions PaymentTransaction[]
+  payment_refunds      PaymentRefund[]
+  split_recipients     PaymentSplitRecipient[]
+  split_rules          PaymentSplitRule[]
+  subscription_plans   SubscriptionPlan[]
+  subscriptions        Subscription[]
+  idempotency_keys     PaymentIdempotencyKey[]
+  payment_requests     PaymentRequest[]
+
+  @@index([office_id])
+  @@index([customer_id])
+  @@index([username])
+  @@index([status])
+  @@map("clients")
+}
+
+model OfficeEmployee {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id        String  @db.Char(36)
+  profile_id       String  @db.Char(36)
+  user_position_id String? @db.Char(36)
+
+  role            String? @db.VarChar(100)
+  two_fa_required Boolean @default(false)
+  two_fa_active   Boolean @default(false)
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office  Office  @relation(fields: [office_id], references: [unique_id])
+  profile Profile @relation(fields: [profile_id], references: [unique_id])
+
+  @@index([office_id])
+  @@index([profile_id])
+  @@index([user_position_id])
+  @@index([status])
+  @@map("office_employees")
+}
+
+model UserCustomer {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  client_id  String @db.Char(36)
+  profile_id String @db.Char(36)
+
+  token           String  @unique @db.VarChar(255)
+  two_fa_required Boolean @default(false)
+  two_fa_active   Boolean @default(false)
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  client  Client  @relation(fields: [client_id], references: [unique_id])
+  profile Profile @relation(fields: [profile_id], references: [unique_id])
+
+  access_codes   UserAccessCode[]
+  user_positions UserPosition[]
+
+  @@index([client_id])
+  @@index([profile_id])
+  @@index([status])
+  @@map("user_customers")
+}
+
+model UserAccessCode {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  user_id    String   @db.Char(36)
+  code       String   @unique @db.VarChar(255)
+  type       String   @db.VarChar(50)
+  sent_to    String   @db.VarChar(255)
+  expires_at DateTime
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("sent") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  user_customer UserCustomer @relation(fields: [user_id], references: [unique_id])
+
+  @@index([user_id])
+  @@index([type])
+  @@index([expires_at])
+  @@index([status])
+  @@map("user_access_codes")
+}
+
+model Position {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id String? @db.Char(36)
+
+  name        String  @db.VarChar(255)
+  slug        String  @db.VarChar(150)
+  description String? @db.Text
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office Office? @relation(fields: [office_id], references: [unique_id])
+
+  position_permissions PositionPermission[]
+  user_positions       UserPosition[]
+
+  @@unique([office_id, slug])
+  @@index([status])
+  @@map("positions")
+}
+
+model Permission {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id String? @db.Char(36)
+
+  name        String  @db.VarChar(255)
+  slug        String  @db.VarChar(150)
+  description String? @db.Text
+  entity      String  @db.VarChar(150)
+  action      String  @db.VarChar(150)
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office Office? @relation(fields: [office_id], references: [unique_id])
+
+  position_permissions PositionPermission[]
+
+  @@unique([office_id, slug])
+  @@index([entity])
+  @@index([action])
+  @@index([status])
+  @@map("permissions")
+}
+
+model PositionPermission {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  position_id   String @db.Char(36)
+  permission_id String @db.Char(36)
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  position   Position   @relation(fields: [position_id], references: [unique_id])
+  permission Permission @relation(fields: [permission_id], references: [unique_id])
+
+  @@unique([position_id, permission_id])
+  @@index([status])
+  @@map("position_permission")
+}
+
+model UserPosition {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  user_customer_id String @db.Char(36)
+  position_id      String @db.Char(36)
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  user_customer UserCustomer @relation(fields: [user_customer_id], references: [unique_id])
+  position      Position     @relation(fields: [position_id], references: [unique_id])
+
+  @@unique([user_customer_id, position_id])
+  @@index([status])
+  @@map("user_position")
+}
+
+model Gateway {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  name         String  @db.VarChar(255)
+  slug         String  @unique @db.VarChar(150)
+  provider     String  @db.VarChar(100)
+  description  String? @db.Text
+  capabilities Json?
+
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  api_credentials      ApiCredential[]
+  checkout_sessions    CheckoutSession[]
+  payment_transactions PaymentTransaction[]
+  webhooks             PaymentWebhook[]
+  split_recipients     PaymentSplitRecipient[]
+  split_rules          PaymentSplitRule[]
+  subscription_plans   SubscriptionPlan[]
+  subscriptions        Subscription[]
+
+  @@index([provider])
+  @@index([status])
+  @@map("gateways")
+}
+
+model ApiCredential {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id  String? @db.Char(36)
+  client_id  String? @db.Char(36)
+  gateway_id String? @db.Char(36)
+
+  name          String @db.VarChar(255)
+  slug          String @db.VarChar(150)
+  provider      String @db.VarChar(100)
+  provider_type String @db.VarChar(100)
+  environment   String @default("sandbox") @db.VarChar(50)
+
+  token      String?   @db.Text
+  origin     String?   @db.VarChar(255)
+  config     Json?
+  expires_at DateTime?
+
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office  Office?  @relation(fields: [office_id], references: [unique_id])
+  client  Client?  @relation(fields: [client_id], references: [unique_id])
+  gateway Gateway? @relation(fields: [gateway_id], references: [unique_id])
+
+  checkout_sessions    CheckoutSession[]
+  payment_transactions PaymentTransaction[]
+  webhooks             PaymentWebhook[]
+  split_recipients     PaymentSplitRecipient[]
+  subscription_plans   SubscriptionPlan[]
+  subscriptions        Subscription[]
+
+  @@unique([office_id, slug])
+  @@index([client_id])
+  @@index([gateway_id])
+  @@index([provider])
+  @@index([provider_type])
+  @@index([environment])
+  @@index([status])
+  @@map("api_credentials")
+}
+
+model PaymentCustomer {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id  String  @db.Char(36)
+  client_id  String  @db.Char(36)
+  profile_id String? @db.Char(36)
+
+  external_reference String? @db.VarChar(255)
+  name               String  @db.VarChar(255)
+  email              String? @db.VarChar(255)
+  document_type      String? @db.VarChar(50)
+  document_value     String? @db.VarChar(100)
+  phone              String? @db.VarChar(50)
+
+  billing_address Json?
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office  Office   @relation(fields: [office_id], references: [unique_id])
+  client  Client   @relation(fields: [client_id], references: [unique_id])
+  profile Profile? @relation(fields: [profile_id], references: [unique_id])
+
+  checkout_sessions    CheckoutSession[]
+  payment_transactions PaymentTransaction[]
+  subscriptions        Subscription[]
+
+  @@index([office_id])
+  @@index([client_id])
+  @@index([profile_id])
+  @@index([email])
+  @@index([document_type, document_value])
+  @@index([external_reference])
+  @@index([status])
+  @@map("payment_customers")
+}
+
+model CheckoutSession {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id           String  @db.Char(36)
+  client_id           String  @db.Char(36)
+  payment_customer_id String? @db.Char(36)
+  gateway_id          String  @db.Char(36)
+  api_credential_id   String? @db.Char(36)
+
+  code               String? @db.VarChar(150)
+  external_reference String? @db.VarChar(255)
+  idempotency_key    String? @db.VarChar(255)
+
+  payment_type String  @db.VarChar(50)
+  amount       Int
+  currency     String  @default("BRL") @db.VarChar(10)
+  description  String? @db.Text
+
+  success_url String?   @db.Text
+  cancel_url  String?   @db.Text
+  expires_at  DateTime?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("created") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office           Office           @relation(fields: [office_id], references: [unique_id])
+  client           Client           @relation(fields: [client_id], references: [unique_id])
+  payment_customer PaymentCustomer? @relation(fields: [payment_customer_id], references: [unique_id])
+  gateway          Gateway          @relation(fields: [gateway_id], references: [unique_id])
+  api_credential   ApiCredential?   @relation(fields: [api_credential_id], references: [unique_id])
+
+  items                CheckoutSessionItem[]
+  payment_transactions PaymentTransaction[]
+
+  @@index([office_id])
+  @@index([client_id])
+  @@index([payment_customer_id])
+  @@index([gateway_id])
+  @@index([api_credential_id])
+  @@index([code])
+  @@index([external_reference])
+  @@index([idempotency_key])
+  @@index([payment_type])
+  @@index([status])
+  @@map("checkout_sessions")
+}
+
+model CheckoutSessionItem {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  checkout_session_id String @db.Char(36)
+
+  item_ref     String? @db.VarChar(255)
+  item_type    String? @db.VarChar(100)
+  name         String  @db.VarChar(255)
+  description  String? @db.Text
+  quantity     Int     @default(1)
+  unit_amount  Int
+  total_amount Int
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  checkout_session CheckoutSession @relation(fields: [checkout_session_id], references: [unique_id])
+
+  @@index([checkout_session_id])
+  @@index([item_ref])
+  @@index([status])
+  @@map("checkout_session_items")
+}
+
+model PaymentTransaction {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id           String  @db.Char(36)
+  client_id           String  @db.Char(36)
+  checkout_session_id String? @db.Char(36)
+  payment_customer_id String? @db.Char(36)
+  gateway_id          String  @db.Char(36)
+  api_credential_id   String? @db.Char(36)
+
+  gateway_transaction_id String? @db.VarChar(255)
+  external_reference     String? @db.VarChar(255)
+  idempotency_key        String? @db.VarChar(255)
+
+  payment_type   String @db.VarChar(50)
+  payment_method String @db.VarChar(50)
+
+  amount   Int
+  currency String @default("BRL") @db.VarChar(10)
+
+  installments       Int?
+  installment_amount Int?
+  interest_amount    Int?
+  interest_type      String? @db.VarChar(50)
+
+  gateway_status  String? @db.VarChar(100)
+  status          String  @default("created") @db.VarChar(50)
+  process_status  String  @default("pending") @db.VarChar(50)
+  process_message String? @db.Text
+
+  provider_payload  Json?
+  provider_response Json?
+  gateway_response  Json?
+
+  qr_code        String? @db.Text
+  qr_code_base64 String? @db.LongText
+  boleto_url     String? @db.Text
+  checkout_url   String? @db.Text
+
+  split_required Boolean @default(false)
+  has_split      Boolean @default(false)
+
+  paid_at       DateTime?
+  authorized_at DateTime?
+  canceled_at   DateTime?
+  failed_at     DateTime?
+  refunded_at   DateTime?
+  expires_at    DateTime?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  office           Office           @relation(fields: [office_id], references: [unique_id])
+  client           Client           @relation(fields: [client_id], references: [unique_id])
+  checkout_session CheckoutSession? @relation(fields: [checkout_session_id], references: [unique_id])
+  payment_customer PaymentCustomer? @relation(fields: [payment_customer_id], references: [unique_id])
+  gateway          Gateway          @relation(fields: [gateway_id], references: [unique_id])
+  api_credential   ApiCredential?   @relation(fields: [api_credential_id], references: [unique_id])
+
+  events                PaymentTransactionEvent[]
+  webhooks              PaymentWebhook[]
+  refunds               PaymentRefund[]
+  splits                PaymentTransactionSplit[]
+  subscription_invoices SubscriptionInvoice[]
+
+  @@index([office_id])
+  @@index([client_id])
+  @@index([checkout_session_id])
+  @@index([payment_customer_id])
+  @@index([gateway_id])
+  @@index([api_credential_id])
+  @@index([gateway_transaction_id])
+  @@index([external_reference])
+  @@index([idempotency_key])
+  @@index([payment_method])
+  @@index([payment_type])
+  @@index([status])
+  @@index([process_status])
+  @@map("payment_transactions")
+}
+
+model PaymentTransactionEvent {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  payment_transaction_id String @db.Char(36)
+
+  event_type String  @db.VarChar(150)
+  old_status String? @db.VarChar(100)
+  new_status String? @db.VarChar(100)
+
+  payload         Json?
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  payment_transaction PaymentTransaction @relation(fields: [payment_transaction_id], references: [unique_id])
+
+  @@index([payment_transaction_id])
+  @@index([event_type])
+  @@index([old_status])
+  @@index([new_status])
+  @@index([status])
+  @@map("payment_transaction_events")
+}
+
+model PaymentWebhook {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  gateway_id             String  @db.Char(36)
+  api_credential_id      String? @db.Char(36)
+  payment_transaction_id String? @db.Char(36)
+
+  external_event_id String? @db.VarChar(255)
+  event_type        String? @db.VarChar(150)
+  headers           Json?
+  payload           Json?
+  signature         String? @db.Text
+
+  processed_at     DateTime?
+  processing_error String?   @db.LongText
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("received") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  gateway             Gateway             @relation(fields: [gateway_id], references: [unique_id])
+  api_credential      ApiCredential?      @relation(fields: [api_credential_id], references: [unique_id])
+  payment_transaction PaymentTransaction? @relation(fields: [payment_transaction_id], references: [unique_id])
+
+  @@index([gateway_id])
+  @@index([api_credential_id])
+  @@index([payment_transaction_id])
+  @@index([external_event_id])
+  @@index([event_type])
+  @@index([status])
+  @@map("payment_webhooks")
+}
+
+model PaymentRefund {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id              String @db.Char(36)
+  client_id              String @db.Char(36)
+  payment_transaction_id String @db.Char(36)
+
+  gateway_refund_id String? @db.VarChar(255)
+  amount            Int
+  currency          String  @default("BRL") @db.VarChar(10)
+  reason            String? @db.Text
+
+  provider_payload  Json?
+  provider_response Json?
+  gateway_response  Json?
+  metadata          Json?
+  config            Json?
+  changes_history   Json?
+  status            String   @default("created") @db.VarChar(50)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  office              Office             @relation(fields: [office_id], references: [unique_id])
+  client              Client             @relation(fields: [client_id], references: [unique_id])
+  payment_transaction PaymentTransaction @relation(fields: [payment_transaction_id], references: [unique_id])
+
+  @@index([office_id])
+  @@index([client_id])
+  @@index([payment_transaction_id])
+  @@index([gateway_refund_id])
+  @@index([status])
+  @@map("payment_refunds")
+}
+
+model PaymentSplitRecipient {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id         String  @db.Char(36)
+  client_id         String  @db.Char(36)
+  gateway_id        String? @db.Char(36)
+  api_credential_id String? @db.Char(36)
+
+  name                  String  @db.VarChar(255)
+  document_type         String? @db.VarChar(50)
+  document_value        String? @db.VarChar(100)
+  email                 String? @db.VarChar(255)
+  provider_recipient_id String? @db.VarChar(255)
+
+  bank_data       Json?
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office         Office         @relation(fields: [office_id], references: [unique_id])
+  client         Client         @relation(fields: [client_id], references: [unique_id])
+  gateway        Gateway?       @relation(fields: [gateway_id], references: [unique_id])
+  api_credential ApiCredential? @relation(fields: [api_credential_id], references: [unique_id])
+
+  split_rule_recipients PaymentSplitRuleRecipient[]
+  transaction_splits    PaymentTransactionSplit[]
+
+  @@index([office_id])
+  @@index([client_id])
+  @@index([gateway_id])
+  @@index([api_credential_id])
+  @@index([provider_recipient_id])
+  @@index([status])
+  @@map("payment_split_recipients")
+}
+
+model PaymentSplitRule {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id  String  @db.Char(36)
+  client_id  String  @db.Char(36)
+  gateway_id String? @db.Char(36)
+
+  name        String  @db.VarChar(255)
+  slug        String  @db.VarChar(150)
+  description String? @db.Text
+  split_type  String  @db.VarChar(50)
+  is_required Boolean @default(false)
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office  Office   @relation(fields: [office_id], references: [unique_id])
+  client  Client   @relation(fields: [client_id], references: [unique_id])
+  gateway Gateway? @relation(fields: [gateway_id], references: [unique_id])
+
+  recipients         PaymentSplitRuleRecipient[]
+  transaction_splits PaymentTransactionSplit[]
+
+  @@unique([office_id, slug])
+  @@index([client_id])
+  @@index([gateway_id])
+  @@index([split_type])
+  @@index([status])
+  @@map("payment_split_rules")
+}
+
+model PaymentSplitRuleRecipient {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  payment_split_rule_id      String @db.Char(36)
+  payment_split_recipient_id String @db.Char(36)
+
+  percentage            Decimal? @db.Decimal(10, 4)
+  fixed_amount          Int?
+  liable                Boolean  @default(false)
+  charge_processing_fee Boolean  @default(false)
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  split_rule      PaymentSplitRule      @relation(fields: [payment_split_rule_id], references: [unique_id])
+  split_recipient PaymentSplitRecipient @relation(fields: [payment_split_recipient_id], references: [unique_id])
+
+  @@unique([payment_split_rule_id, payment_split_recipient_id])
+  @@index([status])
+  @@map("payment_split_rule_recipients")
+}
+
+model PaymentTransactionSplit {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  payment_transaction_id     String  @db.Char(36)
+  payment_split_rule_id      String? @db.Char(36)
+  payment_split_recipient_id String  @db.Char(36)
+
+  gateway_split_id String?  @db.VarChar(255)
+  amount           Int
+  percentage       Decimal? @db.Decimal(10, 4)
+  currency         String   @default("BRL") @db.VarChar(10)
+
+  provider_payload  Json?
+  provider_response Json?
+  gateway_response  Json?
+  metadata          Json?
+  config            Json?
+  changes_history   Json?
+  status            String   @default("created") @db.VarChar(50)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  payment_transaction PaymentTransaction    @relation(fields: [payment_transaction_id], references: [unique_id])
+  split_rule          PaymentSplitRule?     @relation(fields: [payment_split_rule_id], references: [unique_id])
+  split_recipient     PaymentSplitRecipient @relation(fields: [payment_split_recipient_id], references: [unique_id])
+
+  @@index([payment_transaction_id])
+  @@index([payment_split_rule_id])
+  @@index([payment_split_recipient_id])
+  @@index([gateway_split_id])
+  @@index([status])
+  @@map("payment_transaction_splits")
+}
+
+model SubscriptionPlan {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id         String  @db.Char(36)
+  client_id         String  @db.Char(36)
+  gateway_id        String? @db.Char(36)
+  api_credential_id String? @db.Char(36)
+
+  name        String  @db.VarChar(255)
+  slug        String  @db.VarChar(150)
+  description String? @db.Text
+
+  amount         Int
+  currency       String @default("BRL") @db.VarChar(10)
+  interval_type  String @db.VarChar(50)
+  interval_count Int    @default(1)
+  trial_days     Int?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office         Office         @relation(fields: [office_id], references: [unique_id])
+  client         Client         @relation(fields: [client_id], references: [unique_id])
+  gateway        Gateway?       @relation(fields: [gateway_id], references: [unique_id])
+  api_credential ApiCredential? @relation(fields: [api_credential_id], references: [unique_id])
+
+  subscriptions Subscription[]
+
+  @@unique([office_id, slug])
+  @@index([client_id])
+  @@index([gateway_id])
+  @@index([api_credential_id])
+  @@index([status])
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id            String  @db.Char(36)
+  client_id            String  @db.Char(36)
+  subscription_plan_id String? @db.Char(36)
+  payment_customer_id  String  @db.Char(36)
+  gateway_id           String? @db.Char(36)
+  api_credential_id    String? @db.Char(36)
+
+  gateway_subscription_id String? @db.VarChar(255)
+  external_reference      String? @db.VarChar(255)
+
+  amount          Int
+  currency        String    @default("BRL") @db.VarChar(10)
+  current_cycle   Int       @default(0)
+  next_billing_at DateTime?
+  started_at      DateTime?
+  canceled_at     DateTime?
+  ended_at        DateTime?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("created") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office            Office            @relation(fields: [office_id], references: [unique_id])
+  client            Client            @relation(fields: [client_id], references: [unique_id])
+  subscription_plan SubscriptionPlan? @relation(fields: [subscription_plan_id], references: [unique_id])
+  payment_customer  PaymentCustomer   @relation(fields: [payment_customer_id], references: [unique_id])
+  gateway           Gateway?          @relation(fields: [gateway_id], references: [unique_id])
+  api_credential    ApiCredential?    @relation(fields: [api_credential_id], references: [unique_id])
+
+  cycles   SubscriptionCycle[]
+  invoices SubscriptionInvoice[]
+  events   SubscriptionEvent[]
+
+  @@index([office_id])
+  @@index([client_id])
+  @@index([subscription_plan_id])
+  @@index([payment_customer_id])
+  @@index([gateway_id])
+  @@index([api_credential_id])
+  @@index([gateway_subscription_id])
+  @@index([external_reference])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model SubscriptionCycle {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  subscription_id String @db.Char(36)
+  cycle_number    Int
+  amount          Int
+  currency        String @default("BRL") @db.VarChar(10)
+
+  period_start DateTime?
+  period_end   DateTime?
+  scheduled_at DateTime?
+  processed_at DateTime?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("scheduled") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  subscription Subscription @relation(fields: [subscription_id], references: [unique_id])
+
+  invoices SubscriptionInvoice[]
+
+  @@index([subscription_id])
+  @@index([cycle_number])
+  @@index([scheduled_at])
+  @@index([status])
+  @@map("subscription_cycles")
+}
+
+model SubscriptionInvoice {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  subscription_id        String  @db.Char(36)
+  subscription_cycle_id  String? @db.Char(36)
+  payment_transaction_id String? @db.Char(36)
+
+  invoice_number String?   @db.VarChar(100)
+  amount         Int
+  currency       String    @default("BRL") @db.VarChar(10)
+  due_at         DateTime?
+  paid_at        DateTime?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("created") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  subscription        Subscription        @relation(fields: [subscription_id], references: [unique_id])
+  subscription_cycle  SubscriptionCycle?  @relation(fields: [subscription_cycle_id], references: [unique_id])
+  payment_transaction PaymentTransaction? @relation(fields: [payment_transaction_id], references: [unique_id])
+
+  @@index([subscription_id])
+  @@index([subscription_cycle_id])
+  @@index([payment_transaction_id])
+  @@index([invoice_number])
+  @@index([status])
+  @@map("subscription_invoices")
+}
+
+model SubscriptionEvent {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  subscription_id String @db.Char(36)
+
+  event_type String  @db.VarChar(150)
+  old_status String? @db.VarChar(100)
+  new_status String? @db.VarChar(100)
+
+  payload         Json?
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  subscription Subscription @relation(fields: [subscription_id], references: [unique_id])
+
+  @@index([subscription_id])
+  @@index([event_type])
+  @@index([old_status])
+  @@index([new_status])
+  @@index([status])
+  @@map("subscription_events")
+}
+
+model PaymentIdempotencyKey {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id String @db.Char(36)
+  client_id String @db.Char(36)
+
+  idempotency_key  String  @db.VarChar(255)
+  request_hash     String  @db.VarChar(255)
+  resource_type    String? @db.VarChar(100)
+  resource_id      String? @db.Char(36)
+  response_payload Json?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("active") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office Office @relation(fields: [office_id], references: [unique_id])
+  client Client @relation(fields: [client_id], references: [unique_id])
+
+  @@unique([office_id, client_id, idempotency_key])
+  @@index([request_hash])
+  @@index([resource_type])
+  @@index([resource_id])
+  @@index([status])
+  @@map("payment_idempotency_keys")
+}
+
+model PaymentRequest {
+  id        Int    @id @default(autoincrement())
+  unique_id String @unique @map("_id") @db.Char(36)
+
+  office_id String? @db.Char(36)
+  client_id String? @db.Char(36)
+
+  origin          String?   @db.VarChar(255)
+  request_headers Json?
+  request_body    String?   @db.LongText
+  request_hash    String?   @db.VarChar(255)
+  processed_at    DateTime?
+
+  metadata        Json?
+  config          Json?
+  changes_history Json?
+  status          String   @default("created") @db.VarChar(50)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  office Office? @relation(fields: [office_id], references: [unique_id])
+  client Client? @relation(fields: [client_id], references: [unique_id])
+
+  @@index([office_id])
+  @@index([client_id])
+  @@index([origin])
+  @@index([request_hash])
+  @@index([status])
+  @@map("payment_requests")
+}

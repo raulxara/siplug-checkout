@@ -1,0 +1,3 @@
+export const USER_CUSTOMERS_REPOSITORY = Symbol(
+  'USER_CUSTOMERS_REPOSITORY',
+);
