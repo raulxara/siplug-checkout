@@ -149,6 +149,21 @@ export class UserCustomersRepository implements IUserCustomersRepository {
     return rows.map((row) => this.toRow(row));
   }
 
+  async getAllByClientIds(clientIds: string[]): Promise<UserCustomerRow[]> {
+    const rows = await this.prisma.userCustomer.findMany({
+      where: {
+        client_id: {
+          in: clientIds,
+        },
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return rows.map((row) => this.toRow(row));
+  }
+
   private toRow(model: {
     id: number;
     unique_id: string;

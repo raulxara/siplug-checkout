@@ -17,6 +17,7 @@ const find_client_by_username_service_1 = require("./services/find-client-by-use
 const get_all_clients_by_office_id_service_1 = require("./services/get-all-clients-by-office-id/get-all-clients-by-office-id.service");
 const get_all_clients_service_1 = require("./services/get-all-clients/get-all-clients.service");
 const update_client_service_1 = require("./services/update-client/update-client.service");
+const validate_client_username_uniqueness_service_1 = require("./services/validate-client-username-uniqueness/validate-client-username-uniqueness.service");
 const clients_tokens_1 = require("./tokens/clients.tokens");
 let ClientsModule = class ClientsModule {
 };
@@ -36,6 +37,7 @@ exports.ClientsModule = ClientsModule = __decorate([
             find_client_by_username_service_1.FindClientByUsernameService,
             get_all_clients_service_1.GetAllClientsService,
             get_all_clients_by_office_id_service_1.GetAllClientsByOfficeIdService,
+            validate_client_username_uniqueness_service_1.ValidateClientUsernameUniquenessService,
         ],
         exports: [
             clients_tokens_1.CLIENTS_REPOSITORY,
@@ -45,6 +47,7 @@ exports.ClientsModule = ClientsModule = __decorate([
             find_client_by_username_service_1.FindClientByUsernameService,
             get_all_clients_service_1.GetAllClientsService,
             get_all_clients_by_office_id_service_1.GetAllClientsByOfficeIdService,
+            validate_client_username_uniqueness_service_1.ValidateClientUsernameUniquenessService,
         ],
     })
 ], ClientsModule);

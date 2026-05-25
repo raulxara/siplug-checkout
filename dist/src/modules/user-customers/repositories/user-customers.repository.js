@@ -126,6 +126,19 @@ let UserCustomersRepository = class UserCustomersRepository {
         });
         return rows.map((row) => this.toRow(row));
     }
+    async getAllByClientIds(clientIds) {
+        const rows = await this.prisma.userCustomer.findMany({
+            where: {
+                client_id: {
+                    in: clientIds,
+                },
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+        return rows.map((row) => this.toRow(row));
+    }
     toRow(model) {
         return {
             id: model.id,

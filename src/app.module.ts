@@ -17,6 +17,11 @@ import { RegisterApiCredentialModule } from './use-cases/register-api-credential
 import { RegisterPositionModule } from './use-cases/register-position/register-position.module';
 import { SyncPositionPermissionsModule } from './use-cases/sync-position-permissions/sync-position-permissions.module';
 import { UserAccessCodesModule } from './modules/user-access-codes/user-access-codes.module';
+import { RegisterUserModule } from './use-cases/register-user/register-user.module';
+import { UpdateUserModule } from './use-cases/update-user/update-user.module';
+import { GetUserModule } from './use-cases/get-user/get-user.module';
+import { ListUsersModule } from './use-cases/list-users/list-users.module';
+import { GetAllUsersByOfficeIdModule } from './use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module';
 
 @Module({
   imports: [
@@ -40,6 +45,11 @@ import { UserAccessCodesModule } from './modules/user-access-codes/user-access-c
     RegisterPositionModule,
     SyncPositionPermissionsModule,
     UserAccessCodesModule,
+    RegisterUserModule,
+    UpdateUserModule,
+    GetUserModule,
+    ListUsersModule,
+    GetAllUsersByOfficeIdModule,
   ],
 })
 export class AppModule {}

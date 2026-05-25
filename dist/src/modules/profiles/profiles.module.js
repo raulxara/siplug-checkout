@@ -16,6 +16,7 @@ const find_profile_by_email_service_1 = require("./services/find-profile-by-emai
 const find_profile_by_unique_id_service_1 = require("./services/find-profile-by-unique-id/find-profile-by-unique-id.service");
 const get_all_profiles_service_1 = require("./services/get-all-profiles/get-all-profiles.service");
 const update_profile_service_1 = require("./services/update-profile/update-profile.service");
+const validate_profile_email_uniqueness_service_1 = require("./services/validate-profile-email-uniqueness/validate-profile-email-uniqueness.service");
 const profiles_tokens_1 = require("./tokens/profiles.tokens");
 let ProfilesModule = class ProfilesModule {
 };
@@ -34,6 +35,7 @@ exports.ProfilesModule = ProfilesModule = __decorate([
             find_profile_by_email_service_1.FindProfileByEmailService,
             find_profile_by_document_service_1.FindProfileByDocumentService,
             get_all_profiles_service_1.GetAllProfilesService,
+            validate_profile_email_uniqueness_service_1.ValidateProfileEmailUniquenessService,
         ],
         exports: [
             profiles_tokens_1.PROFILES_REPOSITORY,
@@ -43,6 +45,7 @@ exports.ProfilesModule = ProfilesModule = __decorate([
             find_profile_by_email_service_1.FindProfileByEmailService,
             find_profile_by_document_service_1.FindProfileByDocumentService,
             get_all_profiles_service_1.GetAllProfilesService,
+            validate_profile_email_uniqueness_service_1.ValidateProfileEmailUniquenessService,
         ],
     })
 ], ProfilesModule);

@@ -18,6 +18,7 @@ const get_all_user_customers_by_client_id_service_1 = require("./services/get-al
 const get_all_user_customers_service_1 = require("./services/get-all-user-customers/get-all-user-customers.service");
 const update_user_customer_service_1 = require("./services/update-user-customer/update-user-customer.service");
 const user_customers_tokens_1 = require("./tokens/user-customers.tokens");
+const get_all_user_customers_by_client_ids_service_1 = require("./services/get-all-user-customers-by-client-ids/get-all-user-customers-by-client-ids.service");
 let UserCustomersModule = class UserCustomersModule {
 };
 exports.UserCustomersModule = UserCustomersModule;
@@ -36,6 +37,7 @@ exports.UserCustomersModule = UserCustomersModule = __decorate([
             find_user_customer_by_token_service_1.FindUserCustomerByTokenService,
             get_all_user_customers_service_1.GetAllUserCustomersService,
             get_all_user_customers_by_client_id_service_1.GetAllUserCustomersByClientIdService,
+            get_all_user_customers_by_client_ids_service_1.GetAllUserCustomersByClientIdsService,
         ],
         exports: [
             user_customers_tokens_1.USER_CUSTOMERS_REPOSITORY,
@@ -46,6 +48,7 @@ exports.UserCustomersModule = UserCustomersModule = __decorate([
             find_user_customer_by_token_service_1.FindUserCustomerByTokenService,
             get_all_user_customers_service_1.GetAllUserCustomersService,
             get_all_user_customers_by_client_id_service_1.GetAllUserCustomersByClientIdService,
+            get_all_user_customers_by_client_ids_service_1.GetAllUserCustomersByClientIdsService,
         ],
     })
 ], UserCustomersModule);

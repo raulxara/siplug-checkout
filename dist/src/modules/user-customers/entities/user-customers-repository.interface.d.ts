@@ -20,4 +20,5 @@ export interface IUserCustomersRepository {
     findByToken(token: string): Promise<UserCustomerRow | null>;
     getAll(): Promise<UserCustomerRow[]>;
     getAllByClientId(clientId: string): Promise<UserCustomerRow[]>;
+    getAllByClientIds(clientIds: string[]): Promise<UserCustomerRow[]>;
 }

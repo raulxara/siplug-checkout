@@ -9,6 +9,7 @@ import { GetAllUserCustomersByClientIdService } from './services/get-all-user-cu
 import { GetAllUserCustomersService } from './services/get-all-user-customers/get-all-user-customers.service';
 import { UpdateUserCustomerService } from './services/update-user-customer/update-user-customer.service';
 import { USER_CUSTOMERS_REPOSITORY } from './tokens/user-customers.tokens';
+import { GetAllUserCustomersByClientIdsService } from './services/get-all-user-customers-by-client-ids/get-all-user-customers-by-client-ids.service';
 
 @Module({
   providers: [
@@ -24,6 +25,7 @@ import { USER_CUSTOMERS_REPOSITORY } from './tokens/user-customers.tokens';
     FindUserCustomerByTokenService,
     GetAllUserCustomersService,
     GetAllUserCustomersByClientIdService,
+    GetAllUserCustomersByClientIdsService,
   ],
   exports: [
     USER_CUSTOMERS_REPOSITORY,
@@ -34,6 +36,7 @@ import { USER_CUSTOMERS_REPOSITORY } from './tokens/user-customers.tokens';
     FindUserCustomerByTokenService,
     GetAllUserCustomersService,
     GetAllUserCustomersByClientIdService,
+    GetAllUserCustomersByClientIdsService,
   ],
 })
 export class UserCustomersModule {}

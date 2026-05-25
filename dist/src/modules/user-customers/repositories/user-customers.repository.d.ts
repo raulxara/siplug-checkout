@@ -10,6 +10,7 @@ export declare class UserCustomersRepository implements IUserCustomersRepository
     findByToken(token: string): Promise<UserCustomerRow | null>;
     getAll(): Promise<UserCustomerRow[]>;
     getAllByClientId(clientId: string): Promise<UserCustomerRow[]>;
+    getAllByClientIds(clientIds: string[]): Promise<UserCustomerRow[]>;
     private toRow;
     private parseJsonObject;
     private parseChangesHistory;

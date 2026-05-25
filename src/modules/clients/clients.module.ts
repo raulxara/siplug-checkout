@@ -8,6 +8,7 @@ import { FindClientByUsernameService } from './services/find-client-by-username/
 import { GetAllClientsByOfficeIdService } from './services/get-all-clients-by-office-id/get-all-clients-by-office-id.service';
 import { GetAllClientsService } from './services/get-all-clients/get-all-clients.service';
 import { UpdateClientService } from './services/update-client/update-client.service';
+import { ValidateClientUsernameUniquenessService } from './services/validate-client-username-uniqueness/validate-client-username-uniqueness.service';
 import { CLIENTS_REPOSITORY } from './tokens/clients.tokens';
 
 @Module({
@@ -24,6 +25,7 @@ import { CLIENTS_REPOSITORY } from './tokens/clients.tokens';
     FindClientByUsernameService,
     GetAllClientsService,
     GetAllClientsByOfficeIdService,
+    ValidateClientUsernameUniquenessService,
   ],
   exports: [
     CLIENTS_REPOSITORY,
@@ -33,6 +35,7 @@ import { CLIENTS_REPOSITORY } from './tokens/clients.tokens';
     FindClientByUsernameService,
     GetAllClientsService,
     GetAllClientsByOfficeIdService,
+    ValidateClientUsernameUniquenessService,
   ],
 })
 export class ClientsModule {}

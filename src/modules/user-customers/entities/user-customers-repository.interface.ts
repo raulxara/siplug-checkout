@@ -30,4 +30,6 @@ export interface IUserCustomersRepository {
   getAll(): Promise<UserCustomerRow[]>;
 
   getAllByClientId(clientId: string): Promise<UserCustomerRow[]>;
+
+  getAllByClientIds(clientIds: string[]): Promise<UserCustomerRow[]>;
 }

@@ -7,6 +7,7 @@ import { FindProfileByEmailService } from './services/find-profile-by-email/find
 import { FindProfileByUniqueIdService } from './services/find-profile-by-unique-id/find-profile-by-unique-id.service';
 import { GetAllProfilesService } from './services/get-all-profiles/get-all-profiles.service';
 import { UpdateProfileService } from './services/update-profile/update-profile.service';
+import { ValidateProfileEmailUniquenessService } from './services/validate-profile-email-uniqueness/validate-profile-email-uniqueness.service';
 import { PROFILES_REPOSITORY } from './tokens/profiles.tokens';
 
 @Module({
@@ -22,6 +23,7 @@ import { PROFILES_REPOSITORY } from './tokens/profiles.tokens';
     FindProfileByEmailService,
     FindProfileByDocumentService,
     GetAllProfilesService,
+    ValidateProfileEmailUniquenessService,
   ],
   exports: [
     PROFILES_REPOSITORY,
@@ -31,6 +33,7 @@ import { PROFILES_REPOSITORY } from './tokens/profiles.tokens';
     FindProfileByEmailService,
     FindProfileByDocumentService,
     GetAllProfilesService,
+    ValidateProfileEmailUniquenessService,
   ],
 })
 export class ProfilesModule {}

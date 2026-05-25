@@ -26,6 +26,11 @@ const register_api_credential_module_1 = require("./use-cases/register-api-crede
 const register_position_module_1 = require("./use-cases/register-position/register-position.module");
 const sync_position_permissions_module_1 = require("./use-cases/sync-position-permissions/sync-position-permissions.module");
 const user_access_codes_module_1 = require("./modules/user-access-codes/user-access-codes.module");
+const register_user_module_1 = require("./use-cases/register-user/register-user.module");
+const update_user_module_1 = require("./use-cases/update-user/update-user.module");
+const get_user_module_1 = require("./use-cases/get-user/get-user.module");
+const list_users_module_1 = require("./use-cases/list-users/list-users.module");
+const get_all_users_by_office_id_module_1 = require("./use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -52,6 +57,11 @@ exports.AppModule = AppModule = __decorate([
             register_position_module_1.RegisterPositionModule,
             sync_position_permissions_module_1.SyncPositionPermissionsModule,
             user_access_codes_module_1.UserAccessCodesModule,
+            register_user_module_1.RegisterUserModule,
+            update_user_module_1.UpdateUserModule,
+            get_user_module_1.GetUserModule,
+            list_users_module_1.ListUsersModule,
+            get_all_users_by_office_id_module_1.GetAllUsersByOfficeIdModule,
         ],
     })
 ], AppModule);
