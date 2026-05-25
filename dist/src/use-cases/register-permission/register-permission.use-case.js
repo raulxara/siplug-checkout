@@ -58,6 +58,7 @@ let RegisterPermissionUseCase = class RegisterPermissionUseCase {
             await this.handleUseCaseExceptionService.exec(new handle_use_case_exception_dto_in_1.HandleUseCaseExceptionDtoIn({
                 useCase: 'RegisterPermissionUseCase',
                 error,
+                appFile: __filename,
                 context: {
                     officeId: dtoIn.officeId,
                     name: dtoIn.name,

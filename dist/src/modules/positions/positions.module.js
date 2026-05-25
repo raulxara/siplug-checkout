@@ -14,9 +14,10 @@ const create_position_service_1 = require("./services/create-position/create-pos
 const find_position_by_slug_service_1 = require("./services/find-position-by-slug/find-position-by-slug.service");
 const find_position_by_unique_id_service_1 = require("./services/find-position-by-unique-id/find-position-by-unique-id.service");
 const get_all_positions_by_office_id_service_1 = require("./services/get-all-positions-by-office-id/get-all-positions-by-office-id.service");
+const get_all_positions_by_unique_ids_service_1 = require("./services/get-all-positions-by-unique-ids/get-all-positions-by-unique-ids.service");
 const get_all_positions_service_1 = require("./services/get-all-positions/get-all-positions.service");
 const update_position_service_1 = require("./services/update-position/update-position.service");
-const get_all_positions_by_unique_ids_service_1 = require("./services/get-all-positions-by-unique-ids/get-all-positions-by-unique-ids.service");
+const validate_position_slug_uniqueness_service_1 = require("./services/validate-position-slug-uniqueness/validate-position-slug-uniqueness.service");
 const positions_tokens_1 = require("./tokens/positions.tokens");
 let PositionsModule = class PositionsModule {
 };
@@ -36,6 +37,7 @@ exports.PositionsModule = PositionsModule = __decorate([
             get_all_positions_service_1.GetAllPositionsService,
             get_all_positions_by_office_id_service_1.GetAllPositionsByOfficeIdService,
             get_all_positions_by_unique_ids_service_1.GetAllPositionsByUniqueIdsService,
+            validate_position_slug_uniqueness_service_1.ValidatePositionSlugUniquenessService,
         ],
         exports: [
             positions_tokens_1.POSITIONS_REPOSITORY,
@@ -46,6 +48,7 @@ exports.PositionsModule = PositionsModule = __decorate([
             get_all_positions_service_1.GetAllPositionsService,
             get_all_positions_by_office_id_service_1.GetAllPositionsByOfficeIdService,
             get_all_positions_by_unique_ids_service_1.GetAllPositionsByUniqueIdsService,
+            validate_position_slug_uniqueness_service_1.ValidatePositionSlugUniquenessService,
         ],
     })
 ], PositionsModule);

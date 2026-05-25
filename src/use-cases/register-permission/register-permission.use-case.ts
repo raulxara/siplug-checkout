@@ -59,6 +59,7 @@ export class RegisterPermissionUseCase {
         new HandleUseCaseExceptionDtoIn({
           useCase: 'RegisterPermissionUseCase',
           error,
+          appFile: __filename,
           context: {
             officeId: dtoIn.officeId,
             name: dtoIn.name,

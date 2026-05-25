@@ -12,6 +12,11 @@ import { PositionPermissionsModule } from './modules/position-permissions/positi
 import { UserPositionsModule } from './modules/user-positions/user-positions.module';
 import { SecurityModule } from './modules/security/security.module';
 import { RegisterPermissionModule } from './use-cases/register-permission/register-permission.module';
+import { ApiCredentialsModule } from './modules/api-credentials/api-credentials.module';
+import { RegisterApiCredentialModule } from './use-cases/register-api-credential/register-api-credential.module';
+import { RegisterPositionModule } from './use-cases/register-position/register-position.module';
+import { SyncPositionPermissionsModule } from './use-cases/sync-position-permissions/sync-position-permissions.module';
+import { UserAccessCodesModule } from './modules/user-access-codes/user-access-codes.module';
 
 @Module({
   imports: [
@@ -30,6 +35,11 @@ import { RegisterPermissionModule } from './use-cases/register-permission/regist
     UserPositionsModule,
     SecurityModule,
     RegisterPermissionModule,
+    RegisterApiCredentialModule,
+    ApiCredentialsModule,
+    RegisterPositionModule,
+    SyncPositionPermissionsModule,
+    UserAccessCodesModule,
   ],
 })
 export class AppModule {}

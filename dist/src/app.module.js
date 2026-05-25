@@ -21,6 +21,11 @@ const position_permissions_module_1 = require("./modules/position-permissions/po
 const user_positions_module_1 = require("./modules/user-positions/user-positions.module");
 const security_module_1 = require("./modules/security/security.module");
 const register_permission_module_1 = require("./use-cases/register-permission/register-permission.module");
+const api_credentials_module_1 = require("./modules/api-credentials/api-credentials.module");
+const register_api_credential_module_1 = require("./use-cases/register-api-credential/register-api-credential.module");
+const register_position_module_1 = require("./use-cases/register-position/register-position.module");
+const sync_position_permissions_module_1 = require("./use-cases/sync-position-permissions/sync-position-permissions.module");
+const user_access_codes_module_1 = require("./modules/user-access-codes/user-access-codes.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -42,6 +47,11 @@ exports.AppModule = AppModule = __decorate([
             user_positions_module_1.UserPositionsModule,
             security_module_1.SecurityModule,
             register_permission_module_1.RegisterPermissionModule,
+            register_api_credential_module_1.RegisterApiCredentialModule,
+            api_credentials_module_1.ApiCredentialsModule,
+            register_position_module_1.RegisterPositionModule,
+            sync_position_permissions_module_1.SyncPositionPermissionsModule,
+            user_access_codes_module_1.UserAccessCodesModule,
         ],
     })
 ], AppModule);

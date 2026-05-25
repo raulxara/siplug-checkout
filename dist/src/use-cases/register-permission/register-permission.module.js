@@ -8,7 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegisterPermissionModule = void 0;
 const common_1 = require("@nestjs/common");
-const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
+const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
 const permissions_module_1 = require("../../modules/permissions/permissions.module");
 const security_module_1 = require("../../modules/security/security.module");
 const register_permission_controller_1 = require("./register-permission.controller");
@@ -18,9 +18,9 @@ let RegisterPermissionModule = class RegisterPermissionModule {
 exports.RegisterPermissionModule = RegisterPermissionModule;
 exports.RegisterPermissionModule = RegisterPermissionModule = __decorate([
     (0, common_1.Module)({
-        imports: [permissions_module_1.PermissionsModule, security_module_1.SecurityModule],
+        imports: [permissions_module_1.PermissionsModule, security_module_1.SecurityModule, use_case_support_module_1.UseCaseSupportModule],
         controllers: [register_permission_controller_1.RegisterPermissionController],
-        providers: [register_permission_use_case_1.RegisterPermissionUseCase, handle_use_case_exception_service_1.HandleUseCaseExceptionService],
+        providers: [register_permission_use_case_1.RegisterPermissionUseCase],
         exports: [register_permission_use_case_1.RegisterPermissionUseCase],
     })
 ], RegisterPermissionModule);
