@@ -22,6 +22,7 @@ import { UpdateUserModule } from './use-cases/update-user/update-user.module';
 import { GetUserModule } from './use-cases/get-user/get-user.module';
 import { ListUsersModule } from './use-cases/list-users/list-users.module';
 import { GetAllUsersByOfficeIdModule } from './use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module';
+import { UpdateApiCredentialModule } from './use-cases/update-api-credential/update-api-credential.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { GetAllUsersByOfficeIdModule } from './use-cases/get-all-users-by-office
     GetUserModule,
     ListUsersModule,
     GetAllUsersByOfficeIdModule,
+    UpdateApiCredentialModule,
   ],
 })
 export class AppModule {}
