@@ -27,6 +27,11 @@ import { GatewaysModule } from './modules/gateways/gateways.module';
 import { RegisterGatewayModule } from './use-cases/register-gateway/register-gateway.module';
 import { UpdateGatewayModule } from './use-cases/update-gateway/update-gateway.module';
 import { GetAllGatewaysModule } from './use-cases/get-all-gateways/get-all-gateways.module';
+import { PaymentCustomersModule } from './modules/payment-customers/payment-customers.module';
+import { RegisterPaymentCustomerModule } from './use-cases/register-payment-customer/register-payment-customer.module';
+import { UpdatePaymentCustomerModule } from './use-cases/update-payment-customer/update-payment-customer.module';
+import { ListPaymentCustomersModule } from './use-cases/list-payment-customers/list-payment-customers.module';
+import { GetPaymentCustomerByUniqueIdModule } from './use-cases/get-payment-customer-by-unique-id/get-payment-customer-by-unique-id.module';
 
 @Module({
   imports: [
@@ -60,6 +65,11 @@ import { GetAllGatewaysModule } from './use-cases/get-all-gateways/get-all-gatew
     RegisterGatewayModule,
     UpdateGatewayModule,
     GetAllGatewaysModule,
+    PaymentCustomersModule,
+    RegisterPaymentCustomerModule,
+    UpdatePaymentCustomerModule,
+    ListPaymentCustomersModule,
+    GetPaymentCustomerByUniqueIdModule,
   ],
 })
 export class AppModule {}

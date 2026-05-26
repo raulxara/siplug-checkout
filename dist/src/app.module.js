@@ -36,6 +36,11 @@ const gateways_module_1 = require("./modules/gateways/gateways.module");
 const register_gateway_module_1 = require("./use-cases/register-gateway/register-gateway.module");
 const update_gateway_module_1 = require("./use-cases/update-gateway/update-gateway.module");
 const get_all_gateways_module_1 = require("./use-cases/get-all-gateways/get-all-gateways.module");
+const payment_customers_module_1 = require("./modules/payment-customers/payment-customers.module");
+const register_payment_customer_module_1 = require("./use-cases/register-payment-customer/register-payment-customer.module");
+const update_payment_customer_module_1 = require("./use-cases/update-payment-customer/update-payment-customer.module");
+const list_payment_customers_module_1 = require("./use-cases/list-payment-customers/list-payment-customers.module");
+const get_payment_customer_by_unique_id_module_1 = require("./use-cases/get-payment-customer-by-unique-id/get-payment-customer-by-unique-id.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -72,6 +77,11 @@ exports.AppModule = AppModule = __decorate([
             register_gateway_module_1.RegisterGatewayModule,
             update_gateway_module_1.UpdateGatewayModule,
             get_all_gateways_module_1.GetAllGatewaysModule,
+            payment_customers_module_1.PaymentCustomersModule,
+            register_payment_customer_module_1.RegisterPaymentCustomerModule,
+            update_payment_customer_module_1.UpdatePaymentCustomerModule,
+            list_payment_customers_module_1.ListPaymentCustomersModule,
+            get_payment_customer_by_unique_id_module_1.GetPaymentCustomerByUniqueIdModule,
         ],
     })
 ], AppModule);
