@@ -23,6 +23,10 @@ import { GetUserModule } from './use-cases/get-user/get-user.module';
 import { ListUsersModule } from './use-cases/list-users/list-users.module';
 import { GetAllUsersByOfficeIdModule } from './use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module';
 import { UpdateApiCredentialModule } from './use-cases/update-api-credential/update-api-credential.module';
+import { GatewaysModule } from './modules/gateways/gateways.module';
+import { RegisterGatewayModule } from './use-cases/register-gateway/register-gateway.module';
+import { UpdateGatewayModule } from './use-cases/update-gateway/update-gateway.module';
+import { GetAllGatewaysModule } from './use-cases/get-all-gateways/get-all-gateways.module';
 
 @Module({
   imports: [
@@ -52,6 +56,10 @@ import { UpdateApiCredentialModule } from './use-cases/update-api-credential/upd
     ListUsersModule,
     GetAllUsersByOfficeIdModule,
     UpdateApiCredentialModule,
+    GatewaysModule,
+    RegisterGatewayModule,
+    UpdateGatewayModule,
+    GetAllGatewaysModule,
   ],
 })
 export class AppModule {}

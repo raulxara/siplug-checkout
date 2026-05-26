@@ -1,0 +1,1 @@
+export const GATEWAYS_REPOSITORY = Symbol('GATEWAYS_REPOSITORY');

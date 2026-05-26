@@ -32,6 +32,10 @@ const get_user_module_1 = require("./use-cases/get-user/get-user.module");
 const list_users_module_1 = require("./use-cases/list-users/list-users.module");
 const get_all_users_by_office_id_module_1 = require("./use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module");
 const update_api_credential_module_1 = require("./use-cases/update-api-credential/update-api-credential.module");
+const gateways_module_1 = require("./modules/gateways/gateways.module");
+const register_gateway_module_1 = require("./use-cases/register-gateway/register-gateway.module");
+const update_gateway_module_1 = require("./use-cases/update-gateway/update-gateway.module");
+const get_all_gateways_module_1 = require("./use-cases/get-all-gateways/get-all-gateways.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -64,6 +68,10 @@ exports.AppModule = AppModule = __decorate([
             list_users_module_1.ListUsersModule,
             get_all_users_by_office_id_module_1.GetAllUsersByOfficeIdModule,
             update_api_credential_module_1.UpdateApiCredentialModule,
+            gateways_module_1.GatewaysModule,
+            register_gateway_module_1.RegisterGatewayModule,
+            update_gateway_module_1.UpdateGatewayModule,
+            get_all_gateways_module_1.GetAllGatewaysModule,
         ],
     })
 ], AppModule);
