@@ -41,6 +41,14 @@ const register_payment_customer_module_1 = require("./use-cases/register-payment
 const update_payment_customer_module_1 = require("./use-cases/update-payment-customer/update-payment-customer.module");
 const list_payment_customers_module_1 = require("./use-cases/list-payment-customers/list-payment-customers.module");
 const get_payment_customer_by_unique_id_module_1 = require("./use-cases/get-payment-customer-by-unique-id/get-payment-customer-by-unique-id.module");
+const checkout_sessions_module_1 = require("./modules/checkout-sessions/checkout-sessions.module");
+const register_checkout_session_module_1 = require("./use-cases/register-checkout-session/register-checkout-session.module");
+const update_checkout_session_module_1 = require("./use-cases/update-checkout-session/update-checkout-session.module");
+const list_checkout_sessions_module_1 = require("./use-cases/list-checkout-sessions/list-checkout-sessions.module");
+const get_checkout_session_by_unique_id_module_1 = require("./use-cases/get-checkout-session-by-unique-id/get-checkout-session-by-unique-id.module");
+const payment_transactions_module_1 = require("./modules/payment-transactions/payment-transactions.module");
+const process_payment_module_1 = require("./use-cases/process-payment/process-payment.module");
+const gateway_orchestration_module_1 = require("./modules/gateway-orchestration/gateway-orchestration.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -82,6 +90,14 @@ exports.AppModule = AppModule = __decorate([
             update_payment_customer_module_1.UpdatePaymentCustomerModule,
             list_payment_customers_module_1.ListPaymentCustomersModule,
             get_payment_customer_by_unique_id_module_1.GetPaymentCustomerByUniqueIdModule,
+            checkout_sessions_module_1.CheckoutSessionsModule,
+            register_checkout_session_module_1.RegisterCheckoutSessionModule,
+            update_checkout_session_module_1.UpdateCheckoutSessionModule,
+            list_checkout_sessions_module_1.ListCheckoutSessionsModule,
+            get_checkout_session_by_unique_id_module_1.GetCheckoutSessionByUniqueIdModule,
+            payment_transactions_module_1.PaymentTransactionsModule,
+            process_payment_module_1.ProcessPaymentModule,
+            gateway_orchestration_module_1.GatewayOrchestrationModule,
         ],
     })
 ], AppModule);

@@ -32,6 +32,14 @@ import { RegisterPaymentCustomerModule } from './use-cases/register-payment-cust
 import { UpdatePaymentCustomerModule } from './use-cases/update-payment-customer/update-payment-customer.module';
 import { ListPaymentCustomersModule } from './use-cases/list-payment-customers/list-payment-customers.module';
 import { GetPaymentCustomerByUniqueIdModule } from './use-cases/get-payment-customer-by-unique-id/get-payment-customer-by-unique-id.module';
+import { CheckoutSessionsModule } from './modules/checkout-sessions/checkout-sessions.module';
+import { RegisterCheckoutSessionModule } from './use-cases/register-checkout-session/register-checkout-session.module';
+import { UpdateCheckoutSessionModule } from './use-cases/update-checkout-session/update-checkout-session.module';
+import { ListCheckoutSessionsModule } from './use-cases/list-checkout-sessions/list-checkout-sessions.module';
+import { GetCheckoutSessionByUniqueIdModule } from './use-cases/get-checkout-session-by-unique-id/get-checkout-session-by-unique-id.module';
+import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
+import { ProcessPaymentModule } from './use-cases/process-payment/process-payment.module';
+import { GatewayOrchestrationModule } from './modules/gateway-orchestration/gateway-orchestration.module';
 
 @Module({
   imports: [
@@ -70,6 +78,14 @@ import { GetPaymentCustomerByUniqueIdModule } from './use-cases/get-payment-cust
     UpdatePaymentCustomerModule,
     ListPaymentCustomersModule,
     GetPaymentCustomerByUniqueIdModule,
+    CheckoutSessionsModule,
+    RegisterCheckoutSessionModule,
+    UpdateCheckoutSessionModule,
+    ListCheckoutSessionsModule,
+    GetCheckoutSessionByUniqueIdModule,
+    PaymentTransactionsModule,
+    ProcessPaymentModule,
+    GatewayOrchestrationModule,
   ],
 })
 export class AppModule {}

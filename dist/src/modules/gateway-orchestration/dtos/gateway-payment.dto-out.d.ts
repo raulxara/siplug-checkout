@@ -1,0 +1,44 @@
+export declare class GatewayPaymentDtoOut {
+    readonly success: boolean;
+    readonly provider: string;
+    readonly gatewayTransactionId: string | null;
+    readonly gatewayStatus: string | null;
+    readonly status: string;
+    readonly processStatus: string;
+    readonly processMessage: string | null;
+    readonly providerRequest: Record<string, unknown> | null;
+    readonly providerResponse: Record<string, unknown> | null;
+    readonly gatewayResponse: Record<string, unknown> | null;
+    readonly qrCode: string | null;
+    readonly qrCodeBase64: string | null;
+    readonly boletoUrl: string | null;
+    readonly checkoutUrl: string | null;
+    readonly paidAt: string | null;
+    readonly authorizedAt: string | null;
+    readonly canceledAt: string | null;
+    readonly failedAt: string | null;
+    readonly refundedAt: string | null;
+    readonly expiresAt: string | null;
+    constructor(params: {
+        success: boolean;
+        provider: string;
+        gatewayTransactionId?: string | null;
+        gatewayStatus?: string | null;
+        status: string;
+        processStatus: string;
+        processMessage?: string | null;
+        providerRequest?: Record<string, unknown> | null;
+        providerResponse?: Record<string, unknown> | null;
+        gatewayResponse?: Record<string, unknown> | null;
+        qrCode?: string | null;
+        qrCodeBase64?: string | null;
+        boletoUrl?: string | null;
+        checkoutUrl?: string | null;
+        paidAt?: string | null;
+        authorizedAt?: string | null;
+        canceledAt?: string | null;
+        failedAt?: string | null;
+        refundedAt?: string | null;
+        expiresAt?: string | null;
+    });
+}
