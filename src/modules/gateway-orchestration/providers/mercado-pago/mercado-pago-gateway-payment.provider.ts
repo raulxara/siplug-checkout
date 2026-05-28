@@ -106,6 +106,8 @@ export class MercadoPagoGatewayPaymentProvider
         ) as unknown as Record<string, unknown>;
       } else if (dtoIn.paymentTransaction.paymentMethod === 'credit_card') {
         requestPayload = this.buildCreditCardPaymentRequestPayload(dtoIn);
+      } else if (dtoIn.paymentTransaction.paymentMethod === 'boleto') {
+        requestPayload = this.buildBoletoPaymentRequestPayload(dtoIn);
       } else {
         return new GatewayPaymentDtoOut({
           success: false,
@@ -323,6 +325,59 @@ export class MercadoPagoGatewayPaymentProvider
     return payload;
   }
 
+  private buildBoletoPaymentRequestPayload(
+    dtoIn: GatewayPaymentDtoIn,
+  ): Record<string, unknown> {
+    const boletoMinimumAmountInCents = 500;
+
+    if (dtoIn.paymentTransaction.amount < boletoMinimumAmountInCents) {
+      throw new Error(
+        'Mercado Pago boleto requires amount greater than or equal to R$ 5,00',
+      );
+    }
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const checkoutSession = this.asObject(providerPayload.checkoutSession);
+    const payerPayload = this.asObject(providerPayload.payer);
+
+    const payer = this.buildPayer(payerPayload);
+
+    const description =
+      this.toNullableString(checkoutSession.description) ??
+      `Pagamento ${dtoIn.paymentTransaction._id}`;
+
+    const payload: Record<string, unknown> = {
+      transaction_amount: this.convertCentsToAmount(
+        dtoIn.paymentTransaction.amount,
+      ),
+      description,
+      payment_method_id: 'bolbradesco',
+      payer,
+      external_reference:
+        dtoIn.paymentTransaction.externalReference ??
+        dtoIn.paymentTransaction._id,
+      metadata: {
+        paymentTransactionId: dtoIn.paymentTransaction._id,
+        checkoutSessionId: dtoIn.paymentTransaction.checkoutSessionId,
+        officeId: dtoIn.paymentTransaction.officeId,
+        clientId: dtoIn.paymentTransaction.clientId,
+      },
+    };
+
+    const notificationUrl = this.resolveNotificationUrl(dtoIn);
+
+    if (notificationUrl !== null) {
+      payload.notification_url = notificationUrl;
+    }
+
+    const dateOfExpiration = this.resolveDateOfExpiration(dtoIn);
+
+    if (dateOfExpiration !== null) {
+      payload.date_of_expiration = dateOfExpiration;
+    }
+
+    return payload;
+  }
+
   private buildPayer(
     payerPayload: Record<string, unknown>,
   ): MercadoPagoPixPayer {
@@ -456,6 +511,12 @@ export class MercadoPagoGatewayPaymentProvider
     const transactionData =
       params.responseBody.point_of_interaction?.transaction_data;
 
+    const transactionDetails = params.responseBody.transaction_details;
+
+    const boletoUrl =
+      this.toNullableString(transactionDetails?.external_resource_url) ??
+      null;
+
     return new GatewayPaymentDtoOut({
       success: true,
       provider: this.getProviderName(),
@@ -482,7 +543,7 @@ export class MercadoPagoGatewayPaymentProvider
 
       qrCode: transactionData?.qr_code ?? null,
       qrCodeBase64: transactionData?.qr_code_base64 ?? null,
-      boletoUrl: null,
+      boletoUrl,
       checkoutUrl: transactionData?.ticket_url ?? null,
 
       paidAt: internalStatus === 'paid' ? this.nowAsSqlDateTime() : null,
