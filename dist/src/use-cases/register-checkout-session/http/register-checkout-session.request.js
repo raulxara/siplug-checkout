@@ -117,8 +117,9 @@ __decorate([
     __metadata("design:type", Object)
 ], RegisterCheckoutSessionRequest.prototype, "paymentCustomerId", void 0);
 __decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], RegisterCheckoutSessionRequest.prototype, "gatewayId", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),

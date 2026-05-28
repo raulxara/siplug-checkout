@@ -24,9 +24,9 @@ export class CheckoutSessionsRepository
 
         office_id: entity.officeId,
         client_id: entity.clientId,
-        payment_customer_id: entity.paymentCustomerId,
-        gateway_id: entity.gatewayId,
-        api_credential_id: entity.apiCredentialId,
+        payment_customer_id: entity.paymentCustomerId ?? undefined,
+        gateway_id: entity.gatewayId ?? undefined,
+        api_credential_id: entity.apiCredentialId ?? undefined,
 
         code: entity.code,
         external_reference: entity.externalReference,
@@ -240,7 +240,7 @@ export class CheckoutSessionsRepository
     office_id: string;
     client_id: string;
     payment_customer_id: string | null;
-    gateway_id: string;
+    gateway_id: string | null;
     api_credential_id: string | null;
 
     code: string | null;

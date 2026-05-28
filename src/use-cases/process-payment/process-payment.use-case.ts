@@ -2,9 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
 
-import { FindApiCredentialByUniqueIdDtoIn } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/dtos/find-api-credential-by-unique-id.dto-in';
-import { FindApiCredentialByUniqueIdService } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service';
-
 import { GetAllCheckoutSessionItemsByCheckoutSessionIdDtoIn } from '../../modules/checkout-sessions/services/get-all-checkout-session-items-by-checkout-session-id/dtos/get-all-checkout-session-items-by-checkout-session-id.dto-in';
 import { GetAllCheckoutSessionItemsByCheckoutSessionIdService } from '../../modules/checkout-sessions/services/get-all-checkout-session-items-by-checkout-session-id/get-all-checkout-session-items-by-checkout-session-id.service';
 import { FindCheckoutSessionByUniqueIdDtoIn } from '../../modules/checkout-sessions/services/find-checkout-session-by-unique-id/dtos/find-checkout-session-by-unique-id.dto-in';
@@ -15,8 +12,10 @@ import { UpdateCheckoutSessionService } from '../../modules/checkout-sessions/se
 import { FindClientByUniqueIdDtoIn } from '../../modules/clients/services/find-client-by-unique-id/dtos/find-client-by-unique-id.dto-in';
 import { FindClientByUniqueIdService } from '../../modules/clients/services/find-client-by-unique-id/find-client-by-unique-id.service';
 
-import { FindGatewayByUniqueIdDtoIn } from '../../modules/gateways/services/find-gateway-by-unique-id/dtos/find-gateway-by-unique-id.dto-in';
-import { FindGatewayByUniqueIdService } from '../../modules/gateways/services/find-gateway-by-unique-id/find-gateway-by-unique-id.service';
+import { GatewayPaymentDtoIn } from '../../modules/gateway-orchestration/dtos/gateway-payment.dto-in';
+import { DispatchGatewayPaymentService } from '../../modules/gateway-orchestration/services/dispatch-gateway-payment/dispatch-gateway-payment.service';
+import { ResolvePaymentGatewayCredentialDtoIn } from '../../modules/gateway-orchestration/services/resolve-payment-gateway-credential/dtos/resolve-payment-gateway-credential.dto-in';
+import { ResolvePaymentGatewayCredentialService } from '../../modules/gateway-orchestration/services/resolve-payment-gateway-credential/resolve-payment-gateway-credential.service';
 
 import { FindOfficeByUniqueIdDtoIn } from '../../modules/offices/services/find-office-by-unique-id/dtos/find-office-by-unique-id.dto-in';
 import { FindOfficeByUniqueIdService } from '../../modules/offices/services/find-office-by-unique-id/find-office-by-unique-id.service';
@@ -24,8 +23,11 @@ import { FindOfficeByUniqueIdService } from '../../modules/offices/services/find
 import { FindPaymentCustomerByUniqueIdDtoIn } from '../../modules/payment-customers/services/find-payment-customer-by-unique-id/dtos/find-payment-customer-by-unique-id.dto-in';
 import { FindPaymentCustomerByUniqueIdService } from '../../modules/payment-customers/services/find-payment-customer-by-unique-id/find-payment-customer-by-unique-id.service';
 
+import type { PaymentTransactionRow } from '../../modules/payment-transactions/entities/payment-transactions-repository.interface';
 import { CreatePaymentTransactionDtoIn } from '../../modules/payment-transactions/services/create-payment-transaction/dtos/create-payment-transaction.dto-in';
 import { CreatePaymentTransactionService } from '../../modules/payment-transactions/services/create-payment-transaction/create-payment-transaction.service';
+import { UpdatePaymentTransactionDtoIn } from '../../modules/payment-transactions/services/update-payment-transaction/dtos/update-payment-transaction.dto-in';
+import { UpdatePaymentTransactionService } from '../../modules/payment-transactions/services/update-payment-transaction/update-payment-transaction.service';
 
 import { ResolveActorAuthorizationDtoIn } from '../../modules/security/services/resolve-actor-authorization/dtos/resolve-actor-authorization.dto-in';
 import { ResolveActorAuthorizationService } from '../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service';
@@ -37,15 +39,21 @@ import { ProcessPaymentDtoOut } from './dtos/process-payment.dto-out';
 export class ProcessPaymentUseCase {
   constructor(
     private readonly resolveActorAuthorizationService: ResolveActorAuthorizationService,
+
     private readonly findCheckoutSessionByUniqueIdService: FindCheckoutSessionByUniqueIdService,
     private readonly getAllCheckoutSessionItemsByCheckoutSessionIdService: GetAllCheckoutSessionItemsByCheckoutSessionIdService,
     private readonly updateCheckoutSessionService: UpdateCheckoutSessionService,
+
     private readonly findOfficeByUniqueIdService: FindOfficeByUniqueIdService,
     private readonly findClientByUniqueIdService: FindClientByUniqueIdService,
     private readonly findPaymentCustomerByUniqueIdService: FindPaymentCustomerByUniqueIdService,
-    private readonly findGatewayByUniqueIdService: FindGatewayByUniqueIdService,
-    private readonly findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService,
+
+    private readonly resolvePaymentGatewayCredentialService: ResolvePaymentGatewayCredentialService,
+    private readonly dispatchGatewayPaymentService: DispatchGatewayPaymentService,
+
     private readonly createPaymentTransactionService: CreatePaymentTransactionService,
+    private readonly updatePaymentTransactionService: UpdatePaymentTransactionService,
+
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
   ) {}
 
@@ -75,7 +83,7 @@ export class ProcessPaymentUseCase {
 
       const checkoutSession = checkoutSessionDtoOut.checkoutSession;
 
-      if (checkoutSession.status !== 'created') {
+      if (!['created', 'processing'].includes(checkoutSession.status)) {
         throw new Error('checkout session is not available for payment');
       }
 
@@ -122,39 +130,8 @@ export class ProcessPaymentUseCase {
         }
       }
 
-      const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(
-        new FindGatewayByUniqueIdDtoIn(checkoutSession.gatewayId),
-      );
-
-      const gateway = gatewayDtoOut.gateway;
-
-      if (gateway.status !== 'active') {
-        throw new Error('gateway is not active');
-      }
-
-      if (checkoutSession.apiCredentialId !== null) {
-        const apiCredentialDtoOut =
-          await this.findApiCredentialByUniqueIdService.exec(
-            new FindApiCredentialByUniqueIdDtoIn(
-              checkoutSession.apiCredentialId,
-            ),
-          );
-
-        const apiCredential = apiCredentialDtoOut.apiCredential;
-
-        if (apiCredential.status !== 'active') {
-          throw new Error('api credential is not active');
-        }
-
-        if (
-          apiCredential.gatewayId !== null &&
-          apiCredential.gatewayId !== checkoutSession.gatewayId
-        ) {
-          throw new Error('api credential does not belong to gateway');
-        }
-      }
-
       this.validatePaymentType(checkoutSession.paymentType);
+
       this.validateInstallments({
         paymentType: checkoutSession.paymentType,
         paymentMethod: dtoIn.paymentMethod,
@@ -162,12 +139,6 @@ export class ProcessPaymentUseCase {
         installments: dtoIn.installments,
         installmentAmount: dtoIn.installmentAmount,
         interestAmount: dtoIn.interestAmount,
-      });
-
-      this.validateGatewayCapabilities({
-        paymentType: checkoutSession.paymentType,
-        paymentMethod: dtoIn.paymentMethod,
-        gatewayConfig: gateway.config,
       });
 
       const itemsDtoOut =
@@ -196,6 +167,20 @@ export class ProcessPaymentUseCase {
         );
       }
 
+      const resolvedGatewayCredentialDtoOut =
+        await this.resolvePaymentGatewayCredentialService.exec(
+          new ResolvePaymentGatewayCredentialDtoIn({
+            officeId: checkoutSession.officeId,
+            clientId: checkoutSession.clientId,
+            paymentType: checkoutSession.paymentType,
+            paymentMethod: dtoIn.paymentMethod,
+          }),
+        );
+
+      const resolvedGateway = resolvedGatewayCredentialDtoOut.gateway;
+      const resolvedApiCredential =
+        resolvedGatewayCredentialDtoOut.apiCredential;
+
       const transactionDtoOut =
         await this.createPaymentTransactionService.exec(
           new CreatePaymentTransactionDtoIn({
@@ -204,8 +189,8 @@ export class ProcessPaymentUseCase {
             checkoutSessionId: checkoutSession._id,
             paymentCustomerId: checkoutSession.paymentCustomerId,
 
-            gatewayId: checkoutSession.gatewayId,
-            apiCredentialId: checkoutSession.apiCredentialId,
+            gatewayId: resolvedGateway._id,
+            apiCredentialId: resolvedApiCredential._id,
 
             gatewayTransactionId: null,
             externalReference:
@@ -226,9 +211,9 @@ export class ProcessPaymentUseCase {
 
             gatewayStatus: null,
             status: 'created',
-            processStatus: 'pending_gateway_dispatch',
+            processStatus: 'dispatching_gateway',
             processMessage:
-              'payment transaction created and waiting gateway dispatch',
+              'payment transaction created and dispatching to gateway',
 
             providerPayload: {
               checkoutSession: {
@@ -266,8 +251,9 @@ export class ProcessPaymentUseCase {
             metadata: {
               ...(checkoutSession.metadata ?? {}),
               ...(dtoIn.metadata ?? {}),
-              gatewaySlug: gateway.slug,
-              gatewayProvider: gateway.provider,
+              gatewaySlug: resolvedGateway.slug,
+              gatewayProvider: resolvedGateway.provider,
+              apiCredentialId: resolvedApiCredential._id,
               source: 'ProcessPaymentUseCase',
             },
 
@@ -278,62 +264,81 @@ export class ProcessPaymentUseCase {
           }),
         );
 
+      const createdPaymentTransaction =
+        this.buildPaymentTransactionRowFromCreateDtoOut(transactionDtoOut);
+
+      const gatewayPaymentDtoOut =
+        await this.dispatchGatewayPaymentService.exec(
+          new GatewayPaymentDtoIn({
+            gatewayProvider: resolvedGateway.provider,
+            gatewaySlug: resolvedGateway.slug,
+            paymentTransaction: createdPaymentTransaction,
+            apiCredential: {
+              _id: resolvedApiCredential._id,
+              slug: resolvedApiCredential.slug,
+              gatewayId: resolvedApiCredential.gatewayId,
+              token: resolvedGatewayCredentialDtoOut.decryptedProviderToken,
+              config: resolvedApiCredential.config,
+              connectionData: resolvedGatewayCredentialDtoOut.connectionData,
+            },
+            providerPayload: createdPaymentTransaction.providerPayload,
+            idempotencyKey: createdPaymentTransaction.idempotencyKey,
+            config: {
+              gatewayConfig: resolvedGateway.config,
+              transactionConfig: createdPaymentTransaction.config,
+              apiCredentialConfig: resolvedApiCredential.config,
+            },
+          }),
+        );
+
+      const updatedTransactionDtoOut =
+        await this.updatePaymentTransactionService.exec(
+          new UpdatePaymentTransactionDtoIn({
+            _id: createdPaymentTransaction._id,
+
+            gatewayTransactionId: gatewayPaymentDtoOut.gatewayTransactionId,
+            gatewayStatus: gatewayPaymentDtoOut.gatewayStatus,
+
+            status: gatewayPaymentDtoOut.status,
+            processStatus: gatewayPaymentDtoOut.processStatus,
+            processMessage: gatewayPaymentDtoOut.processMessage,
+
+            providerPayload: gatewayPaymentDtoOut.providerRequest,
+            providerResponse: gatewayPaymentDtoOut.providerResponse,
+            gatewayResponse: gatewayPaymentDtoOut.gatewayResponse,
+
+            qrCode: gatewayPaymentDtoOut.qrCode,
+            qrCodeBase64: gatewayPaymentDtoOut.qrCodeBase64,
+            boletoUrl: gatewayPaymentDtoOut.boletoUrl,
+            checkoutUrl: gatewayPaymentDtoOut.checkoutUrl,
+
+            paidAt: gatewayPaymentDtoOut.paidAt,
+            authorizedAt: gatewayPaymentDtoOut.authorizedAt,
+            canceledAt: gatewayPaymentDtoOut.canceledAt,
+            failedAt: gatewayPaymentDtoOut.failedAt,
+            refundedAt: gatewayPaymentDtoOut.refundedAt,
+            expiresAt: gatewayPaymentDtoOut.expiresAt,
+
+            source: 'ProcessPaymentUseCase.gatewayResponse',
+          }),
+        );
+
+      const checkoutSessionStatus = this.resolveCheckoutSessionStatus(
+        updatedTransactionDtoOut.paymentTransaction.status,
+      );
+
       const updatedCheckoutSessionDtoOut =
         await this.updateCheckoutSessionService.exec(
           new UpdateCheckoutSessionDtoIn({
             _id: checkoutSession._id,
-            status: 'processing',
+            status: checkoutSessionStatus,
             source: 'ProcessPaymentUseCase',
           }),
         );
 
       return new ProcessPaymentDtoOut(
         updatedCheckoutSessionDtoOut.checkoutSession,
-        {
-          id: transactionDtoOut.id,
-          _id: transactionDtoOut._id,
-          officeId: transactionDtoOut.officeId,
-          clientId: transactionDtoOut.clientId,
-          checkoutSessionId: transactionDtoOut.checkoutSessionId,
-          paymentCustomerId: transactionDtoOut.paymentCustomerId,
-          gatewayId: transactionDtoOut.gatewayId,
-          apiCredentialId: transactionDtoOut.apiCredentialId,
-          gatewayTransactionId: transactionDtoOut.gatewayTransactionId,
-          externalReference: transactionDtoOut.externalReference,
-          idempotencyKey: transactionDtoOut.idempotencyKey,
-          paymentType: transactionDtoOut.paymentType,
-          paymentMethod: transactionDtoOut.paymentMethod,
-          amount: transactionDtoOut.amount,
-          currency: transactionDtoOut.currency,
-          installments: transactionDtoOut.installments,
-          installmentAmount: transactionDtoOut.installmentAmount,
-          interestAmount: transactionDtoOut.interestAmount,
-          interestType: transactionDtoOut.interestType,
-          gatewayStatus: transactionDtoOut.gatewayStatus,
-          status: transactionDtoOut.status,
-          processStatus: transactionDtoOut.processStatus,
-          processMessage: transactionDtoOut.processMessage,
-          providerPayload: transactionDtoOut.providerPayload,
-          providerResponse: transactionDtoOut.providerResponse,
-          gatewayResponse: transactionDtoOut.gatewayResponse,
-          qrCode: transactionDtoOut.qrCode,
-          qrCodeBase64: transactionDtoOut.qrCodeBase64,
-          boletoUrl: transactionDtoOut.boletoUrl,
-          checkoutUrl: transactionDtoOut.checkoutUrl,
-          splitRequired: transactionDtoOut.splitRequired,
-          hasSplit: transactionDtoOut.hasSplit,
-          paidAt: transactionDtoOut.paidAt,
-          authorizedAt: transactionDtoOut.authorizedAt,
-          canceledAt: transactionDtoOut.canceledAt,
-          failedAt: transactionDtoOut.failedAt,
-          refundedAt: transactionDtoOut.refundedAt,
-          expiresAt: transactionDtoOut.expiresAt,
-          metadata: transactionDtoOut.metadata,
-          config: transactionDtoOut.config,
-          changesHistory: transactionDtoOut.changesHistory,
-          createdAt: transactionDtoOut.createdAt,
-          updatedAt: transactionDtoOut.updatedAt,
-        },
+        updatedTransactionDtoOut.paymentTransaction,
       );
     } catch (error) {
       await this.handleUseCaseExceptionService.exec(
@@ -435,47 +440,6 @@ export class ProcessPaymentUseCase {
     }
   }
 
-  private validateGatewayCapabilities(params: {
-    paymentType: string;
-    paymentMethod: string;
-    gatewayConfig: Record<string, unknown> | null;
-  }): void {
-    const config = params.gatewayConfig ?? {};
-
-    if (
-      params.paymentType === 'one_time' &&
-      config.supportsOneTimePayment === false
-    ) {
-      throw new Error('gateway does not support one time payment');
-    }
-
-    if (
-      params.paymentType === 'installment' &&
-      config.supportsInstallments === false
-    ) {
-      throw new Error('gateway does not support installments');
-    }
-
-    if (
-      params.paymentType === 'recurring' &&
-      config.supportsRecurringPayment === false
-    ) {
-      throw new Error('gateway does not support recurring payment');
-    }
-
-    const supportedPaymentMethods = config.supportedPaymentMethods;
-
-    if (Array.isArray(supportedPaymentMethods)) {
-      const normalizedMethods = supportedPaymentMethods.map((method) =>
-        String(method),
-      );
-
-      if (!normalizedMethods.includes(params.paymentMethod)) {
-        throw new Error('gateway does not support selected payment method');
-      }
-    }
-  }
-
   private assertNoForbiddenSensitivePaymentData(params: {
     payer: Record<string, unknown> | null;
     paymentData: Record<string, unknown> | null;
@@ -519,5 +483,123 @@ export class ProcessPaymentUseCase {
         );
       }
     }
+  }
+
+  private resolveCheckoutSessionStatus(paymentTransactionStatus: string): string {
+    if (paymentTransactionStatus === 'paid') {
+      return 'paid';
+    }
+
+    if (paymentTransactionStatus === 'authorized') {
+      return 'authorized';
+    }
+
+    if (paymentTransactionStatus === 'failed') {
+      return 'failed';
+    }
+
+    if (paymentTransactionStatus === 'canceled') {
+      return 'canceled';
+    }
+
+    if (paymentTransactionStatus === 'refunded') {
+      return 'refunded';
+    }
+
+    return 'processing';
+  }
+
+  private buildPaymentTransactionRowFromCreateDtoOut(
+    transactionDtoOut: {
+      id: number;
+      _id: string;
+      officeId: string;
+      clientId: string;
+      checkoutSessionId: string | null;
+      paymentCustomerId: string | null;
+      gatewayId: string;
+      apiCredentialId: string | null;
+      gatewayTransactionId: string | null;
+      externalReference: string | null;
+      idempotencyKey: string | null;
+      paymentType: string;
+      paymentMethod: string;
+      amount: number;
+      currency: string;
+      installments: number | null;
+      installmentAmount: number | null;
+      interestAmount: number | null;
+      interestType: string | null;
+      gatewayStatus: string | null;
+      status: string;
+      processStatus: string;
+      processMessage: string | null;
+      providerPayload: Record<string, unknown> | null;
+      providerResponse: Record<string, unknown> | null;
+      gatewayResponse: Record<string, unknown> | null;
+      qrCode: string | null;
+      qrCodeBase64: string | null;
+      boletoUrl: string | null;
+      checkoutUrl: string | null;
+      splitRequired: boolean;
+      hasSplit: boolean;
+      paidAt: string | null;
+      authorizedAt: string | null;
+      canceledAt: string | null;
+      failedAt: string | null;
+      refundedAt: string | null;
+      expiresAt: string | null;
+      metadata: Record<string, unknown> | null;
+      config: Record<string, unknown> | null;
+      changesHistory: Array<Record<string, unknown>> | null;
+      createdAt: string | null;
+      updatedAt: string | null;
+    },
+  ): PaymentTransactionRow {
+    return {
+      id: transactionDtoOut.id,
+      _id: transactionDtoOut._id,
+      officeId: transactionDtoOut.officeId,
+      clientId: transactionDtoOut.clientId,
+      checkoutSessionId: transactionDtoOut.checkoutSessionId,
+      paymentCustomerId: transactionDtoOut.paymentCustomerId,
+      gatewayId: transactionDtoOut.gatewayId,
+      apiCredentialId: transactionDtoOut.apiCredentialId,
+      gatewayTransactionId: transactionDtoOut.gatewayTransactionId,
+      externalReference: transactionDtoOut.externalReference,
+      idempotencyKey: transactionDtoOut.idempotencyKey,
+      paymentType: transactionDtoOut.paymentType,
+      paymentMethod: transactionDtoOut.paymentMethod,
+      amount: transactionDtoOut.amount,
+      currency: transactionDtoOut.currency,
+      installments: transactionDtoOut.installments,
+      installmentAmount: transactionDtoOut.installmentAmount,
+      interestAmount: transactionDtoOut.interestAmount,
+      interestType: transactionDtoOut.interestType,
+      gatewayStatus: transactionDtoOut.gatewayStatus,
+      status: transactionDtoOut.status,
+      processStatus: transactionDtoOut.processStatus,
+      processMessage: transactionDtoOut.processMessage,
+      providerPayload: transactionDtoOut.providerPayload,
+      providerResponse: transactionDtoOut.providerResponse,
+      gatewayResponse: transactionDtoOut.gatewayResponse,
+      qrCode: transactionDtoOut.qrCode,
+      qrCodeBase64: transactionDtoOut.qrCodeBase64,
+      boletoUrl: transactionDtoOut.boletoUrl,
+      checkoutUrl: transactionDtoOut.checkoutUrl,
+      splitRequired: transactionDtoOut.splitRequired,
+      hasSplit: transactionDtoOut.hasSplit,
+      paidAt: transactionDtoOut.paidAt,
+      authorizedAt: transactionDtoOut.authorizedAt,
+      canceledAt: transactionDtoOut.canceledAt,
+      failedAt: transactionDtoOut.failedAt,
+      refundedAt: transactionDtoOut.refundedAt,
+      expiresAt: transactionDtoOut.expiresAt,
+      metadata: transactionDtoOut.metadata,
+      config: transactionDtoOut.config,
+      changesHistory: transactionDtoOut.changesHistory,
+      createdAt: transactionDtoOut.createdAt,
+      updatedAt: transactionDtoOut.updatedAt,
+    };
   }
 }

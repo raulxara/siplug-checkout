@@ -125,14 +125,24 @@ export class UpdateCheckoutSessionUseCase {
         }
       }
 
-      const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(
-        new FindGatewayByUniqueIdDtoIn(effectiveGatewayId),
-      );
+      let gateway: {
+            _id: string;
+            slug: string;
+            provider: string;
+            config: Record<string, unknown> | null;
+            status: string;
+      } | null = null;
 
-      const gateway = gatewayDtoOut.gateway;
+      if (effectiveGatewayId !== null) {
+        const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(
+          new FindGatewayByUniqueIdDtoIn(effectiveGatewayId),
+        );
 
-      if (gateway.status !== 'active') {
-        throw new Error('gateway is not active');
+        gateway = gatewayDtoOut.gateway;
+
+        if (gateway.status !== 'active') {
+          throw new Error('gateway is not active');
+        }
       }
 
       if (effectiveApiCredentialId !== null) {
@@ -155,10 +165,12 @@ export class UpdateCheckoutSessionUseCase {
         }
       }
 
-      this.validateGatewayCapabilities({
-        paymentType: effectivePaymentType,
-        gatewayConfig: gateway.config,
-      });
+      if (gateway !== null) {
+        this.validateGatewayCapabilities({
+          paymentType: effectivePaymentType,
+          gatewayConfig: gateway.config,
+        });
+      }
 
       const currentItemsDtoOut =
         await this.getAllCheckoutSessionItemsByCheckoutSessionIdService.exec(

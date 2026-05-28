@@ -318,6 +318,21 @@ export class PaymentTransactionsRepository
     return model ? this.toRow(model) : null;
   }
 
+  async findByGatewayTransactionId(
+    gatewayTransactionId: string,
+  ): Promise<PaymentTransactionRow | null> {
+    const model = await this.prisma.paymentTransaction.findFirst({
+      where: {
+        gateway_transaction_id: gatewayTransactionId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return model ? this.toRow(model) : null;
+  }
+
   async getAll(): Promise<PaymentTransactionRow[]> {
     const rows = await this.prisma.paymentTransaction.findMany({
       orderBy: {

@@ -65,8 +65,9 @@ export class RegisterCheckoutSessionRequest {
   @IsString()
   paymentCustomerId?: string | null;
 
+  @IsOptional()
   @IsString()
-  gatewayId!: string;
+  gatewayId!: string | null;
 
   @IsOptional()
   @IsString()

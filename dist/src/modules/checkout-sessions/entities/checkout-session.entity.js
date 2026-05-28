@@ -7,7 +7,7 @@ class CheckoutSessionEntity extends abstract_entity_1.AbstractEntity {
     officeId;
     clientId;
     paymentCustomerId = null;
-    gatewayId;
+    gatewayId = null;
     apiCredentialId = null;
     code = null;
     externalReference = null;

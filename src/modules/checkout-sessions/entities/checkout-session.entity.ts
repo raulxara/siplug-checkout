@@ -5,7 +5,7 @@ export class CheckoutSessionEntity extends AbstractEntity {
   public officeId!: string;
   public clientId!: string;
   public paymentCustomerId: string | null = null;
-  public gatewayId!: string;
+  public gatewayId: string | null = null;
   public apiCredentialId: string | null = null;
 
   public code: string | null = null;

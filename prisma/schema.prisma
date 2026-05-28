@@ -427,7 +427,7 @@ model CheckoutSession {
   office_id           String  @db.Char(36)
   client_id           String  @db.Char(36)
   payment_customer_id String? @db.Char(36)
-  gateway_id          String  @db.Char(36)
+  gateway_id          String? @db.Char(36)
   api_credential_id   String? @db.Char(36)
 
   code               String? @db.VarChar(150)
@@ -453,7 +453,7 @@ model CheckoutSession {
   office           Office           @relation(fields: [office_id], references: [unique_id])
   client           Client           @relation(fields: [client_id], references: [unique_id])
   payment_customer PaymentCustomer? @relation(fields: [payment_customer_id], references: [unique_id])
-  gateway          Gateway          @relation(fields: [gateway_id], references: [unique_id])
+  gateway          Gateway?         @relation(fields: [gateway_id], references: [unique_id])
   api_credential   ApiCredential?   @relation(fields: [api_credential_id], references: [unique_id])
 
   items                CheckoutSessionItem[]

@@ -7,7 +7,7 @@ export type CheckoutSessionRow = {
   officeId: string;
   clientId: string;
   paymentCustomerId: string | null;
-  gatewayId: string;
+  gatewayId: string | null;
   apiCredentialId: string | null;
 
   code: string | null;

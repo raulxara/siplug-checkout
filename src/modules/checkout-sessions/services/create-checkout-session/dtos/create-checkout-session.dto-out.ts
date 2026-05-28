@@ -7,7 +7,7 @@ export class CreateCheckoutSessionDtoOut {
     public readonly officeId: string,
     public readonly clientId: string,
     public readonly paymentCustomerId: string | null,
-    public readonly gatewayId: string,
+    public readonly gatewayId: string | null,
     public readonly apiCredentialId: string | null,
     public readonly code: string | null,
     public readonly externalReference: string | null,
@@ -27,7 +27,9 @@ export class CreateCheckoutSessionDtoOut {
     public readonly updatedAt: string | null,
   ) {}
 
-  static fromEntity(entity: CheckoutSessionEntity): CreateCheckoutSessionDtoOut {
+  static fromEntity(
+    entity: CheckoutSessionEntity,
+  ): CreateCheckoutSessionDtoOut {
     return new CreateCheckoutSessionDtoOut(
       entity.id ?? 0,
       entity._id ?? '',

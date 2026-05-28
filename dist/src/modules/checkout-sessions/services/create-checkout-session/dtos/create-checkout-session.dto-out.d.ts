@@ -5,7 +5,7 @@ export declare class CreateCheckoutSessionDtoOut {
     readonly officeId: string;
     readonly clientId: string;
     readonly paymentCustomerId: string | null;
-    readonly gatewayId: string;
+    readonly gatewayId: string | null;
     readonly apiCredentialId: string | null;
     readonly code: string | null;
     readonly externalReference: string | null;
@@ -23,6 +23,6 @@ export declare class CreateCheckoutSessionDtoOut {
     readonly status: string;
     readonly createdAt: string | null;
     readonly updatedAt: string | null;
-    constructor(id: number, _id: string, officeId: string, clientId: string, paymentCustomerId: string | null, gatewayId: string, apiCredentialId: string | null, code: string | null, externalReference: string | null, idempotencyKey: string | null, paymentType: string, amount: number, currency: string, description: string | null, successUrl: string | null, cancelUrl: string | null, expiresAt: string | null, metadata: Record<string, unknown> | null, config: Record<string, unknown> | null, changesHistory: Array<Record<string, unknown>> | null, status: string, createdAt: string | null, updatedAt: string | null);
+    constructor(id: number, _id: string, officeId: string, clientId: string, paymentCustomerId: string | null, gatewayId: string | null, apiCredentialId: string | null, code: string | null, externalReference: string | null, idempotencyKey: string | null, paymentType: string, amount: number, currency: string, description: string | null, successUrl: string | null, cancelUrl: string | null, expiresAt: string | null, metadata: Record<string, unknown> | null, config: Record<string, unknown> | null, changesHistory: Array<Record<string, unknown>> | null, status: string, createdAt: string | null, updatedAt: string | null);
     static fromEntity(entity: CheckoutSessionEntity): CreateCheckoutSessionDtoOut;
 }

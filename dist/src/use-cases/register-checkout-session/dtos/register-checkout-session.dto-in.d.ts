@@ -15,7 +15,7 @@ export declare class RegisterCheckoutSessionDtoIn {
     readonly officeId: string;
     readonly clientId: string;
     readonly paymentCustomerId: string | null;
-    readonly gatewayId: string;
+    readonly gatewayId: string | null;
     readonly apiCredentialId: string | null;
     readonly code: string | null;
     readonly externalReference: string | null;
@@ -36,7 +36,7 @@ export declare class RegisterCheckoutSessionDtoIn {
         officeId?: string;
         clientId?: string;
         paymentCustomerId?: string | null;
-        gatewayId?: string;
+        gatewayId?: string | null;
         apiCredentialId?: string | null;
         code?: string | null;
         externalReference?: string | null;

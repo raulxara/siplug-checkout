@@ -15,7 +15,7 @@ export declare class RegisterCheckoutSessionRequest {
     officeId: string;
     clientId: string;
     paymentCustomerId?: string | null;
-    gatewayId: string;
+    gatewayId: string | null;
     apiCredentialId?: string | null;
     code?: string | null;
     externalReference?: string | null;

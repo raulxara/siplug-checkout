@@ -9,10 +9,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProcessPaymentModule = void 0;
 const common_1 = require("@nestjs/common");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
-const api_credentials_module_1 = require("../../modules/api-credentials/api-credentials.module");
 const checkout_sessions_module_1 = require("../../modules/checkout-sessions/checkout-sessions.module");
 const clients_module_1 = require("../../modules/clients/clients.module");
-const gateways_module_1 = require("../../modules/gateways/gateways.module");
+const gateway_orchestration_module_1 = require("../../modules/gateway-orchestration/gateway-orchestration.module");
 const offices_module_1 = require("../../modules/offices/offices.module");
 const payment_customers_module_1 = require("../../modules/payment-customers/payment-customers.module");
 const payment_transactions_module_1 = require("../../modules/payment-transactions/payment-transactions.module");
@@ -28,10 +27,9 @@ exports.ProcessPaymentModule = ProcessPaymentModule = __decorate([
             offices_module_1.OfficesModule,
             clients_module_1.ClientsModule,
             payment_customers_module_1.PaymentCustomersModule,
-            gateways_module_1.GatewaysModule,
-            api_credentials_module_1.ApiCredentialsModule,
             checkout_sessions_module_1.CheckoutSessionsModule,
             payment_transactions_module_1.PaymentTransactionsModule,
+            gateway_orchestration_module_1.GatewayOrchestrationModule,
             security_module_1.SecurityModule,
             use_case_support_module_1.UseCaseSupportModule,
         ],

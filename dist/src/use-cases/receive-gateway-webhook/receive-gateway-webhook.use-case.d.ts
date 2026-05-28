@@ -1,0 +1,32 @@
+import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
+import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
+import { FindApiCredentialByUniqueIdService } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service';
+import { UpdateCheckoutSessionService } from '../../modules/checkout-sessions/services/update-checkout-session/update-checkout-session.service';
+import { FetchMercadoPagoPaymentService } from '../../modules/gateway-orchestration/services/fetch-mercado-pago-payment/fetch-mercado-pago-payment.service';
+import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service';
+import { UpdatePaymentTransactionService } from '../../modules/payment-transactions/services/update-payment-transaction/update-payment-transaction.service';
+import { ReceiveGatewayWebhookDtoIn } from './dtos/receive-gateway-webhook.dto-in';
+import { ReceiveGatewayWebhookDtoOut } from './dtos/receive-gateway-webhook.dto-out';
+export declare class ReceiveGatewayWebhookUseCase {
+    private readonly findPaymentTransactionByGatewayTransactionIdService;
+    private readonly updatePaymentTransactionService;
+    private readonly findApiCredentialByUniqueIdService;
+    private readonly decryptApiCredentialSecretService;
+    private readonly fetchMercadoPagoPaymentService;
+    private readonly updateCheckoutSessionService;
+    private readonly handleUseCaseExceptionService;
+    constructor(findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, updatePaymentTransactionService: UpdatePaymentTransactionService, findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, fetchMercadoPagoPaymentService: FetchMercadoPagoPaymentService, updateCheckoutSessionService: UpdateCheckoutSessionService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    exec(dtoIn: ReceiveGatewayWebhookDtoIn): Promise<ReceiveGatewayWebhookDtoOut>;
+    private extractGatewayTransactionId;
+    private extractEventType;
+    private extractEventAction;
+    private decryptProviderToken;
+    private resolveWebhookSecret;
+    private validateMercadoPagoSignature;
+    private parseSignatureHeader;
+    private resolveCheckoutSessionStatus;
+    private getHeader;
+    private normalizeProvider;
+    private asObject;
+    private toNullableString;
+}

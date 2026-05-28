@@ -4,6 +4,7 @@ export type GatewayApiCredentialData = {
   _id: string | null;
   slug: string | null;
   gatewayId: string | null;
+  token: string | null;
   config: Record<string, unknown> | null;
   connectionData: Record<string, unknown> | null;
 };

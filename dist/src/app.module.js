@@ -49,6 +49,8 @@ const get_checkout_session_by_unique_id_module_1 = require("./use-cases/get-chec
 const payment_transactions_module_1 = require("./modules/payment-transactions/payment-transactions.module");
 const process_payment_module_1 = require("./use-cases/process-payment/process-payment.module");
 const gateway_orchestration_module_1 = require("./modules/gateway-orchestration/gateway-orchestration.module");
+const dispatch_payment_transaction_to_gateway_module_1 = require("./use-cases/dispatch-payment-transaction-to-gateway/dispatch-payment-transaction-to-gateway.module");
+const receive_gateway_webhook_module_1 = require("./use-cases/receive-gateway-webhook/receive-gateway-webhook.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -98,6 +100,8 @@ exports.AppModule = AppModule = __decorate([
             payment_transactions_module_1.PaymentTransactionsModule,
             process_payment_module_1.ProcessPaymentModule,
             gateway_orchestration_module_1.GatewayOrchestrationModule,
+            dispatch_payment_transaction_to_gateway_module_1.DispatchPaymentTransactionToGatewayModule,
+            receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
         ],
     })
 ], AppModule);

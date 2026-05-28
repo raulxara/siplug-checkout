@@ -48,6 +48,7 @@ export interface IPaymentTransactionsRepository {
     create(entity: PaymentTransactionEntity): Promise<PaymentTransactionEntity>;
     updateByUniqueId(_id: string, data: Record<string, unknown>): Promise<PaymentTransactionRow>;
     findByUniqueId(_id: string): Promise<PaymentTransactionRow | null>;
+    findByGatewayTransactionId(gatewayTransactionId: string): Promise<PaymentTransactionRow | null>;
     getAll(): Promise<PaymentTransactionRow[]>;
     getAllByOfficeId(officeId: string): Promise<PaymentTransactionRow[]>;
     getAllByCheckoutSessionId(checkoutSessionId: string): Promise<PaymentTransactionRow[]>;

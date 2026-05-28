@@ -17,7 +17,7 @@ export class RegisterCheckoutSessionDtoIn {
   public readonly officeId: string;
   public readonly clientId: string;
   public readonly paymentCustomerId: string | null;
-  public readonly gatewayId: string;
+  public readonly gatewayId: string | null;
   public readonly apiCredentialId: string | null;
 
   public readonly code: string | null;
@@ -46,7 +46,7 @@ export class RegisterCheckoutSessionDtoIn {
     officeId?: string;
     clientId?: string;
     paymentCustomerId?: string | null;
-    gatewayId?: string;
+    gatewayId?: string | null;
     apiCredentialId?: string | null;
 
     code?: string | null;
@@ -74,7 +74,7 @@ export class RegisterCheckoutSessionDtoIn {
     this.officeId = params.officeId ?? '';
     this.clientId = params.clientId ?? '';
     this.paymentCustomerId = params.paymentCustomerId ?? null;
-    this.gatewayId = params.gatewayId ?? '';
+    this.gatewayId = params.gatewayId ?? null;
     this.apiCredentialId = params.apiCredentialId ?? null;
 
     this.code = params.code ?? null;
@@ -107,10 +107,6 @@ export class RegisterCheckoutSessionDtoIn {
 
     if (this.clientId.trim() === '') {
       throw new Error('clientId is required');
-    }
-
-    if (this.gatewayId.trim() === '') {
-      throw new Error('gatewayId is required');
     }
 
     if (this.paymentType.trim() === '') {

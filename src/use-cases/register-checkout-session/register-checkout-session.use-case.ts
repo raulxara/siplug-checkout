@@ -108,17 +108,33 @@ export class RegisterCheckoutSessionUseCase {
         }
       }
 
-      const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(
-        new FindGatewayByUniqueIdDtoIn(dtoIn.gatewayId),
-      );
+      let resolvedGateway:
+        | {
+            _id: string;
+            slug: string;
+            provider: string;
+            config: Record<string, unknown> | null;
+            status: string;
+          }
+        | null = null;
 
-      const gateway = gatewayDtoOut.gateway;
+      if (dtoIn.gatewayId !== null) {
+        const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(
+          new FindGatewayByUniqueIdDtoIn(dtoIn.gatewayId),
+        );
 
-      if (gateway.status !== 'active') {
-        throw new Error('gateway is not active');
+        resolvedGateway = gatewayDtoOut.gateway;
+
+        if (resolvedGateway.status !== 'active') {
+          throw new Error('gateway is not active');
+        }
       }
 
       if (dtoIn.apiCredentialId !== null) {
+        if (dtoIn.gatewayId === null) {
+          throw new Error('gatewayId is required when apiCredentialId is provided');
+        }
+
         const apiCredentialDtoOut =
           await this.findApiCredentialByUniqueIdService.exec(
             new FindApiCredentialByUniqueIdDtoIn(dtoIn.apiCredentialId),
@@ -138,10 +154,12 @@ export class RegisterCheckoutSessionUseCase {
         }
       }
 
-      this.validateGatewayCapabilities({
-        paymentType: dtoIn.paymentType,
-        gatewayConfig: gateway.config,
-      });
+      if (resolvedGateway !== null) {
+        this.validateGatewayCapabilities({
+          paymentType: dtoIn.paymentType,
+          gatewayConfig: resolvedGateway.config,
+        });
+      }
 
       const checkoutSessionDtoOut =
         await this.createCheckoutSessionService.exec(
@@ -167,8 +185,12 @@ export class RegisterCheckoutSessionUseCase {
 
             metadata: {
               ...(dtoIn.metadata ?? {}),
-              gatewaySlug: gateway.slug,
-              gatewayProvider: gateway.provider,
+              ...(resolvedGateway !== null
+                ? {
+                    gatewaySlug: resolvedGateway.slug,
+                    gatewayProvider: resolvedGateway.provider,
+                  }
+                : {}),
               source: 'RegisterCheckoutSessionUseCase',
             },
             config: dtoIn.config,

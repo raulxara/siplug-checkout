@@ -40,6 +40,8 @@ import { GetCheckoutSessionByUniqueIdModule } from './use-cases/get-checkout-ses
 import { PaymentTransactionsModule } from './modules/payment-transactions/payment-transactions.module';
 import { ProcessPaymentModule } from './use-cases/process-payment/process-payment.module';
 import { GatewayOrchestrationModule } from './modules/gateway-orchestration/gateway-orchestration.module';
+import { DispatchPaymentTransactionToGatewayModule } from './use-cases/dispatch-payment-transaction-to-gateway/dispatch-payment-transaction-to-gateway.module';
+import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook/receive-gateway-webhook.module';
 
 @Module({
   imports: [
@@ -86,6 +88,8 @@ import { GatewayOrchestrationModule } from './modules/gateway-orchestration/gate
     PaymentTransactionsModule,
     ProcessPaymentModule,
     GatewayOrchestrationModule,
+    DispatchPaymentTransactionToGatewayModule,
+    ReceiveGatewayWebhookModule,
   ],
 })
 export class AppModule {}

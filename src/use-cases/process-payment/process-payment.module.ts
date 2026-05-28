@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { UseCaseSupportModule } from '../../common/services/use-case-support/use-case-support.module';
-import { ApiCredentialsModule } from '../../modules/api-credentials/api-credentials.module';
 import { CheckoutSessionsModule } from '../../modules/checkout-sessions/checkout-sessions.module';
 import { ClientsModule } from '../../modules/clients/clients.module';
-import { GatewaysModule } from '../../modules/gateways/gateways.module';
+import { GatewayOrchestrationModule } from '../../modules/gateway-orchestration/gateway-orchestration.module';
 import { OfficesModule } from '../../modules/offices/offices.module';
 import { PaymentCustomersModule } from '../../modules/payment-customers/payment-customers.module';
 import { PaymentTransactionsModule } from '../../modules/payment-transactions/payment-transactions.module';
@@ -16,10 +15,9 @@ import { ProcessPaymentUseCase } from './process-payment.use-case';
     OfficesModule,
     ClientsModule,
     PaymentCustomersModule,
-    GatewaysModule,
-    ApiCredentialsModule,
     CheckoutSessionsModule,
     PaymentTransactionsModule,
+    GatewayOrchestrationModule,
     SecurityModule,
     UseCaseSupportModule,
   ],

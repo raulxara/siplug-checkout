@@ -89,12 +89,18 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
                     throw new Error('payment customer does not belong to client');
                 }
             }
-            const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(new find_gateway_by_unique_id_dto_in_1.FindGatewayByUniqueIdDtoIn(dtoIn.gatewayId));
-            const gateway = gatewayDtoOut.gateway;
-            if (gateway.status !== 'active') {
-                throw new Error('gateway is not active');
+            let resolvedGateway = null;
+            if (dtoIn.gatewayId !== null) {
+                const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(new find_gateway_by_unique_id_dto_in_1.FindGatewayByUniqueIdDtoIn(dtoIn.gatewayId));
+                resolvedGateway = gatewayDtoOut.gateway;
+                if (resolvedGateway.status !== 'active') {
+                    throw new Error('gateway is not active');
+                }
             }
             if (dtoIn.apiCredentialId !== null) {
+                if (dtoIn.gatewayId === null) {
+                    throw new Error('gatewayId is required when apiCredentialId is provided');
+                }
                 const apiCredentialDtoOut = await this.findApiCredentialByUniqueIdService.exec(new find_api_credential_by_unique_id_dto_in_1.FindApiCredentialByUniqueIdDtoIn(dtoIn.apiCredentialId));
                 const apiCredential = apiCredentialDtoOut.apiCredential;
                 if (apiCredential.status !== 'active') {
@@ -105,10 +111,12 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
                     throw new Error('api credential does not belong to gateway');
                 }
             }
-            this.validateGatewayCapabilities({
-                paymentType: dtoIn.paymentType,
-                gatewayConfig: gateway.config,
-            });
+            if (resolvedGateway !== null) {
+                this.validateGatewayCapabilities({
+                    paymentType: dtoIn.paymentType,
+                    gatewayConfig: resolvedGateway.config,
+                });
+            }
             const checkoutSessionDtoOut = await this.createCheckoutSessionService.exec(new create_checkout_session_dto_in_1.CreateCheckoutSessionDtoIn({
                 officeId: dtoIn.officeId,
                 clientId: dtoIn.clientId,
@@ -127,8 +135,12 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
                 expiresAt: dtoIn.expiresAt,
                 metadata: {
                     ...(dtoIn.metadata ?? {}),
-                    gatewaySlug: gateway.slug,
-                    gatewayProvider: gateway.provider,
+                    ...(resolvedGateway !== null
+                        ? {
+                            gatewaySlug: resolvedGateway.slug,
+                            gatewayProvider: resolvedGateway.provider,
+                        }
+                        : {}),
                     source: 'RegisterCheckoutSessionUseCase',
                 },
                 config: dtoIn.config,

@@ -100,10 +100,13 @@ let UpdateCheckoutSessionUseCase = class UpdateCheckoutSessionUseCase {
                     throw new Error('payment customer does not belong to client');
                 }
             }
-            const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(new find_gateway_by_unique_id_dto_in_1.FindGatewayByUniqueIdDtoIn(effectiveGatewayId));
-            const gateway = gatewayDtoOut.gateway;
-            if (gateway.status !== 'active') {
-                throw new Error('gateway is not active');
+            let gateway = null;
+            if (effectiveGatewayId !== null) {
+                const gatewayDtoOut = await this.findGatewayByUniqueIdService.exec(new find_gateway_by_unique_id_dto_in_1.FindGatewayByUniqueIdDtoIn(effectiveGatewayId));
+                gateway = gatewayDtoOut.gateway;
+                if (gateway.status !== 'active') {
+                    throw new Error('gateway is not active');
+                }
             }
             if (effectiveApiCredentialId !== null) {
                 const apiCredentialDtoOut = await this.findApiCredentialByUniqueIdService.exec(new find_api_credential_by_unique_id_dto_in_1.FindApiCredentialByUniqueIdDtoIn(effectiveApiCredentialId));
@@ -116,10 +119,12 @@ let UpdateCheckoutSessionUseCase = class UpdateCheckoutSessionUseCase {
                     throw new Error('api credential does not belong to gateway');
                 }
             }
-            this.validateGatewayCapabilities({
-                paymentType: effectivePaymentType,
-                gatewayConfig: gateway.config,
-            });
+            if (gateway !== null) {
+                this.validateGatewayCapabilities({
+                    paymentType: effectivePaymentType,
+                    gatewayConfig: gateway.config,
+                });
+            }
             const currentItemsDtoOut = await this.getAllCheckoutSessionItemsByCheckoutSessionIdService.exec(new get_all_checkout_session_items_by_checkout_session_id_dto_in_1.GetAllCheckoutSessionItemsByCheckoutSessionIdDtoIn(currentSession._id));
             this.validateFinalItemsTotal({
                 effectiveAmount,

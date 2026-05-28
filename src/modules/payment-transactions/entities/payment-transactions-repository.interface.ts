@@ -69,6 +69,10 @@ export interface IPaymentTransactionsRepository {
 
   findByUniqueId(_id: string): Promise<PaymentTransactionRow | null>;
 
+  findByGatewayTransactionId(
+    gatewayTransactionId: string,
+  ): Promise<PaymentTransactionRow | null>;
+
   getAll(): Promise<PaymentTransactionRow[]>;
 
   getAllByOfficeId(officeId: string): Promise<PaymentTransactionRow[]>;

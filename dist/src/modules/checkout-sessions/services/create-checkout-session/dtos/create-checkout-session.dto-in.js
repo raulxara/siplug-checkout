@@ -24,7 +24,7 @@ class CreateCheckoutSessionDtoIn {
         this.officeId = params.officeId;
         this.clientId = params.clientId;
         this.paymentCustomerId = params.paymentCustomerId ?? null;
-        this.gatewayId = params.gatewayId;
+        this.gatewayId = params.gatewayId ?? null;
         this.apiCredentialId = params.apiCredentialId ?? null;
         this.code = params.code ?? null;
         this.externalReference = params.externalReference ?? null;
@@ -44,9 +44,6 @@ class CreateCheckoutSessionDtoIn {
         }
         if (this.clientId.trim() === '') {
             throw new Error('clientId is required');
-        }
-        if (this.gatewayId.trim() === '') {
-            throw new Error('gatewayId is required');
         }
         if (this.paymentType.trim() === '') {
             throw new Error('paymentType is required');
