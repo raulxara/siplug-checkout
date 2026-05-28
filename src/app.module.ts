@@ -42,6 +42,7 @@ import { ProcessPaymentModule } from './use-cases/process-payment/process-paymen
 import { GatewayOrchestrationModule } from './modules/gateway-orchestration/gateway-orchestration.module';
 import { DispatchPaymentTransactionToGatewayModule } from './use-cases/dispatch-payment-transaction-to-gateway/dispatch-payment-transaction-to-gateway.module';
 import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook/receive-gateway-webhook.module';
+import { CreateGatewayCardTokenModule } from './use-cases/create-gateway-card-token/create-gateway-card-token.module';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook
     GatewayOrchestrationModule,
     DispatchPaymentTransactionToGatewayModule,
     ReceiveGatewayWebhookModule,
+    CreateGatewayCardTokenModule,
   ],
 })
 export class AppModule {}

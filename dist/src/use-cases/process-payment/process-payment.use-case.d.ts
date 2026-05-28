@@ -30,6 +30,9 @@ export declare class ProcessPaymentUseCase {
     private validatePaymentType;
     private validatePaymentMethod;
     private validateInstallments;
+    private sanitizeSensitiveGatewayData;
+    private sanitizeUnknownGatewayValue;
+    private isSensitiveGatewayKey;
     private assertNoForbiddenSensitivePaymentData;
     private assertNoForbiddenKeys;
     private resolveCheckoutSessionStatus;

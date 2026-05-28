@@ -181,6 +181,24 @@ export class ProcessPaymentUseCase {
       const resolvedApiCredential =
         resolvedGatewayCredentialDtoOut.apiCredential;
 
+      const rawProviderPayload: Record<string, unknown> = {
+        checkoutSession: {
+          _id: checkoutSession._id,
+          code: checkoutSession.code,
+          externalReference: checkoutSession.externalReference,
+          paymentType: checkoutSession.paymentType,
+          amount: checkoutSession.amount,
+          currency: checkoutSession.currency,
+          description: checkoutSession.description,
+        },
+        payer: dtoIn.payer,
+        paymentData: dtoIn.paymentData,
+        items: activeItems,
+      };
+
+      const sanitizedProviderPayload =
+        this.sanitizeSensitiveGatewayData(rawProviderPayload);
+
       const transactionDtoOut =
         await this.createPaymentTransactionService.exec(
           new CreatePaymentTransactionDtoIn({
@@ -215,20 +233,7 @@ export class ProcessPaymentUseCase {
             processMessage:
               'payment transaction created and dispatching to gateway',
 
-            providerPayload: {
-              checkoutSession: {
-                _id: checkoutSession._id,
-                code: checkoutSession.code,
-                externalReference: checkoutSession.externalReference,
-                paymentType: checkoutSession.paymentType,
-                amount: checkoutSession.amount,
-                currency: checkoutSession.currency,
-                description: checkoutSession.description,
-              },
-              payer: dtoIn.payer,
-              paymentData: dtoIn.paymentData,
-              items: activeItems,
-            },
+            providerPayload: sanitizedProviderPayload,
 
             providerResponse: null,
             gatewayResponse: null,
@@ -281,7 +286,7 @@ export class ProcessPaymentUseCase {
               config: resolvedApiCredential.config,
               connectionData: resolvedGatewayCredentialDtoOut.connectionData,
             },
-            providerPayload: createdPaymentTransaction.providerPayload,
+            providerPayload: rawProviderPayload,
             idempotencyKey: createdPaymentTransaction.idempotencyKey,
             config: {
               gatewayConfig: resolvedGateway.config,
@@ -303,9 +308,15 @@ export class ProcessPaymentUseCase {
             processStatus: gatewayPaymentDtoOut.processStatus,
             processMessage: gatewayPaymentDtoOut.processMessage,
 
-            providerPayload: gatewayPaymentDtoOut.providerRequest,
-            providerResponse: gatewayPaymentDtoOut.providerResponse,
-            gatewayResponse: gatewayPaymentDtoOut.gatewayResponse,
+            providerPayload: this.sanitizeSensitiveGatewayData(
+              gatewayPaymentDtoOut.providerRequest,
+            ),
+            providerResponse: this.sanitizeSensitiveGatewayData(
+              gatewayPaymentDtoOut.providerResponse,
+            ),
+            gatewayResponse: this.sanitizeSensitiveGatewayData(
+              gatewayPaymentDtoOut.gatewayResponse,
+            ),
 
             qrCode: gatewayPaymentDtoOut.qrCode,
             qrCodeBase64: gatewayPaymentDtoOut.qrCodeBase64,
@@ -438,6 +449,70 @@ export class ProcessPaymentUseCase {
         'installments greater than 1 is allowed only for installment payment',
       );
     }
+  }
+
+  private sanitizeSensitiveGatewayData(
+    data: Record<string, unknown> | null,
+  ): Record<string, unknown> | null {
+    if (data === null) {
+      return null;
+    }
+
+    const sanitized = this.sanitizeUnknownGatewayValue(data);
+
+    if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+      return null;
+    }
+
+    return sanitized as Record<string, unknown>;
+  }
+
+  private sanitizeUnknownGatewayValue(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.sanitizeUnknownGatewayValue(item));
+    }
+
+    if (value && typeof value === 'object') {
+      const sanitizedObject: Record<string, unknown> = {};
+
+      for (const [key, itemValue] of Object.entries(
+        value as Record<string, unknown>,
+      )) {
+        if (this.isSensitiveGatewayKey(key)) {
+          sanitizedObject[key] = '[REDACTED]';
+          continue;
+        }
+
+        sanitizedObject[key] = this.sanitizeUnknownGatewayValue(itemValue);
+      }
+
+      return sanitizedObject;
+    }
+
+    return value;
+  }
+
+  private isSensitiveGatewayKey(key: string): boolean {
+    const normalizedKey = key
+      .toLowerCase()
+      .trim()
+      .replace(/[\s_\-]/g, '');
+
+    const sensitiveKeys = [
+      'token',
+      'cardtoken',
+      'cardnumber',
+      'card',
+      'cvv',
+      'securitycode',
+      'pan',
+      'rawcard',
+      'accesstoken',
+      'providertoken',
+      'authorization',
+    ];
+
+    return sensitiveKeys.includes(normalizedKey);
   }
 
   private assertNoForbiddenSensitivePaymentData(params: {

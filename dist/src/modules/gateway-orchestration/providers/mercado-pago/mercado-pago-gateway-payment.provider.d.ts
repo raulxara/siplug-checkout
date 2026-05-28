@@ -6,6 +6,7 @@ export declare class MercadoPagoGatewayPaymentProvider implements IGatewayPaymen
     supports(gatewayProvider: string): boolean;
     processPayment(dtoIn: GatewayPaymentDtoIn): Promise<GatewayPaymentDtoOut>;
     private buildPixPaymentRequestPayload;
+    private buildCreditCardPaymentRequestPayload;
     private buildPayer;
     private buildAddress;
     private mapSuccessfulPixPaymentResponse;

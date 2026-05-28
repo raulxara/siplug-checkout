@@ -21,15 +21,24 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
     }
     async processPayment(dtoIn) {
         try {
-            if (dtoIn.paymentTransaction.paymentMethod !== 'pix') {
+            const accessToken = this.resolveAccessToken(dtoIn);
+            const idempotencyKey = this.resolveIdempotencyKey(dtoIn);
+            let requestPayload;
+            if (dtoIn.paymentTransaction.paymentMethod === 'pix') {
+                requestPayload = this.buildPixPaymentRequestPayload(dtoIn);
+            }
+            else if (dtoIn.paymentTransaction.paymentMethod === 'credit_card') {
+                requestPayload = this.buildCreditCardPaymentRequestPayload(dtoIn);
+            }
+            else {
                 return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                     success: false,
                     provider: this.getProviderName(),
                     gatewayTransactionId: null,
                     gatewayStatus: null,
-                    status: dtoIn.paymentTransaction.status,
+                    status: 'failed',
                     processStatus: 'gateway_payment_method_not_implemented',
-                    processMessage: 'Mercado Pago provider currently supports only pix in this implementation',
+                    processMessage: `Mercado Pago provider does not support payment method ${dtoIn.paymentTransaction.paymentMethod}`,
                     providerRequest: {
                         paymentTransactionId: dtoIn.paymentTransaction._id,
                         paymentMethod: dtoIn.paymentTransaction.paymentMethod,
@@ -38,12 +47,10 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
                         message: 'payment method not implemented for Mercado Pago adapter',
                     },
                     gatewayResponse: null,
+                    failedAt: this.nowAsSqlDateTime(),
                     expiresAt: dtoIn.paymentTransaction.expiresAt,
                 });
             }
-            const accessToken = this.resolveAccessToken(dtoIn);
-            const idempotencyKey = this.resolveIdempotencyKey(dtoIn);
-            const requestPayload = this.buildPixPaymentRequestPayload(dtoIn);
             const response = await fetch('https://api.mercadopago.com/v1/payments', {
                 method: 'POST',
                 headers: {
@@ -62,8 +69,7 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
                     success: false,
                     provider: this.getProviderName(),
                     gatewayTransactionId: this.toNullableString(responseBody.id),
-                    gatewayStatus: this.toNullableString(responseBody.status) ??
-                        String(response.status),
+                    gatewayStatus: this.toNullableString(responseBody.status) ?? String(response.status),
                     status: 'failed',
                     processStatus: 'gateway_dispatch_failed',
                     processMessage: this.extractMercadoPagoErrorMessage(responseBody) ??
@@ -89,7 +95,7 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
         catch (error) {
             const message = error instanceof Error
                 ? error.message
-                : 'error on Mercado Pago PIX payment provider';
+                : 'error on Mercado Pago payment provider';
             return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                 success: false,
                 provider: this.getProviderName(),
@@ -140,6 +146,48 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
         const dateOfExpiration = this.resolveDateOfExpiration(dtoIn);
         if (dateOfExpiration !== null) {
             payload.date_of_expiration = dateOfExpiration;
+        }
+        return payload;
+    }
+    buildCreditCardPaymentRequestPayload(dtoIn) {
+        const providerPayload = dtoIn.providerPayload ?? {};
+        const checkoutSession = this.asObject(providerPayload.checkoutSession);
+        const payerPayload = this.asObject(providerPayload.payer);
+        const paymentData = this.asObject(providerPayload.paymentData);
+        const cardToken = this.toNullableString(paymentData.cardToken);
+        const paymentMethodId = this.toNullableString(paymentData.paymentMethodId);
+        const issuerId = this.toNullableString(paymentData.issuerId);
+        if (cardToken === null) {
+            throw new Error('paymentData.cardToken is required for Mercado Pago credit card');
+        }
+        if (paymentMethodId === null) {
+            throw new Error('paymentData.paymentMethodId is required for Mercado Pago credit card');
+        }
+        const payer = this.buildPayer(payerPayload);
+        const description = this.toNullableString(checkoutSession.description) ??
+            `Pagamento ${dtoIn.paymentTransaction._id}`;
+        const payload = {
+            token: cardToken,
+            transaction_amount: this.convertCentsToAmount(dtoIn.paymentTransaction.amount),
+            installments: dtoIn.paymentTransaction.installments ?? 1,
+            payment_method_id: paymentMethodId,
+            description,
+            payer,
+            external_reference: dtoIn.paymentTransaction.externalReference ??
+                dtoIn.paymentTransaction._id,
+            metadata: {
+                paymentTransactionId: dtoIn.paymentTransaction._id,
+                checkoutSessionId: dtoIn.paymentTransaction.checkoutSessionId,
+                officeId: dtoIn.paymentTransaction.officeId,
+                clientId: dtoIn.paymentTransaction.clientId,
+            },
+        };
+        if (issuerId !== null) {
+            payload.issuer_id = issuerId;
+        }
+        const notificationUrl = this.resolveNotificationUrl(dtoIn);
+        if (notificationUrl !== null) {
+            payload.notification_url = notificationUrl;
         }
         return payload;
     }
@@ -233,7 +281,7 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
             gatewayStatus,
             status: internalStatus,
             processStatus,
-            processMessage: `Mercado Pago PIX payment returned status ${gatewayStatus}${gatewayStatusDetail !== null ? `/${gatewayStatusDetail}` : ''}`,
+            processMessage: `Mercado Pago payment returned status ${gatewayStatus}${gatewayStatusDetail !== null ? `/${gatewayStatusDetail}` : ''}`,
             providerRequest: params.requestPayload,
             providerResponse: params.responseBody,
             gatewayResponse: {

@@ -51,6 +51,7 @@ const process_payment_module_1 = require("./use-cases/process-payment/process-pa
 const gateway_orchestration_module_1 = require("./modules/gateway-orchestration/gateway-orchestration.module");
 const dispatch_payment_transaction_to_gateway_module_1 = require("./use-cases/dispatch-payment-transaction-to-gateway/dispatch-payment-transaction-to-gateway.module");
 const receive_gateway_webhook_module_1 = require("./use-cases/receive-gateway-webhook/receive-gateway-webhook.module");
+const create_gateway_card_token_module_1 = require("./use-cases/create-gateway-card-token/create-gateway-card-token.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -102,6 +103,7 @@ exports.AppModule = AppModule = __decorate([
             gateway_orchestration_module_1.GatewayOrchestrationModule,
             dispatch_payment_transaction_to_gateway_module_1.DispatchPaymentTransactionToGatewayModule,
             receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
+            create_gateway_card_token_module_1.CreateGatewayCardTokenModule,
         ],
     })
 ], AppModule);
