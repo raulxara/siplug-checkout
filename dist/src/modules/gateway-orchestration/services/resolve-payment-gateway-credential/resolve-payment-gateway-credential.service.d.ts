@@ -12,6 +12,8 @@ export declare class ResolvePaymentGatewayCredentialService {
     private credentialSupportsPaymentContext;
     private gatewaySupportsPaymentContext;
     private decryptProviderToken;
+    private providerRequiresToken;
+    private normalizeProvider;
     private resolvePriority;
     private resolveIsDefault;
     private asStringArray;

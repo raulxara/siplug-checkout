@@ -284,6 +284,7 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
             'debit_card',
             'pix',
             'boleto',
+            'payment_link',
         ];
         if (!allowedPaymentMethods.includes(paymentMethod)) {
             throw new Error(`paymentMethod must be one of: ${allowedPaymentMethods.join(', ')}`);

@@ -397,6 +397,7 @@ export class ProcessPaymentUseCase {
       'debit_card',
       'pix',
       'boleto',
+      'payment_link',
     ];
 
     if (!allowedPaymentMethods.includes(paymentMethod)) {

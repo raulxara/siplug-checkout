@@ -102,13 +102,23 @@ export class ResolvePaymentGatewayCredentialService {
         return a.priority - b.priority;
       })[0];
 
-      if (!selected.apiCredential.token || selected.apiCredential.token.trim() === '') {
+      const providerRequiresToken = this.providerRequiresToken({
+        gatewayProvider: selected.gateway.provider,
+        gatewaySlug: selected.gateway.slug,
+      });
+
+      let decryptedProviderToken: string | null = null;
+
+      if (
+        selected.apiCredential.token !== null &&
+        selected.apiCredential.token.trim() !== ''
+      ) {
+        decryptedProviderToken = this.decryptProviderToken(
+          selected.apiCredential.token,
+        );
+      } else if (providerRequiresToken) {
         throw new Error('api credential token is required');
       }
-
-      const decryptedProviderToken = this.decryptProviderToken(
-        selected.apiCredential.token,
-      );
 
       const connectionData = {
         token: decryptedProviderToken,
@@ -231,6 +241,42 @@ export class ResolvePaymentGatewayCredentialService {
     }
 
     return token;
+  }
+
+  private providerRequiresToken(params: {
+    gatewayProvider: string;
+    gatewaySlug: string;
+  }): boolean {
+    const provider = this.normalizeProvider(params.gatewayProvider);
+    const slug = this.normalizeProvider(params.gatewaySlug);
+
+    const providersWithoutToken = [
+      'infinitepay',
+      'infinite_pay',
+      'infinitypay',
+      'infinity_pay',
+      'infinity_pay_checkout',
+    ];
+
+    if (
+      providersWithoutToken.includes(provider) ||
+      providersWithoutToken.includes(slug)
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private normalizeProvider(value: string): string {
+    return value
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\./g, '')
+      .replace(/-/g, '_')
+      .replace(/\s+/g, '_');
   }
 
   private resolvePriority(config: Record<string, unknown> | null): number {

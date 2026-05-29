@@ -3,7 +3,7 @@ import type { GatewayRow } from '../../../../gateways/entities/gateways-reposito
 export declare class ResolvePaymentGatewayCredentialDtoOut {
     readonly gateway: GatewayRow;
     readonly apiCredential: ApiCredentialRow;
-    readonly decryptedProviderToken: string;
+    readonly decryptedProviderToken: string | null;
     readonly connectionData: Record<string, unknown>;
-    constructor(gateway: GatewayRow, apiCredential: ApiCredentialRow, decryptedProviderToken: string, connectionData: Record<string, unknown>);
+    constructor(gateway: GatewayRow, apiCredential: ApiCredentialRow, decryptedProviderToken: string | null, connectionData: Record<string, unknown>);
 }

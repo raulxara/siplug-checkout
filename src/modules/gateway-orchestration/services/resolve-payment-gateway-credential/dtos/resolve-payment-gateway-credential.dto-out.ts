@@ -5,7 +5,7 @@ export class ResolvePaymentGatewayCredentialDtoOut {
   constructor(
     public readonly gateway: GatewayRow,
     public readonly apiCredential: ApiCredentialRow,
-    public readonly decryptedProviderToken: string,
+    public readonly decryptedProviderToken: string | null,
     public readonly connectionData: Record<string, unknown>,
   ) {}
 }
