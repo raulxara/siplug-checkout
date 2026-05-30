@@ -57,6 +57,22 @@ let ResolvePaymentGatewayCredentialService = class ResolvePaymentGatewayCredenti
                 if (!this.gatewaySupportsPaymentContext(gateway, dtoIn)) {
                     continue;
                 }
+                if (dtoIn.apiCredentialId !== null &&
+                    apiCredential._id !== dtoIn.apiCredentialId) {
+                    continue;
+                }
+                if (dtoIn.gatewayId !== null && gateway._id !== dtoIn.gatewayId) {
+                    continue;
+                }
+                if (dtoIn.gatewayProvider !== null &&
+                    this.normalizeProvider(gateway.provider) !==
+                        this.normalizeProvider(dtoIn.gatewayProvider)) {
+                    continue;
+                }
+                if (dtoIn.gatewaySlug !== null &&
+                    this.normalizeProvider(gateway.slug) !== this.normalizeProvider(dtoIn.gatewaySlug)) {
+                    continue;
+                }
                 candidates.push({
                     apiCredential,
                     gateway,

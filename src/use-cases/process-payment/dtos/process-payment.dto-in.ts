@@ -18,6 +18,11 @@ export class ProcessPaymentDtoIn {
   public readonly metadata: Record<string, unknown> | null;
   public readonly config: Record<string, unknown> | null;
 
+  public readonly gatewayProvider: string | null;
+  public readonly gatewaySlug: string | null;
+  public readonly gatewayId: string | null;
+  public readonly apiCredentialId: string | null;
+
   constructor(params: {
     token?: string;
 
@@ -37,6 +42,11 @@ export class ProcessPaymentDtoIn {
 
     metadata?: Record<string, unknown> | null;
     config?: Record<string, unknown> | null;
+
+    gatewayProvider?: unknown;
+    gatewaySlug?: unknown;
+    gatewayId?: unknown;
+    apiCredentialId?: unknown;
   }) {
     this.token = params.token ?? '';
 
@@ -56,6 +66,26 @@ export class ProcessPaymentDtoIn {
 
     this.metadata = params.metadata ?? null;
     this.config = params.config ?? null;
+
+    this.gatewayProvider =
+      params.gatewayProvider !== undefined && params.gatewayProvider !== null
+        ? String(params.gatewayProvider).trim()
+        : null;
+
+    this.gatewaySlug =
+      params.gatewaySlug !== undefined && params.gatewaySlug !== null
+        ? String(params.gatewaySlug).trim()
+        : null;
+
+    this.gatewayId =
+      params.gatewayId !== undefined && params.gatewayId !== null
+        ? String(params.gatewayId).trim()
+        : null;
+
+    this.apiCredentialId =
+      params.apiCredentialId !== undefined && params.apiCredentialId !== null
+        ? String(params.apiCredentialId).trim()
+        : null;
 
     if (this.token.trim() === '') {
       throw new Error('token is required');

@@ -23,6 +23,10 @@ class ProcessPaymentRequest {
     externalReference;
     payer;
     paymentData;
+    gatewayProvider;
+    gatewaySlug;
+    gatewayId;
+    apiCredentialId;
     metadata;
     config;
 }
@@ -83,6 +87,26 @@ __decorate([
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], ProcessPaymentRequest.prototype, "paymentData", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", Object)
+], ProcessPaymentRequest.prototype, "gatewayProvider", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", Object)
+], ProcessPaymentRequest.prototype, "gatewaySlug", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", Object)
+], ProcessPaymentRequest.prototype, "gatewayId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", Object)
+], ProcessPaymentRequest.prototype, "apiCredentialId", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsObject)(),

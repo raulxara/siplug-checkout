@@ -10,6 +10,10 @@ export declare class ProcessPaymentRequest {
     externalReference?: string | null;
     payer?: Record<string, unknown> | null;
     paymentData?: Record<string, unknown> | null;
+    gatewayProvider?: Record<string, unknown> | null;
+    gatewaySlug?: Record<string, unknown> | null;
+    gatewayId?: Record<string, unknown> | null;
+    apiCredentialId?: Record<string, unknown> | null;
     metadata?: Record<string, unknown> | null;
     config?: Record<string, unknown> | null;
 }

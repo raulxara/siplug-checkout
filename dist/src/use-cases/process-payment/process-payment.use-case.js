@@ -129,6 +129,10 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
                 clientId: checkoutSession.clientId,
                 paymentType: checkoutSession.paymentType,
                 paymentMethod: dtoIn.paymentMethod,
+                gatewayProvider: dtoIn.gatewayProvider,
+                gatewaySlug: dtoIn.gatewaySlug,
+                gatewayId: dtoIn.gatewayId,
+                apiCredentialId: dtoIn.apiCredentialId,
             }));
             const resolvedGateway = resolvedGatewayCredentialDtoOut.gateway;
             const resolvedApiCredential = resolvedGatewayCredentialDtoOut.apiCredential;
@@ -347,6 +351,8 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         const sensitiveKeys = [
             'token',
             'cardtoken',
+            'encryptedcard',
+            'encrypted_card',
             'cardnumber',
             'card',
             'cvv',

@@ -47,6 +47,22 @@ export class ProcessPaymentRequest {
   paymentData?: Record<string, unknown> | null;
 
   @IsOptional()
+  @IsString()
+  gatewayProvider?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsString()
+  gatewaySlug?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsString()
+  gatewayId?: Record<string, unknown> | null;
+
+  @IsOptional()
+  @IsString()
+  apiCredentialId?: Record<string, unknown> | null;
+
+  @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown> | null;
 

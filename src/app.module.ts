@@ -43,6 +43,7 @@ import { GatewayOrchestrationModule } from './modules/gateway-orchestration/gate
 import { DispatchPaymentTransactionToGatewayModule } from './use-cases/dispatch-payment-transaction-to-gateway/dispatch-payment-transaction-to-gateway.module';
 import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook/receive-gateway-webhook.module';
 import { CreateGatewayCardTokenModule } from './use-cases/create-gateway-card-token/create-gateway-card-token.module';
+import { DevPagSeguroEncryptedCardPageModule } from './use-cases/dev-pagseguro-encrypted-card-page/dev-pagseguro-encrypted-card-page.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { CreateGatewayCardTokenModule } from './use-cases/create-gateway-card-to
     DispatchPaymentTransactionToGatewayModule,
     ReceiveGatewayWebhookModule,
     CreateGatewayCardTokenModule,
+    DevPagSeguroEncryptedCardPageModule,
   ],
 })
 export class AppModule {}

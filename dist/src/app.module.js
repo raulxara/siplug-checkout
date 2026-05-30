@@ -52,6 +52,7 @@ const gateway_orchestration_module_1 = require("./modules/gateway-orchestration/
 const dispatch_payment_transaction_to_gateway_module_1 = require("./use-cases/dispatch-payment-transaction-to-gateway/dispatch-payment-transaction-to-gateway.module");
 const receive_gateway_webhook_module_1 = require("./use-cases/receive-gateway-webhook/receive-gateway-webhook.module");
 const create_gateway_card_token_module_1 = require("./use-cases/create-gateway-card-token/create-gateway-card-token.module");
+const dev_pagseguro_encrypted_card_page_module_1 = require("./use-cases/dev-pagseguro-encrypted-card-page/dev-pagseguro-encrypted-card-page.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -104,6 +105,7 @@ exports.AppModule = AppModule = __decorate([
             dispatch_payment_transaction_to_gateway_module_1.DispatchPaymentTransactionToGatewayModule,
             receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
             create_gateway_card_token_module_1.CreateGatewayCardTokenModule,
+            dev_pagseguro_encrypted_card_page_module_1.DevPagSeguroEncryptedCardPageModule,
         ],
     })
 ], AppModule);

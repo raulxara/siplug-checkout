@@ -11,47 +11,29 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProcessPaymentController = void 0;
+exports.DevPagSeguroEncryptedCardPageController = void 0;
 const common_1 = require("@nestjs/common");
-const process_payment_dto_in_1 = require("./dtos/process-payment.dto-in");
-const process_payment_request_1 = require("./http/process-payment.request");
-const process_payment_use_case_1 = require("./process-payment.use-case");
-let ProcessPaymentController = class ProcessPaymentController {
-    processPaymentUseCase;
-    constructor(processPaymentUseCase) {
-        this.processPaymentUseCase = processPaymentUseCase;
+const dev_pagseguro_encrypted_card_page_dto_in_1 = require("./dtos/dev-pagseguro-encrypted-card-page.dto-in");
+const dev_pagseguro_encrypted_card_page_use_case_1 = require("./dev-pagseguro-encrypted-card-page.use-case");
+let DevPagSeguroEncryptedCardPageController = class DevPagSeguroEncryptedCardPageController {
+    devPagSeguroEncryptedCardPageUseCase;
+    constructor(devPagSeguroEncryptedCardPageUseCase) {
+        this.devPagSeguroEncryptedCardPageUseCase = devPagSeguroEncryptedCardPageUseCase;
     }
-    async handle(body, authorization) {
+    async page(apiCredentialId, response) {
         try {
-            const token = body.token ??
-                authorization?.replace(/^Bearer\s+/i, '').trim() ??
-                '';
-            const dtoOut = await this.processPaymentUseCase.exec(new process_payment_dto_in_1.ProcessPaymentDtoIn({
-                token,
-                checkoutSessionId: body.checkoutSessionId,
-                paymentMethod: body.paymentMethod,
-                installments: body.installments ?? null,
-                installmentAmount: body.installmentAmount ?? null,
-                interestAmount: body.interestAmount ?? null,
-                interestType: body.interestType ?? null,
-                idempotencyKey: body.idempotencyKey ?? null,
-                externalReference: body.externalReference ?? null,
-                payer: body.payer ?? null,
-                paymentData: body.paymentData ?? null,
-                metadata: body.metadata ?? null,
-                config: body.config ?? null,
+            const dtoOut = await this.devPagSeguroEncryptedCardPageUseCase.exec(new dev_pagseguro_encrypted_card_page_dto_in_1.DevPagSeguroEncryptedCardPageDtoIn({
+                apiCredentialId,
             }));
-            return {
-                status: 'success',
-                message: 'payment processed successfully',
-                data: dtoOut,
-            };
+            response.setHeader('Content-Type', 'text/html; charset=utf-8');
+            response.send(dtoOut.html);
         }
         catch (error) {
             const message = error instanceof Error
                 ? error.message
-                : 'error on process payment controller';
+                : 'error on dev PagSeguro encrypted card page controller';
             throw new common_1.BadRequestException({
                 status: 'error',
                 message,
@@ -59,17 +41,17 @@ let ProcessPaymentController = class ProcessPaymentController {
         }
     }
 };
-exports.ProcessPaymentController = ProcessPaymentController;
+exports.DevPagSeguroEncryptedCardPageController = DevPagSeguroEncryptedCardPageController;
 __decorate([
-    (0, common_1.Post)('process'),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Headers)('authorization')),
+    (0, common_1.Get)('encrypted-card-page/:apiCredentialId'),
+    __param(0, (0, common_1.Param)('apiCredentialId')),
+    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [process_payment_request_1.ProcessPaymentRequest, String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
-], ProcessPaymentController.prototype, "handle", null);
-exports.ProcessPaymentController = ProcessPaymentController = __decorate([
-    (0, common_1.Controller)('payments'),
-    __metadata("design:paramtypes", [process_payment_use_case_1.ProcessPaymentUseCase])
-], ProcessPaymentController);
+], DevPagSeguroEncryptedCardPageController.prototype, "page", null);
+exports.DevPagSeguroEncryptedCardPageController = DevPagSeguroEncryptedCardPageController = __decorate([
+    (0, common_1.Controller)('dev/pagseguro'),
+    __metadata("design:paramtypes", [typeof (_a = typeof dev_pagseguro_encrypted_card_page_use_case_1.DevPagSeguroEncryptedCardPageUseCase !== "undefined" && dev_pagseguro_encrypted_card_page_use_case_1.DevPagSeguroEncryptedCardPageUseCase) === "function" ? _a : Object])
+], DevPagSeguroEncryptedCardPageController);
 //# sourceMappingURL=process-payment.controller.js.map

@@ -12,6 +12,10 @@ export declare class ProcessPaymentDtoIn {
     readonly paymentData: Record<string, unknown> | null;
     readonly metadata: Record<string, unknown> | null;
     readonly config: Record<string, unknown> | null;
+    readonly gatewayProvider: string | null;
+    readonly gatewaySlug: string | null;
+    readonly gatewayId: string | null;
+    readonly apiCredentialId: string | null;
     constructor(params: {
         token?: string;
         checkoutSessionId?: string;
@@ -26,5 +30,9 @@ export declare class ProcessPaymentDtoIn {
         paymentData?: Record<string, unknown> | null;
         metadata?: Record<string, unknown> | null;
         config?: Record<string, unknown> | null;
+        gatewayProvider?: unknown;
+        gatewaySlug?: unknown;
+        gatewayId?: unknown;
+        apiCredentialId?: unknown;
     });
 }

@@ -1,57 +1,40 @@
 import {
   BadRequestException,
-  Body,
   Controller,
-  Headers,
-  Post,
+  Get,
+  Param,
+  Res,
 } from '@nestjs/common';
-import { ProcessPaymentDtoIn } from './dtos/process-payment.dto-in';
-import { ProcessPaymentRequest } from './http/process-payment.request';
-import { ProcessPaymentUseCase } from './process-payment.use-case';
+import type { Response } from 'express';
 
-@Controller('payments')
-export class ProcessPaymentController {
-  constructor(private readonly processPaymentUseCase: ProcessPaymentUseCase) {}
+import { DevPagSeguroEncryptedCardPageDtoIn } from './dtos/dev-pagseguro-encrypted-card-page.dto-in';
+import { DevPagSeguroEncryptedCardPageUseCase } from './dev-pagseguro-encrypted-card-page.use-case';
 
-  @Post('process')
-  async handle(
-    @Body() body: ProcessPaymentRequest,
-    @Headers('authorization') authorization?: string,
+@Controller('dev/pagseguro')
+export class DevPagSeguroEncryptedCardPageController {
+  constructor(
+    private readonly devPagSeguroEncryptedCardPageUseCase: DevPagSeguroEncryptedCardPageUseCase,
+  ) {}
+
+  @Get('encrypted-card-page/:apiCredentialId')
+  async page(
+    @Param('apiCredentialId') apiCredentialId: string,
+    @Res() response: Response,
   ) {
     try {
-      const token =
-        body.token ??
-        authorization?.replace(/^Bearer\s+/i, '').trim() ??
-        '';
-
-      const dtoOut = await this.processPaymentUseCase.exec(
-        new ProcessPaymentDtoIn({
-          token,
-          checkoutSessionId: body.checkoutSessionId,
-          paymentMethod: body.paymentMethod,
-          installments: body.installments ?? null,
-          installmentAmount: body.installmentAmount ?? null,
-          interestAmount: body.interestAmount ?? null,
-          interestType: body.interestType ?? null,
-          idempotencyKey: body.idempotencyKey ?? null,
-          externalReference: body.externalReference ?? null,
-          payer: body.payer ?? null,
-          paymentData: body.paymentData ?? null,
-          metadata: body.metadata ?? null,
-          config: body.config ?? null,
+      const dtoOut = await this.devPagSeguroEncryptedCardPageUseCase.exec(
+        new DevPagSeguroEncryptedCardPageDtoIn({
+          apiCredentialId,
         }),
       );
 
-      return {
-        status: 'success',
-        message: 'payment processed successfully',
-        data: dtoOut,
-      };
+      response.setHeader('Content-Type', 'text/html; charset=utf-8');
+      response.send(dtoOut.html);
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : 'error on process payment controller';
+          : 'error on dev PagSeguro encrypted card page controller';
 
       throw new BadRequestException({
         status: 'error',

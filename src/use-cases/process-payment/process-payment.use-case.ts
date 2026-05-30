@@ -174,6 +174,11 @@ export class ProcessPaymentUseCase {
             clientId: checkoutSession.clientId,
             paymentType: checkoutSession.paymentType,
             paymentMethod: dtoIn.paymentMethod,
+
+            gatewayProvider: dtoIn.gatewayProvider,
+            gatewaySlug: dtoIn.gatewaySlug,
+            gatewayId: dtoIn.gatewayId,
+            apiCredentialId: dtoIn.apiCredentialId,
           }),
         );
 
@@ -502,6 +507,8 @@ export class ProcessPaymentUseCase {
     const sensitiveKeys = [
       'token',
       'cardtoken',
+      'encryptedcard',
+      'encrypted_card',
       'cardnumber',
       'card',
       'cvv',

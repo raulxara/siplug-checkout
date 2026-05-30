@@ -15,6 +15,10 @@ class ProcessPaymentDtoIn {
     paymentData;
     metadata;
     config;
+    gatewayProvider;
+    gatewaySlug;
+    gatewayId;
+    apiCredentialId;
     constructor(params) {
         this.token = params.token ?? '';
         this.checkoutSessionId = params.checkoutSessionId ?? '';
@@ -29,6 +33,22 @@ class ProcessPaymentDtoIn {
         this.paymentData = params.paymentData ?? null;
         this.metadata = params.metadata ?? null;
         this.config = params.config ?? null;
+        this.gatewayProvider =
+            params.gatewayProvider !== undefined && params.gatewayProvider !== null
+                ? String(params.gatewayProvider).trim()
+                : null;
+        this.gatewaySlug =
+            params.gatewaySlug !== undefined && params.gatewaySlug !== null
+                ? String(params.gatewaySlug).trim()
+                : null;
+        this.gatewayId =
+            params.gatewayId !== undefined && params.gatewayId !== null
+                ? String(params.gatewayId).trim()
+                : null;
+        this.apiCredentialId =
+            params.apiCredentialId !== undefined && params.apiCredentialId !== null
+                ? String(params.apiCredentialId).trim()
+                : null;
         if (this.token.trim() === '') {
             throw new Error('token is required');
         }
