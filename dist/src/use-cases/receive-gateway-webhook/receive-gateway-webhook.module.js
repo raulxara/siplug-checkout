@@ -11,7 +11,6 @@ const common_1 = require("@nestjs/common");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
 const api_credentials_module_1 = require("../../modules/api-credentials/api-credentials.module");
 const checkout_sessions_module_1 = require("../../modules/checkout-sessions/checkout-sessions.module");
-const gateway_orchestration_module_1 = require("../../modules/gateway-orchestration/gateway-orchestration.module");
 const payment_transactions_module_1 = require("../../modules/payment-transactions/payment-transactions.module");
 const receive_gateway_webhook_controller_1 = require("./receive-gateway-webhook.controller");
 const receive_gateway_webhook_use_case_1 = require("./receive-gateway-webhook.use-case");
@@ -21,10 +20,9 @@ exports.ReceiveGatewayWebhookModule = ReceiveGatewayWebhookModule;
 exports.ReceiveGatewayWebhookModule = ReceiveGatewayWebhookModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            payment_transactions_module_1.PaymentTransactionsModule,
             api_credentials_module_1.ApiCredentialsModule,
             checkout_sessions_module_1.CheckoutSessionsModule,
-            gateway_orchestration_module_1.GatewayOrchestrationModule,
+            payment_transactions_module_1.PaymentTransactionsModule,
             use_case_support_module_1.UseCaseSupportModule,
         ],
         controllers: [receive_gateway_webhook_controller_1.ReceiveGatewayWebhookController],

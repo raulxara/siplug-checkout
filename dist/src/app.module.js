@@ -106,6 +106,7 @@ exports.AppModule = AppModule = __decorate([
             receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
             create_gateway_card_token_module_1.CreateGatewayCardTokenModule,
             dev_pagseguro_encrypted_card_page_module_1.DevPagSeguroEncryptedCardPageModule,
+            receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
         ],
     })
 ], AppModule);

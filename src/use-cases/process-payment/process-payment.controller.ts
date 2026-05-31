@@ -1,40 +1,69 @@
 import {
   BadRequestException,
+  Body,
   Controller,
-  Get,
-  Param,
-  Res,
+  Headers,
+  HttpCode,
+  Post,
 } from '@nestjs/common';
-import type { Response } from 'express';
 
-import { DevPagSeguroEncryptedCardPageDtoIn } from './dtos/dev-pagseguro-encrypted-card-page.dto-in';
-import { DevPagSeguroEncryptedCardPageUseCase } from './dev-pagseguro-encrypted-card-page.use-case';
+import { ProcessPaymentDtoIn } from './dtos/process-payment.dto-in';
+import { ProcessPaymentRequest } from './http/process-payment.request';
+import { ProcessPaymentUseCase } from './process-payment.use-case';
 
-@Controller('dev/pagseguro')
-export class DevPagSeguroEncryptedCardPageController {
-  constructor(
-    private readonly devPagSeguroEncryptedCardPageUseCase: DevPagSeguroEncryptedCardPageUseCase,
-  ) {}
+@Controller('payments')
+export class ProcessPaymentController {
+  constructor(private readonly processPaymentUseCase: ProcessPaymentUseCase) {}
 
-  @Get('encrypted-card-page/:apiCredentialId')
-  async page(
-    @Param('apiCredentialId') apiCredentialId: string,
-    @Res() response: Response,
+  @Post('process')
+  @HttpCode(200)
+  async process(
+    @Body() body: ProcessPaymentRequest,
+    @Headers('authorization') authorization?: string,
   ) {
     try {
-      const dtoOut = await this.devPagSeguroEncryptedCardPageUseCase.exec(
-        new DevPagSeguroEncryptedCardPageDtoIn({
-          apiCredentialId,
+      const token =
+        body.token ??
+        authorization?.replace(/^Bearer\s+/i, '').trim() ??
+        '';
+
+      const dtoOut = await this.processPaymentUseCase.exec(
+        new ProcessPaymentDtoIn({
+          token,
+
+          checkoutSessionId: body.checkoutSessionId,
+          paymentMethod: body.paymentMethod,
+
+          gatewayProvider: body.gatewayProvider,
+          gatewaySlug: body.gatewaySlug,
+          gatewayId: body.gatewayId,
+          apiCredentialId: body.apiCredentialId,
+
+          idempotencyKey: body.idempotencyKey,
+          externalReference: body.externalReference,
+
+          installments: body.installments,
+          installmentAmount: body.installmentAmount,
+          interestAmount: body.interestAmount,
+          interestType: body.interestType,
+
+          payer: body.payer,
+          paymentData: body.paymentData,
+          metadata: body.metadata,
+          config: body.config,
         }),
       );
 
-      response.setHeader('Content-Type', 'text/html; charset=utf-8');
-      response.send(dtoOut.html);
+      return {
+        status: 'success',
+        message: 'payment processed successfully',
+        data: dtoOut,
+      };
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : 'error on dev PagSeguro encrypted card page controller';
+          : 'error on process payment controller';
 
       throw new BadRequestException({
         status: 'error',

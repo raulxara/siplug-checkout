@@ -1,12 +1,12 @@
 export declare class ReceiveGatewayWebhookDtoIn {
-    readonly provider: string;
-    readonly body: Record<string, unknown>;
-    readonly query: Record<string, unknown>;
-    readonly headers: Record<string, unknown>;
+    readonly gatewayProvider: string;
+    readonly payload: Record<string, unknown>;
+    readonly headers: Record<string, string | string[] | undefined>;
+    readonly rawBody: Buffer | null;
     constructor(params: {
-        provider?: string;
-        body?: Record<string, unknown>;
-        query?: Record<string, unknown>;
-        headers?: Record<string, unknown>;
+        gatewayProvider?: unknown;
+        payload?: Record<string, unknown> | null;
+        headers?: Record<string, string | string[] | undefined> | null;
+        rawBody?: Buffer | null;
     });
 }

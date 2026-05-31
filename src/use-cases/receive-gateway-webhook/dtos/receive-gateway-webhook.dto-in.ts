@@ -1,22 +1,22 @@
 export class ReceiveGatewayWebhookDtoIn {
-  public readonly provider: string;
-  public readonly body: Record<string, unknown>;
-  public readonly query: Record<string, unknown>;
-  public readonly headers: Record<string, unknown>;
+  public readonly gatewayProvider: string;
+  public readonly payload: Record<string, unknown>;
+  public readonly headers: Record<string, string | string[] | undefined>;
+  public readonly rawBody: Buffer | null;
 
   constructor(params: {
-    provider?: string;
-    body?: Record<string, unknown>;
-    query?: Record<string, unknown>;
-    headers?: Record<string, unknown>;
+    gatewayProvider?: unknown;
+    payload?: Record<string, unknown> | null;
+    headers?: Record<string, string | string[] | undefined> | null;
+    rawBody?: Buffer | null;
   }) {
-    this.provider = params.provider ?? '';
-    this.body = params.body ?? {};
-    this.query = params.query ?? {};
+    this.gatewayProvider = String(params.gatewayProvider ?? '').trim();
+    this.payload = params.payload ?? {};
     this.headers = params.headers ?? {};
+    this.rawBody = params.rawBody ?? null;
 
-    if (this.provider.trim() === '') {
-      throw new Error('provider is required');
+    if (this.gatewayProvider === '') {
+      throw new Error('gatewayProvider is required');
     }
   }
 }

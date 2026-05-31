@@ -6,8 +6,10 @@ import {
   HttpCode,
   Param,
   Post,
-  Query,
+  Req,
 } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 
 import { ReceiveGatewayWebhookDtoIn } from './dtos/receive-gateway-webhook.dto-in';
 import { ReceiveGatewayWebhookUseCase } from './receive-gateway-webhook.use-case';
@@ -18,21 +20,21 @@ export class ReceiveGatewayWebhookController {
     private readonly receiveGatewayWebhookUseCase: ReceiveGatewayWebhookUseCase,
   ) {}
 
-  @Post(':provider')
+  @Post(':gatewayProvider')
   @HttpCode(200)
-  async handle(
-    @Param('provider') provider: string,
-    @Body() body: unknown,
-    @Query() query: Record<string, unknown>,
-    @Headers() headers: Record<string, unknown>,
+  async receive(
+    @Param('gatewayProvider') gatewayProvider: string,
+    @Body() body: Record<string, unknown>,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Req() request: RawBodyRequest<Request>,
   ) {
     try {
       const dtoOut = await this.receiveGatewayWebhookUseCase.exec(
         new ReceiveGatewayWebhookDtoIn({
-          provider,
-          body: this.asRecord(body),
-          query: this.asRecord(query),
-          headers: this.asRecord(headers),
+          gatewayProvider,
+          payload: body,
+          headers,
+          rawBody: request.rawBody ?? null,
         }),
       );
 
@@ -52,13 +54,5 @@ export class ReceiveGatewayWebhookController {
         message,
       });
     }
-  }
-
-  private asRecord(value: unknown): Record<string, unknown> {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      return {};
-    }
-
-    return value as Record<string, unknown>;
   }
 }

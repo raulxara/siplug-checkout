@@ -2,19 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReceiveGatewayWebhookDtoOut = void 0;
 class ReceiveGatewayWebhookDtoOut {
-    provider;
     eventType;
-    eventAction;
-    gatewayTransactionId;
-    ignored;
+    processed;
     paymentTransaction;
     checkoutSession;
-    constructor(provider, eventType, eventAction, gatewayTransactionId, ignored, paymentTransaction, checkoutSession) {
-        this.provider = provider;
+    constructor(eventType, processed, paymentTransaction, checkoutSession) {
         this.eventType = eventType;
-        this.eventAction = eventAction;
-        this.gatewayTransactionId = gatewayTransactionId;
-        this.ignored = ignored;
+        this.processed = processed;
         this.paymentTransaction = paymentTransaction;
         this.checkoutSession = checkoutSession;
     }

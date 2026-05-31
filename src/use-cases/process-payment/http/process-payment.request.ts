@@ -48,19 +48,19 @@ export class ProcessPaymentRequest {
 
   @IsOptional()
   @IsString()
-  gatewayProvider?: Record<string, unknown> | null;
+  gatewayProvider?: string | null;
 
   @IsOptional()
   @IsString()
-  gatewaySlug?: Record<string, unknown> | null;
+  gatewaySlug?: string | null;
 
   @IsOptional()
   @IsString()
-  gatewayId?: Record<string, unknown> | null;
+  gatewayId?: string | null;
 
   @IsOptional()
   @IsString()
-  apiCredentialId?: Record<string, unknown> | null;
+  apiCredentialId?: string | null;
 
   @IsOptional()
   @IsObject()

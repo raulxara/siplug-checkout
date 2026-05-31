@@ -2,17 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReceiveGatewayWebhookDtoIn = void 0;
 class ReceiveGatewayWebhookDtoIn {
-    provider;
-    body;
-    query;
+    gatewayProvider;
+    payload;
     headers;
+    rawBody;
     constructor(params) {
-        this.provider = params.provider ?? '';
-        this.body = params.body ?? {};
-        this.query = params.query ?? {};
+        this.gatewayProvider = String(params.gatewayProvider ?? '').trim();
+        this.payload = params.payload ?? {};
         this.headers = params.headers ?? {};
-        if (this.provider.trim() === '') {
-            throw new Error('provider is required');
+        this.rawBody = params.rawBody ?? null;
+        if (this.gatewayProvider === '') {
+            throw new Error('gatewayProvider is required');
         }
     }
 }

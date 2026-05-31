@@ -1,7 +1,11 @@
-import type { Response } from 'express';
-import { DevPagSeguroEncryptedCardPageUseCase } from './dev-pagseguro-encrypted-card-page.use-case';
-export declare class DevPagSeguroEncryptedCardPageController {
-    private readonly devPagSeguroEncryptedCardPageUseCase;
-    constructor(devPagSeguroEncryptedCardPageUseCase: DevPagSeguroEncryptedCardPageUseCase);
-    page(apiCredentialId: string, response: Response): Promise<void>;
+import { ProcessPaymentRequest } from './http/process-payment.request';
+import { ProcessPaymentUseCase } from './process-payment.use-case';
+export declare class ProcessPaymentController {
+    private readonly processPaymentUseCase;
+    constructor(processPaymentUseCase: ProcessPaymentUseCase);
+    process(body: ProcessPaymentRequest, authorization?: string): Promise<{
+        status: string;
+        message: string;
+        data: import("./dtos/process-payment.dto-out").ProcessPaymentDtoOut;
+    }>;
 }

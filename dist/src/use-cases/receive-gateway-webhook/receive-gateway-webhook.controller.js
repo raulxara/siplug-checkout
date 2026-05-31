@@ -21,13 +21,13 @@ let ReceiveGatewayWebhookController = class ReceiveGatewayWebhookController {
     constructor(receiveGatewayWebhookUseCase) {
         this.receiveGatewayWebhookUseCase = receiveGatewayWebhookUseCase;
     }
-    async handle(provider, body, query, headers) {
+    async receive(gatewayProvider, body, headers, request) {
         try {
             const dtoOut = await this.receiveGatewayWebhookUseCase.exec(new receive_gateway_webhook_dto_in_1.ReceiveGatewayWebhookDtoIn({
-                provider,
-                body: this.asRecord(body),
-                query: this.asRecord(query),
-                headers: this.asRecord(headers),
+                gatewayProvider,
+                payload: body,
+                headers,
+                rawBody: request.rawBody ?? null,
             }));
             return {
                 status: 'success',
@@ -45,25 +45,19 @@ let ReceiveGatewayWebhookController = class ReceiveGatewayWebhookController {
             });
         }
     }
-    asRecord(value) {
-        if (!value || typeof value !== 'object' || Array.isArray(value)) {
-            return {};
-        }
-        return value;
-    }
 };
 exports.ReceiveGatewayWebhookController = ReceiveGatewayWebhookController;
 __decorate([
-    (0, common_1.Post)(':provider'),
+    (0, common_1.Post)(':gatewayProvider'),
     (0, common_1.HttpCode)(200),
-    __param(0, (0, common_1.Param)('provider')),
+    __param(0, (0, common_1.Param)('gatewayProvider')),
     __param(1, (0, common_1.Body)()),
-    __param(2, (0, common_1.Query)()),
-    __param(3, (0, common_1.Headers)()),
+    __param(2, (0, common_1.Headers)()),
+    __param(3, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object, Object, Object]),
     __metadata("design:returntype", Promise)
-], ReceiveGatewayWebhookController.prototype, "handle", null);
+], ReceiveGatewayWebhookController.prototype, "receive", null);
 exports.ReceiveGatewayWebhookController = ReceiveGatewayWebhookController = __decorate([
     (0, common_1.Controller)('webhooks/gateways'),
     __metadata("design:paramtypes", [receive_gateway_webhook_use_case_1.ReceiveGatewayWebhookUseCase])
