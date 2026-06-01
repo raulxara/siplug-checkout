@@ -6,9 +6,11 @@ export declare class PicPayGatewayPaymentProvider implements IGatewayPaymentProv
     supports(gatewayProvider: string): boolean;
     processPayment(dtoIn: GatewayPaymentDtoIn): Promise<GatewayPaymentDtoOut>;
     private resolveAccessToken;
+    private buildPicPayOrderNumber;
     private resolvePicPayPaymentMethods;
     private resolvePicPayExpirationDate;
     private buildPaymentLinkRequestPayload;
+    private limitText;
     private parsePicPayResponse;
     private extractPaymentLinkId;
     private extractCheckoutUrl;

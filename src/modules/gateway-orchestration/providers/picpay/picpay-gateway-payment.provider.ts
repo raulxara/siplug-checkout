@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import type { IGatewayPaymentProvider } from '../../contracts/gateway-payment-provider.interface';
 import { GatewayPaymentDtoIn } from '../../dtos/gateway-payment.dto-in';
 import { GatewayPaymentDtoOut } from '../../dtos/gateway-payment.dto-out';
+import { createHash } from 'crypto';
 
 type PicPayOAuthResponse = {
   access_token?: string;
@@ -334,6 +335,22 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
     return accessToken;
   }
 
+  private buildPicPayOrderNumber(referenceId: string): string {
+    const cleanReference = referenceId.replace(/[^a-zA-Z0-9]/g, '');
+
+    if (cleanReference.length > 0 && cleanReference.length <= 15) {
+        return cleanReference;
+    }
+
+    const hash = createHash('sha256')
+        .update(referenceId)
+        .digest('hex')
+        .slice(0, 13)
+        .toUpperCase();
+
+    return `PP${hash}`;
+    }
+
   private resolvePicPayPaymentMethods(paymentMethod: string): {
     methods: Array<'BRCODE' | 'CREDIT_CARD'>;
     brcodeArrangements: Array<'PICPAY' | 'PIX'>;
@@ -428,18 +445,22 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
 
     return {
         charge: {
-        name:
-            this.toNullableString(transactionConfig.chargeName) ??
+        name: this.limitText(
+        this.toNullableString(transactionConfig.chargeName) ??
             this.toNullableString(transactionConfig.charge_name) ??
             this.toNullableString(dtoIn.paymentTransaction.externalReference) ??
             `Cobrança ${dtoIn.paymentTransaction._id}`,
+        100,
+        ),
 
-        description:
-            this.toNullableString(transactionConfig.description) ??
+        description: this.limitText(
+        this.toNullableString(transactionConfig.description) ??
             this.toNullableString(dtoIn.paymentTransaction.externalReference) ??
             `Pagamento ${dtoIn.paymentTransaction._id}`,
+        255,
+        ),
 
-        order_number: referenceId.slice(0, 64),
+        order_number: this.buildPicPayOrderNumber(referenceId),
 
         redirect_url: redirectUrl,
 
@@ -463,6 +484,14 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
         expired_at: this.resolvePicPayExpirationDate(dtoIn),
         },
     };
+    }
+
+    private limitText(value: string, maxLength: number): string {
+    if (value.length <= maxLength) {
+        return value;
+    }
+
+    return value.slice(0, maxLength);
     }
 
   private async parsePicPayResponse(

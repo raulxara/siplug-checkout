@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PicPayGatewayPaymentProvider = void 0;
 const common_1 = require("@nestjs/common");
 const gateway_payment_dto_out_1 = require("../../dtos/gateway-payment.dto-out");
+const crypto_1 = require("crypto");
 let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
     getProviderName() {
         return 'picpay';
@@ -201,6 +202,18 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
         }
         return accessToken;
     }
+    buildPicPayOrderNumber(referenceId) {
+        const cleanReference = referenceId.replace(/[^a-zA-Z0-9]/g, '');
+        if (cleanReference.length > 0 && cleanReference.length <= 15) {
+            return cleanReference;
+        }
+        const hash = (0, crypto_1.createHash)('sha256')
+            .update(referenceId)
+            .digest('hex')
+            .slice(0, 13)
+            .toUpperCase();
+        return `PP${hash}`;
+    }
     resolvePicPayPaymentMethods(paymentMethod) {
         const normalizedMethod = this.normalize(paymentMethod);
         if (normalizedMethod === 'pix') {
@@ -269,14 +282,14 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
             3;
         return {
             charge: {
-                name: this.toNullableString(transactionConfig.chargeName) ??
+                name: this.limitText(this.toNullableString(transactionConfig.chargeName) ??
                     this.toNullableString(transactionConfig.charge_name) ??
                     this.toNullableString(dtoIn.paymentTransaction.externalReference) ??
-                    `Cobrança ${dtoIn.paymentTransaction._id}`,
-                description: this.toNullableString(transactionConfig.description) ??
+                    `Cobrança ${dtoIn.paymentTransaction._id}`, 100),
+                description: this.limitText(this.toNullableString(transactionConfig.description) ??
                     this.toNullableString(dtoIn.paymentTransaction.externalReference) ??
-                    `Pagamento ${dtoIn.paymentTransaction._id}`,
-                order_number: referenceId.slice(0, 64),
+                    `Pagamento ${dtoIn.paymentTransaction._id}`, 255),
+                order_number: this.buildPicPayOrderNumber(referenceId),
                 redirect_url: redirectUrl,
                 payment: {
                     methods: paymentMethods.methods,
@@ -295,6 +308,12 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                 expired_at: this.resolvePicPayExpirationDate(dtoIn),
             },
         };
+    }
+    limitText(value, maxLength) {
+        if (value.length <= maxLength) {
+            return value;
+        }
+        return value.slice(0, maxLength);
     }
     async parsePicPayResponse(response) {
         const rawText = await response.text();
