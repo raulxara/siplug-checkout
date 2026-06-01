@@ -44,7 +44,6 @@ import { DispatchPaymentTransactionToGatewayModule } from './use-cases/dispatch-
 import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook/receive-gateway-webhook.module';
 import { CreateGatewayCardTokenModule } from './use-cases/create-gateway-card-token/create-gateway-card-token.module';
 import { DevPagSeguroEncryptedCardPageModule } from './use-cases/dev-pagseguro-encrypted-card-page/dev-pagseguro-encrypted-card-page.module';
-import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook/receive-gateway-webhook.module';
 
 @Module({
   imports: [
@@ -95,7 +94,6 @@ import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook
     ReceiveGatewayWebhookModule,
     CreateGatewayCardTokenModule,
     DevPagSeguroEncryptedCardPageModule,
-    ReceiveGatewayWebhookModule,
   ],
 })
 export class AppModule {}

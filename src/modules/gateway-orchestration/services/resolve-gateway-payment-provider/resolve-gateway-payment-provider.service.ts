@@ -12,6 +12,7 @@ import { PagSeguroGatewayPaymentProvider } from '../../providers/pagseguro/pagse
 import { PayPalGatewayPaymentProvider } from '../../providers/paypal/paypal-gateway-payment.provider';
 import { StripeGatewayPaymentProvider } from '../../providers/stripe/stripe-gateway-payment.provider';
 import { VindiGatewayPaymentProvider } from '../../providers/vindi/vindi-gateway-payment.provider';
+import { PicPayGatewayPaymentProvider } from '../../providers/picpay/picpay-gateway-payment.provider';
 
 @Injectable()
 export class ResolveGatewayPaymentProviderService {
@@ -27,6 +28,7 @@ export class ResolveGatewayPaymentProviderService {
     private readonly iuguGatewayPaymentProvider: IuguGatewayPaymentProvider,
     private readonly efiBankGatewayPaymentProvider: EfiBankGatewayPaymentProvider,
     private readonly infinityPayGatewayPaymentProvider: InfinityPayGatewayPaymentProvider,
+    private readonly picPayGatewayPaymentProvider: PicPayGatewayPaymentProvider,
   ) {}
 
   exec(gatewayProvider: string): IGatewayPaymentProvider {
@@ -42,6 +44,7 @@ export class ResolveGatewayPaymentProviderService {
       this.iuguGatewayPaymentProvider,
       this.efiBankGatewayPaymentProvider,
       this.infinityPayGatewayPaymentProvider,
+      this.picPayGatewayPaymentProvider,
     ];
 
     const provider = providers.find((item) => item.supports(gatewayProvider));

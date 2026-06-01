@@ -46,15 +46,19 @@ let ReceiveGatewayWebhookUseCase = class ReceiveGatewayWebhookUseCase {
             if (normalizedProvider === 'stripe') {
                 return await this.handleStripeWebhook(dtoIn);
             }
-            if (normalizedProvider === 'mercado_pago') {
+            if (normalizedProvider === 'mercado_pago' ||
+                normalizedProvider === 'mercadopago') {
                 return new receive_gateway_webhook_dto_out_1.ReceiveGatewayWebhookDtoOut('mercado_pago.webhook_not_implemented', false, null, null);
             }
-            if (normalizedProvider === 'infinitypay') {
+            if (normalizedProvider === 'infinitepay' ||
+                normalizedProvider === 'infinitypay' ||
+                normalizedProvider === 'infinity_pay') {
                 return new receive_gateway_webhook_dto_out_1.ReceiveGatewayWebhookDtoOut('infinitypay.webhook_not_implemented', false, null, null);
             }
             if (normalizedProvider === 'pagseguro') {
                 return new receive_gateway_webhook_dto_out_1.ReceiveGatewayWebhookDtoOut('pagseguro.webhook_not_implemented', false, null, null);
             }
+            throw new Error(`gateway webhook provider not supported: ${dtoIn.gatewayProvider}`);
         }
         catch (error) {
             await this.handleUseCaseExceptionService.exec(new handle_use_case_exception_dto_in_1.HandleUseCaseExceptionDtoIn({

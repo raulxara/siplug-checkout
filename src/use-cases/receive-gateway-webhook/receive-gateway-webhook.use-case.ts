@@ -37,62 +37,73 @@ export class ReceiveGatewayWebhookUseCase {
 
   async exec(
     dtoIn: ReceiveGatewayWebhookDtoIn,
-  ): Promise<ReceiveGatewayWebhookDtoOut> {
+    ): Promise<ReceiveGatewayWebhookDtoOut> {
     try {
-      const normalizedProvider = this.normalize(dtoIn.gatewayProvider);
+        const normalizedProvider = this.normalize(dtoIn.gatewayProvider);
 
-       if (normalizedProvider === 'stripe') {
+        if (normalizedProvider === 'stripe') {
         return await this.handleStripeWebhook(dtoIn);
-      }
+        }
 
-      if (normalizedProvider === 'mercado_pago') {
+        if (
+        normalizedProvider === 'mercado_pago' ||
+        normalizedProvider === 'mercadopago'
+        ) {
         return new ReceiveGatewayWebhookDtoOut(
-          'mercado_pago.webhook_not_implemented',
-          false,
-          null,
-          null,
+            'mercado_pago.webhook_not_implemented',
+            false,
+            null,
+            null,
         );
-      }
+        }
 
-      if (normalizedProvider === 'infinitypay') {
+        if (
+        normalizedProvider === 'infinitepay' ||
+        normalizedProvider === 'infinitypay' ||
+        normalizedProvider === 'infinity_pay'
+        ) {
         return new ReceiveGatewayWebhookDtoOut(
-          'infinitypay.webhook_not_implemented',
-          false,
-          null,
-          null,
+            'infinitypay.webhook_not_implemented',
+            false,
+            null,
+            null,
         );
-      }
+        }
 
-      if (normalizedProvider === 'pagseguro') {
+        if (normalizedProvider === 'pagseguro') {
         return new ReceiveGatewayWebhookDtoOut(
-          'pagseguro.webhook_not_implemented',
-          false,
-          null,
-          null,
+            'pagseguro.webhook_not_implemented',
+            false,
+            null,
+            null,
         );
-      }
+        }
+
+        throw new Error(
+        `gateway webhook provider not supported: ${dtoIn.gatewayProvider}`,
+        );
     } catch (error) {
-      await this.handleUseCaseExceptionService.exec(
+        await this.handleUseCaseExceptionService.exec(
         new HandleUseCaseExceptionDtoIn({
-          useCase: 'ReceiveGatewayWebhookUseCase',
-          error,
-          appFile: __filename,
-          context: {
+            useCase: 'ReceiveGatewayWebhookUseCase',
+            error,
+            appFile: __filename,
+            context: {
             gatewayProvider: dtoIn.gatewayProvider,
             hasRawBody: dtoIn.rawBody !== null,
             eventType: this.toNullableString(dtoIn.payload.type),
-          },
+            },
         }),
-      );
+        );
 
-      const message =
+        const message =
         error instanceof Error
-          ? error.message
-          : 'error on receive gateway webhook use case';
+            ? error.message
+            : 'error on receive gateway webhook use case';
 
-      throw new Error(message);
+        throw new Error(message);
     }
-  }
+    }
 
   private async handleStripeWebhook(
     dtoIn: ReceiveGatewayWebhookDtoIn,

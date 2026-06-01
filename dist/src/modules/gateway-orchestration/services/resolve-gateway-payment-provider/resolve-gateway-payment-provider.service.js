@@ -22,6 +22,7 @@ const pagseguro_gateway_payment_provider_1 = require("../../providers/pagseguro/
 const paypal_gateway_payment_provider_1 = require("../../providers/paypal/paypal-gateway-payment.provider");
 const stripe_gateway_payment_provider_1 = require("../../providers/stripe/stripe-gateway-payment.provider");
 const vindi_gateway_payment_provider_1 = require("../../providers/vindi/vindi-gateway-payment.provider");
+const picpay_gateway_payment_provider_1 = require("../../providers/picpay/picpay-gateway-payment.provider");
 let ResolveGatewayPaymentProviderService = class ResolveGatewayPaymentProviderService {
     mercadoPagoGatewayPaymentProvider;
     stripeGatewayPaymentProvider;
@@ -34,7 +35,8 @@ let ResolveGatewayPaymentProviderService = class ResolveGatewayPaymentProviderSe
     iuguGatewayPaymentProvider;
     efiBankGatewayPaymentProvider;
     infinityPayGatewayPaymentProvider;
-    constructor(mercadoPagoGatewayPaymentProvider, stripeGatewayPaymentProvider, pagSeguroGatewayPaymentProvider, vindiGatewayPaymentProvider, pagarmeGatewayPaymentProvider, paypalGatewayPaymentProvider, cieloGatewayPaymentProvider, getnetGatewayPaymentProvider, iuguGatewayPaymentProvider, efiBankGatewayPaymentProvider, infinityPayGatewayPaymentProvider) {
+    picPayGatewayPaymentProvider;
+    constructor(mercadoPagoGatewayPaymentProvider, stripeGatewayPaymentProvider, pagSeguroGatewayPaymentProvider, vindiGatewayPaymentProvider, pagarmeGatewayPaymentProvider, paypalGatewayPaymentProvider, cieloGatewayPaymentProvider, getnetGatewayPaymentProvider, iuguGatewayPaymentProvider, efiBankGatewayPaymentProvider, infinityPayGatewayPaymentProvider, picPayGatewayPaymentProvider) {
         this.mercadoPagoGatewayPaymentProvider = mercadoPagoGatewayPaymentProvider;
         this.stripeGatewayPaymentProvider = stripeGatewayPaymentProvider;
         this.pagSeguroGatewayPaymentProvider = pagSeguroGatewayPaymentProvider;
@@ -46,6 +48,7 @@ let ResolveGatewayPaymentProviderService = class ResolveGatewayPaymentProviderSe
         this.iuguGatewayPaymentProvider = iuguGatewayPaymentProvider;
         this.efiBankGatewayPaymentProvider = efiBankGatewayPaymentProvider;
         this.infinityPayGatewayPaymentProvider = infinityPayGatewayPaymentProvider;
+        this.picPayGatewayPaymentProvider = picPayGatewayPaymentProvider;
     }
     exec(gatewayProvider) {
         const providers = [
@@ -60,6 +63,7 @@ let ResolveGatewayPaymentProviderService = class ResolveGatewayPaymentProviderSe
             this.iuguGatewayPaymentProvider,
             this.efiBankGatewayPaymentProvider,
             this.infinityPayGatewayPaymentProvider,
+            this.picPayGatewayPaymentProvider,
         ];
         const provider = providers.find((item) => item.supports(gatewayProvider));
         if (!provider) {
@@ -81,6 +85,7 @@ exports.ResolveGatewayPaymentProviderService = ResolveGatewayPaymentProviderServ
         getnet_gateway_payment_provider_1.GetnetGatewayPaymentProvider,
         iugu_gateway_payment_provider_1.IuguGatewayPaymentProvider,
         efi_bank_gateway_payment_provider_1.EfiBankGatewayPaymentProvider,
-        infinity_pay_gateway_payment_provider_1.InfinityPayGatewayPaymentProvider])
+        infinity_pay_gateway_payment_provider_1.InfinityPayGatewayPaymentProvider,
+        picpay_gateway_payment_provider_1.PicPayGatewayPaymentProvider])
 ], ResolveGatewayPaymentProviderService);
 //# sourceMappingURL=resolve-gateway-payment-provider.service.js.map

@@ -19,7 +19,7 @@ import { ApiCredentialsModule } from '../api-credentials/api-credentials.module'
 import { GatewaysModule } from '../gateways/gateways.module';
 import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
 import { ResolvePaymentGatewayCredentialService } from './services/resolve-payment-gateway-credential/resolve-payment-gateway-credential.service';
-
+import { PicPayGatewayPaymentProvider } from './providers/picpay/picpay-gateway-payment.provider';
 @Module({
   imports: [ApiCredentialsModule, GatewaysModule],
   providers: [
@@ -34,7 +34,7 @@ import { ResolvePaymentGatewayCredentialService } from './services/resolve-payme
     IuguGatewayPaymentProvider,
     EfiBankGatewayPaymentProvider,
     InfinityPayGatewayPaymentProvider,
-
+    PicPayGatewayPaymentProvider,
     ResolveGatewayPaymentProviderService,
     DispatchGatewayPaymentService,
     FetchMercadoPagoPaymentService,

@@ -10,6 +10,7 @@ import { PagSeguroGatewayPaymentProvider } from '../../providers/pagseguro/pagse
 import { PayPalGatewayPaymentProvider } from '../../providers/paypal/paypal-gateway-payment.provider';
 import { StripeGatewayPaymentProvider } from '../../providers/stripe/stripe-gateway-payment.provider';
 import { VindiGatewayPaymentProvider } from '../../providers/vindi/vindi-gateway-payment.provider';
+import { PicPayGatewayPaymentProvider } from '../../providers/picpay/picpay-gateway-payment.provider';
 export declare class ResolveGatewayPaymentProviderService {
     private readonly mercadoPagoGatewayPaymentProvider;
     private readonly stripeGatewayPaymentProvider;
@@ -22,6 +23,7 @@ export declare class ResolveGatewayPaymentProviderService {
     private readonly iuguGatewayPaymentProvider;
     private readonly efiBankGatewayPaymentProvider;
     private readonly infinityPayGatewayPaymentProvider;
-    constructor(mercadoPagoGatewayPaymentProvider: MercadoPagoGatewayPaymentProvider, stripeGatewayPaymentProvider: StripeGatewayPaymentProvider, pagSeguroGatewayPaymentProvider: PagSeguroGatewayPaymentProvider, vindiGatewayPaymentProvider: VindiGatewayPaymentProvider, pagarmeGatewayPaymentProvider: PagarmeGatewayPaymentProvider, paypalGatewayPaymentProvider: PayPalGatewayPaymentProvider, cieloGatewayPaymentProvider: CieloGatewayPaymentProvider, getnetGatewayPaymentProvider: GetnetGatewayPaymentProvider, iuguGatewayPaymentProvider: IuguGatewayPaymentProvider, efiBankGatewayPaymentProvider: EfiBankGatewayPaymentProvider, infinityPayGatewayPaymentProvider: InfinityPayGatewayPaymentProvider);
+    private readonly picPayGatewayPaymentProvider;
+    constructor(mercadoPagoGatewayPaymentProvider: MercadoPagoGatewayPaymentProvider, stripeGatewayPaymentProvider: StripeGatewayPaymentProvider, pagSeguroGatewayPaymentProvider: PagSeguroGatewayPaymentProvider, vindiGatewayPaymentProvider: VindiGatewayPaymentProvider, pagarmeGatewayPaymentProvider: PagarmeGatewayPaymentProvider, paypalGatewayPaymentProvider: PayPalGatewayPaymentProvider, cieloGatewayPaymentProvider: CieloGatewayPaymentProvider, getnetGatewayPaymentProvider: GetnetGatewayPaymentProvider, iuguGatewayPaymentProvider: IuguGatewayPaymentProvider, efiBankGatewayPaymentProvider: EfiBankGatewayPaymentProvider, infinityPayGatewayPaymentProvider: InfinityPayGatewayPaymentProvider, picPayGatewayPaymentProvider: PicPayGatewayPaymentProvider);
     exec(gatewayProvider: string): IGatewayPaymentProvider;
 }

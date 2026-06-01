@@ -26,6 +26,7 @@ const api_credentials_module_1 = require("../api-credentials/api-credentials.mod
 const gateways_module_1 = require("../gateways/gateways.module");
 const decrypt_api_credential_secret_service_1 = require("../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service");
 const resolve_payment_gateway_credential_service_1 = require("./services/resolve-payment-gateway-credential/resolve-payment-gateway-credential.service");
+const picpay_gateway_payment_provider_1 = require("./providers/picpay/picpay-gateway-payment.provider");
 let GatewayOrchestrationModule = class GatewayOrchestrationModule {
 };
 exports.GatewayOrchestrationModule = GatewayOrchestrationModule;
@@ -44,6 +45,7 @@ exports.GatewayOrchestrationModule = GatewayOrchestrationModule = __decorate([
             iugu_gateway_payment_provider_1.IuguGatewayPaymentProvider,
             efi_bank_gateway_payment_provider_1.EfiBankGatewayPaymentProvider,
             infinity_pay_gateway_payment_provider_1.InfinityPayGatewayPaymentProvider,
+            picpay_gateway_payment_provider_1.PicPayGatewayPaymentProvider,
             resolve_gateway_payment_provider_service_1.ResolveGatewayPaymentProviderService,
             dispatch_gateway_payment_service_1.DispatchGatewayPaymentService,
             fetch_mercado_pago_payment_service_1.FetchMercadoPagoPaymentService,
