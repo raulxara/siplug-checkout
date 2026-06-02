@@ -1,4 +1,41 @@
-import { UnsupportedGatewayPaymentProvider } from '../base/unsupported-gateway-payment.provider';
-export declare class CieloGatewayPaymentProvider extends UnsupportedGatewayPaymentProvider {
-    constructor();
+import type { IGatewayPaymentProvider } from '../../contracts/gateway-payment-provider.interface';
+import { GatewayPaymentDtoIn } from '../../dtos/gateway-payment.dto-in';
+import { GatewayPaymentDtoOut } from '../../dtos/gateway-payment.dto-out';
+export declare class CieloGatewayPaymentProvider implements IGatewayPaymentProvider {
+    getProviderName(): string;
+    supports(gatewayProvider: string): boolean;
+    processPayment(dtoIn: GatewayPaymentDtoIn): Promise<GatewayPaymentDtoOut>;
+    private processTransparentSale;
+    private processPaymentLink;
+    private createCieloLinkAccessToken;
+    private buildSaleRequestPayload;
+    private buildCieloPayment;
+    private buildPaymentLinkProductRequestPayload;
+    private mapSuccessfulSaleResponse;
+    private buildCieloCustomer;
+    private resolveMerchantId;
+    private resolveMerchantKey;
+    private resolveCieloLinkClientId;
+    private resolveCieloLinkClientSecret;
+    private resolveBaseUrl;
+    private resolveCapture;
+    private resolvePixExpiration;
+    private resolveRequestId;
+    private buildCieloOrderNumber;
+    private resolveCieloLinkProductType;
+    private resolveCieloLinkExpirationDate;
+    private extractCieloPaymentLinkId;
+    private extractCieloPaymentLinkUrl;
+    private extractCieloPaymentLinkErrorMessage;
+    private extractCieloSaleErrorMessage;
+    private mapCieloStatusToInternalStatus;
+    private mapCieloStatusToProcessStatus;
+    private parseJsonResponse;
+    private truncateText;
+    private limitText;
+    private asObject;
+    private toNullableString;
+    private toPositiveInteger;
+    private nowAsSqlDateTime;
+    private normalize;
 }
