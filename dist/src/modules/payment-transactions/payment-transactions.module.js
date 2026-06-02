@@ -17,6 +17,7 @@ const get_all_payment_transactions_by_checkout_session_id_service_1 = require(".
 const get_all_payment_transactions_by_office_id_service_1 = require("./services/get-all-payment-transactions-by-office-id/get-all-payment-transactions-by-office-id.service");
 const update_payment_transaction_service_1 = require("./services/update-payment-transaction/update-payment-transaction.service");
 const payment_transactions_tokens_1 = require("./tokens/payment-transactions.tokens");
+const get_all_payment_transactions_service_1 = require("./services/get-all-payment-transactions/get-all-payment-transactions.service");
 let PaymentTransactionsModule = class PaymentTransactionsModule {
 };
 exports.PaymentTransactionsModule = PaymentTransactionsModule;
@@ -34,6 +35,7 @@ exports.PaymentTransactionsModule = PaymentTransactionsModule = __decorate([
             find_payment_transaction_by_unique_id_service_1.FindPaymentTransactionByUniqueIdService,
             get_all_payment_transactions_by_office_id_service_1.GetAllPaymentTransactionsByOfficeIdService,
             get_all_payment_transactions_by_checkout_session_id_service_1.GetAllPaymentTransactionsByCheckoutSessionIdService,
+            get_all_payment_transactions_service_1.GetAllPaymentTransactionsService,
         ],
         exports: [
             payment_transactions_tokens_1.PAYMENT_TRANSACTIONS_REPOSITORY,
@@ -43,6 +45,7 @@ exports.PaymentTransactionsModule = PaymentTransactionsModule = __decorate([
             find_payment_transaction_by_unique_id_service_1.FindPaymentTransactionByUniqueIdService,
             get_all_payment_transactions_by_office_id_service_1.GetAllPaymentTransactionsByOfficeIdService,
             get_all_payment_transactions_by_checkout_session_id_service_1.GetAllPaymentTransactionsByCheckoutSessionIdService,
+            get_all_payment_transactions_service_1.GetAllPaymentTransactionsService,
         ],
     })
 ], PaymentTransactionsModule);

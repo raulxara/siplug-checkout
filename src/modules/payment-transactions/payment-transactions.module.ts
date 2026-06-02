@@ -8,7 +8,7 @@ import { GetAllPaymentTransactionsByCheckoutSessionIdService } from './services/
 import { GetAllPaymentTransactionsByOfficeIdService } from './services/get-all-payment-transactions-by-office-id/get-all-payment-transactions-by-office-id.service';
 import { UpdatePaymentTransactionService } from './services/update-payment-transaction/update-payment-transaction.service';
 import { PAYMENT_TRANSACTIONS_REPOSITORY } from './tokens/payment-transactions.tokens';
-
+import { GetAllPaymentTransactionsService } from './services/get-all-payment-transactions/get-all-payment-transactions.service';
 @Module({
   providers: [
     {
@@ -22,6 +22,7 @@ import { PAYMENT_TRANSACTIONS_REPOSITORY } from './tokens/payment-transactions.t
     FindPaymentTransactionByUniqueIdService,
     GetAllPaymentTransactionsByOfficeIdService,
     GetAllPaymentTransactionsByCheckoutSessionIdService,
+    GetAllPaymentTransactionsService,
   ],
   exports: [
     PAYMENT_TRANSACTIONS_REPOSITORY,
@@ -31,6 +32,7 @@ import { PAYMENT_TRANSACTIONS_REPOSITORY } from './tokens/payment-transactions.t
     FindPaymentTransactionByUniqueIdService,
     GetAllPaymentTransactionsByOfficeIdService,
     GetAllPaymentTransactionsByCheckoutSessionIdService,
+    GetAllPaymentTransactionsService,
   ],
 })
 export class PaymentTransactionsModule {}

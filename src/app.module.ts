@@ -44,6 +44,11 @@ import { DispatchPaymentTransactionToGatewayModule } from './use-cases/dispatch-
 import { ReceiveGatewayWebhookModule } from './use-cases/receive-gateway-webhook/receive-gateway-webhook.module';
 import { CreateGatewayCardTokenModule } from './use-cases/create-gateway-card-token/create-gateway-card-token.module';
 import { DevPagSeguroEncryptedCardPageModule } from './use-cases/dev-pagseguro-encrypted-card-page/dev-pagseguro-encrypted-card-page.module';
+import { GetPaymentTransactionByUniqueIdModule } from './use-cases/get-payment-transaction-by-unique-id/get-payment-transaction-by-unique-id.module';
+import { ListPaymentTransactionsModule } from './use-cases/list-payment-transactions/list-payment-transactions.module';
+import { ListPaymentTransactionsByOfficeIdModule } from './use-cases/list-payment-transactions-by-office-id/list-payment-transactions-by-office-id.module';
+import { UpdatePaymentTransactionModule } from './use-cases/update-payment-transaction/update-payment-transaction.module';
+import { SyncPaymentTransactionStatusModule } from './use-cases/sync-payment-transaction-status/sync-payment-transaction-status.module';
 
 @Module({
   imports: [
@@ -94,6 +99,11 @@ import { DevPagSeguroEncryptedCardPageModule } from './use-cases/dev-pagseguro-e
     ReceiveGatewayWebhookModule,
     CreateGatewayCardTokenModule,
     DevPagSeguroEncryptedCardPageModule,
+    GetPaymentTransactionByUniqueIdModule,
+    ListPaymentTransactionsModule,
+    ListPaymentTransactionsByOfficeIdModule,
+    UpdatePaymentTransactionModule,
+    SyncPaymentTransactionStatusModule,
   ],
 })
 export class AppModule {}

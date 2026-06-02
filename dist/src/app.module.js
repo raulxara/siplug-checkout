@@ -53,6 +53,11 @@ const dispatch_payment_transaction_to_gateway_module_1 = require("./use-cases/di
 const receive_gateway_webhook_module_1 = require("./use-cases/receive-gateway-webhook/receive-gateway-webhook.module");
 const create_gateway_card_token_module_1 = require("./use-cases/create-gateway-card-token/create-gateway-card-token.module");
 const dev_pagseguro_encrypted_card_page_module_1 = require("./use-cases/dev-pagseguro-encrypted-card-page/dev-pagseguro-encrypted-card-page.module");
+const get_payment_transaction_by_unique_id_module_1 = require("./use-cases/get-payment-transaction-by-unique-id/get-payment-transaction-by-unique-id.module");
+const list_payment_transactions_module_1 = require("./use-cases/list-payment-transactions/list-payment-transactions.module");
+const list_payment_transactions_by_office_id_module_1 = require("./use-cases/list-payment-transactions-by-office-id/list-payment-transactions-by-office-id.module");
+const update_payment_transaction_module_1 = require("./use-cases/update-payment-transaction/update-payment-transaction.module");
+const sync_payment_transaction_status_module_1 = require("./use-cases/sync-payment-transaction-status/sync-payment-transaction-status.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -106,6 +111,11 @@ exports.AppModule = AppModule = __decorate([
             receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
             create_gateway_card_token_module_1.CreateGatewayCardTokenModule,
             dev_pagseguro_encrypted_card_page_module_1.DevPagSeguroEncryptedCardPageModule,
+            get_payment_transaction_by_unique_id_module_1.GetPaymentTransactionByUniqueIdModule,
+            list_payment_transactions_module_1.ListPaymentTransactionsModule,
+            list_payment_transactions_by_office_id_module_1.ListPaymentTransactionsByOfficeIdModule,
+            update_payment_transaction_module_1.UpdatePaymentTransactionModule,
+            sync_payment_transaction_status_module_1.SyncPaymentTransactionStatusModule,
         ],
     })
 ], AppModule);
