@@ -834,9 +834,12 @@ model SubscriptionPlan {
   gateway_id        String? @db.Char(36)
   api_credential_id String? @db.Char(36)
 
-  name        String  @db.VarChar(255)
-  slug        String  @db.VarChar(150)
-  description String? @db.Text
+  name               String  @db.VarChar(255)
+  slug               String  @db.VarChar(150)
+  description        String? @db.Text
+  gateway_plan_id    String? @db.VarChar(255)
+  payment_methods    Json?
+  max_billing_cycles Int?
 
   amount         Int
   currency       String @default("BRL") @db.VarChar(10)
@@ -954,9 +957,13 @@ model SubscriptionInvoice {
   id        Int    @id @default(autoincrement())
   unique_id String @unique @map("_id") @db.Char(36)
 
-  subscription_id        String  @db.Char(36)
-  subscription_cycle_id  String? @db.Char(36)
-  payment_transaction_id String? @db.Char(36)
+  subscription_id        String    @db.Char(36)
+  subscription_cycle_id  String?   @db.Char(36)
+  payment_transaction_id String?   @db.Char(36)
+  gateway_invoice_id     String?   @db.VarChar(255)
+  external_reference     String?   @db.VarChar(255)
+  attempt_number         Int       @default(1)
+  last_attempt_at        DateTime?
 
   invoice_number String?   @db.VarChar(100)
   amount         Int
@@ -989,9 +996,11 @@ model SubscriptionEvent {
 
   subscription_id String @db.Char(36)
 
-  event_type String  @db.VarChar(150)
-  old_status String? @db.VarChar(100)
-  new_status String? @db.VarChar(100)
+  event_type       String  @db.VarChar(150)
+  old_status       String? @db.VarChar(100)
+  new_status       String? @db.VarChar(100)
+  gateway_event_id String? @db.VarChar(255)
+  gateway_provider String? @db.VarChar(100)
 
   payload         Json?
   metadata        Json?

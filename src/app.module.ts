@@ -49,6 +49,9 @@ import { ListPaymentTransactionsModule } from './use-cases/list-payment-transact
 import { ListPaymentTransactionsByOfficeIdModule } from './use-cases/list-payment-transactions-by-office-id/list-payment-transactions-by-office-id.module';
 import { UpdatePaymentTransactionModule } from './use-cases/update-payment-transaction/update-payment-transaction.module';
 import { SyncPaymentTransactionStatusModule } from './use-cases/sync-payment-transaction-status/sync-payment-transaction-status.module';
+import { RegisterSubscriptionPlanModule } from './use-cases/register-subscription-plan/register-subscription-plan.module';
+import { RegisterSubscriptionModule } from './use-cases/register-subscription/register-subscription.module';
+import { GenerateSubscriptionInvoiceModule } from './use-cases/generate-subscription-invoice/generate-subscription-invoice.module';
 
 @Module({
   imports: [
@@ -104,6 +107,9 @@ import { SyncPaymentTransactionStatusModule } from './use-cases/sync-payment-tra
     ListPaymentTransactionsByOfficeIdModule,
     UpdatePaymentTransactionModule,
     SyncPaymentTransactionStatusModule,
+    RegisterSubscriptionPlanModule,
+    RegisterSubscriptionModule,
+    GenerateSubscriptionInvoiceModule,
   ],
 })
 export class AppModule {}
