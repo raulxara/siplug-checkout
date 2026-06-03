@@ -1,0 +1,35 @@
+import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
+import { FindApiCredentialByUniqueIdService } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service';
+import { UpdateCheckoutSessionService } from '../../modules/checkout-sessions/services/update-checkout-session/update-checkout-session.service';
+import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service';
+import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
+import { UpdatePaymentTransactionService } from '../../modules/payment-transactions/services/update-payment-transaction/update-payment-transaction.service';
+import { ReceiveGatewayWebhookDtoIn } from './dtos/receive-gateway-webhook.dto-in';
+import { ReceiveGatewayWebhookDtoOut } from './dtos/receive-gateway-webhook.dto-out';
+export declare class ReceiveGatewayWebhookUseCase {
+    private readonly findApiCredentialByUniqueIdService;
+    private readonly findPaymentTransactionByGatewayTransactionIdService;
+    private readonly findPaymentTransactionByUniqueIdService;
+    private readonly updatePaymentTransactionService;
+    private readonly updateCheckoutSessionService;
+    private readonly handleUseCaseExceptionService;
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, updatePaymentTransactionService: UpdatePaymentTransactionService, updateCheckoutSessionService: UpdateCheckoutSessionService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    exec(dtoIn: ReceiveGatewayWebhookDtoIn): Promise<ReceiveGatewayWebhookDtoOut>;
+    private handleStripeWebhook;
+    private resolvePaymentTransactionForStripeWebhook;
+    private tryFindPaymentTransactionByGatewayTransactionId;
+    private tryFindPaymentTransactionByUniqueId;
+    private verifyStripeSignature;
+    private parseStripeSignatureHeader;
+    private safeCompareHex;
+    private resolveWebhookSecret;
+    private extractStripeObject;
+    private extractStripePaymentTransactionIdFromMetadata;
+    private mapStripeEventToInternalStatus;
+    private resolveCheckoutSessionStatus;
+    private getHeader;
+    private asObject;
+    private toNullableString;
+    private normalize;
+    private nowAsSqlDateTime;
+}
