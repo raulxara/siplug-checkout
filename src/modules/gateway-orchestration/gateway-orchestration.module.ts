@@ -14,6 +14,9 @@ import { DecryptApiCredentialSecretService } from '../../common/services/crypto/
 import { ResolvePaymentGatewayCredentialService } from './services/resolve-payment-gateway-credential/resolve-payment-gateway-credential.service';
 import { PicPayGatewayPaymentProvider } from './providers/picpay/picpay-gateway-payment.provider';
 import { SyncGatewayPaymentStatusService } from './services/sync-gateway-payment-status/sync-gateway-payment-status.service';
+import { DispatchGatewayRecurringPaymentService } from './services/dispatch-gateway-recurring-payment/dispatch-gateway-recurring-payment.service';
+import { MercadoPagoRecurringPaymentProvider } from './providers/mercado-pago/mercado-pago-recurring-payment.provider';
+
 @Module({
   imports: [ApiCredentialsModule, GatewaysModule],
   providers: [
@@ -29,6 +32,8 @@ import { SyncGatewayPaymentStatusService } from './services/sync-gateway-payment
     ResolvePaymentGatewayCredentialService,
     DecryptApiCredentialSecretService,
     SyncGatewayPaymentStatusService,
+    DispatchGatewayRecurringPaymentService,
+    MercadoPagoRecurringPaymentProvider,
   ],
   exports: [
     ResolveGatewayPaymentProviderService,
@@ -36,6 +41,8 @@ import { SyncGatewayPaymentStatusService } from './services/sync-gateway-payment
     FetchMercadoPagoPaymentService,
     ResolvePaymentGatewayCredentialService,
     SyncGatewayPaymentStatusService,
+    DispatchGatewayRecurringPaymentService,
+    MercadoPagoRecurringPaymentProvider,
   ],
 })
 export class GatewayOrchestrationModule {}

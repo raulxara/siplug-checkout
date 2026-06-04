@@ -10,6 +10,8 @@ exports.SubscriptionInvoicesModule = void 0;
 const common_1 = require("@nestjs/common");
 const subscription_invoices_repository_1 = require("./repositories/subscription-invoices.repository");
 const create_subscription_invoice_service_1 = require("./services/create-subscription-invoice/create-subscription-invoice.service");
+const find_subscription_invoice_by_unique_id_service_1 = require("./services/find-subscription-invoice-by-unique-id/find-subscription-invoice-by-unique-id.service");
+const update_subscription_invoice_service_1 = require("./services/update-subscription-invoice/update-subscription-invoice.service");
 const subscription_invoices_tokens_1 = require("./tokens/subscription-invoices.tokens");
 let SubscriptionInvoicesModule = class SubscriptionInvoicesModule {
 };
@@ -22,10 +24,14 @@ exports.SubscriptionInvoicesModule = SubscriptionInvoicesModule = __decorate([
                 useClass: subscription_invoices_repository_1.SubscriptionInvoicesRepository,
             },
             create_subscription_invoice_service_1.CreateSubscriptionInvoiceService,
+            find_subscription_invoice_by_unique_id_service_1.FindSubscriptionInvoiceByUniqueIdService,
+            update_subscription_invoice_service_1.UpdateSubscriptionInvoiceService,
         ],
         exports: [
             subscription_invoices_tokens_1.SUBSCRIPTION_INVOICES_REPOSITORY,
             create_subscription_invoice_service_1.CreateSubscriptionInvoiceService,
+            find_subscription_invoice_by_unique_id_service_1.FindSubscriptionInvoiceByUniqueIdService,
+            update_subscription_invoice_service_1.UpdateSubscriptionInvoiceService,
         ],
     })
 ], SubscriptionInvoicesModule);

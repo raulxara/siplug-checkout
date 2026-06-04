@@ -52,6 +52,7 @@ import { SyncPaymentTransactionStatusModule } from './use-cases/sync-payment-tra
 import { RegisterSubscriptionPlanModule } from './use-cases/register-subscription-plan/register-subscription-plan.module';
 import { RegisterSubscriptionModule } from './use-cases/register-subscription/register-subscription.module';
 import { GenerateSubscriptionInvoiceModule } from './use-cases/generate-subscription-invoice/generate-subscription-invoice.module';
+import { ProcessRecurringPaymentModule } from './use-cases/process-recurring-payment/process-recurring-payment.module';
 
 @Module({
   imports: [
@@ -110,6 +111,7 @@ import { GenerateSubscriptionInvoiceModule } from './use-cases/generate-subscrip
     RegisterSubscriptionPlanModule,
     RegisterSubscriptionModule,
     GenerateSubscriptionInvoiceModule,
+    ProcessRecurringPaymentModule,
   ],
 })
 export class AppModule {}

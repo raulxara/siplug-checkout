@@ -61,6 +61,7 @@ const sync_payment_transaction_status_module_1 = require("./use-cases/sync-payme
 const register_subscription_plan_module_1 = require("./use-cases/register-subscription-plan/register-subscription-plan.module");
 const register_subscription_module_1 = require("./use-cases/register-subscription/register-subscription.module");
 const generate_subscription_invoice_module_1 = require("./use-cases/generate-subscription-invoice/generate-subscription-invoice.module");
+const process_recurring_payment_module_1 = require("./use-cases/process-recurring-payment/process-recurring-payment.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -122,6 +123,7 @@ exports.AppModule = AppModule = __decorate([
             register_subscription_plan_module_1.RegisterSubscriptionPlanModule,
             register_subscription_module_1.RegisterSubscriptionModule,
             generate_subscription_invoice_module_1.GenerateSubscriptionInvoiceModule,
+            process_recurring_payment_module_1.ProcessRecurringPaymentModule,
         ],
     })
 ], AppModule);
