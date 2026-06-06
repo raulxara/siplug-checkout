@@ -40,7 +40,34 @@ export interface ISubscriptionPlansRepository {
 
   updateByUniqueId(
     _id: string,
-    data: Record<string, unknown>,
+    data: Partial<{
+      office_id: string | null;
+      client_id: string | null;
+      gateway_id: string | null;
+      api_credential_id: string | null;
+
+      name: string | null;
+      slug: string | null;
+      description: string | null;
+
+      billing_interval: string | null;
+      billing_interval_count: number | null;
+
+      amount: number | null;
+      currency: string | null;
+
+      trial_days: number | null;
+      max_billing_cycles: number | null;
+
+      gateway_plan_id: string | null;
+      payment_methods: string[] | null;
+
+      metadata: Record<string, unknown> | null;
+      config: Record<string, unknown> | null;
+
+      status: string | null;
+      changes_history: unknown;
+    }>,
   ): Promise<SubscriptionPlanRow>;
 
   findByUniqueId(_id: string): Promise<SubscriptionPlanRow | null>;

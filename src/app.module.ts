@@ -55,6 +55,10 @@ import { GenerateSubscriptionInvoiceModule } from './use-cases/generate-subscrip
 import { ProcessRecurringPaymentModule } from './use-cases/process-recurring-payment/process-recurring-payment.module';
 import { DevMercadoPagoCardTokenPageModule } from './use-cases/dev-mercado-pago-card-token-page/dev-mercado-pago-card-token-page.module';
 import { DevPicPayTemporaryCardTokenPageModule } from './use-cases/dev-picpay-temporary-card-token-page/dev-picpay-temporary-card-token-page.module';
+import { GetSubscriptionPlanByUniqueIdModule } from './use-cases/get-subscription-plan-by-unique-id/get-subscription-plan-by-unique-id.module';
+import { ListSubscriptionPlansModule } from './use-cases/list-subscription-plans/list-subscription-plans.module';
+import { ListSubscriptionPlansByOfficeIdModule } from './use-cases/list-subscription-plans-by-office-id/list-subscription-plans-by-office-id.module';
+import { UpdateSubscriptionPlanModule } from './use-cases/update-subscription-plan/update-subscription-plan.module';
 
 @Module({
   imports: [
@@ -116,6 +120,10 @@ import { DevPicPayTemporaryCardTokenPageModule } from './use-cases/dev-picpay-te
     ProcessRecurringPaymentModule,
     DevMercadoPagoCardTokenPageModule,
     DevPicPayTemporaryCardTokenPageModule,
+    GetSubscriptionPlanByUniqueIdModule,
+    ListSubscriptionPlansModule,
+    ListSubscriptionPlansByOfficeIdModule,
+    UpdateSubscriptionPlanModule,
   ],
 })
 export class AppModule {}

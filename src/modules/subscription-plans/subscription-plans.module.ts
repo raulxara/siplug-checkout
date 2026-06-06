@@ -4,6 +4,9 @@ import { CreateSubscriptionPlanService } from './services/create-subscription-pl
 import { FindSubscriptionPlanBySlugAndOfficeIdService } from './services/find-subscription-plan-by-slug-and-office-id/find-subscription-plan-by-slug-and-office-id.service';
 import { FindSubscriptionPlanByUniqueIdService } from './services/find-subscription-plan-by-unique-id/find-subscription-plan-by-unique-id.service';
 import { SUBSCRIPTION_PLANS_REPOSITORY } from './tokens/subscription-plans.tokens';
+import { GetAllSubscriptionPlansService } from './services/get-all-subscription-plans/get-all-subscription-plans.service';
+import { GetAllSubscriptionPlansByOfficeIdService } from './services/get-all-subscription-plans-by-office-id/get-all-subscription-plans-by-office-id.service';
+import { UpdateSubscriptionPlanService } from './services/update-subscription-plan/update-subscription-plan.service';
 
 @Module({
   providers: [
@@ -14,12 +17,18 @@ import { SUBSCRIPTION_PLANS_REPOSITORY } from './tokens/subscription-plans.token
     CreateSubscriptionPlanService,
     FindSubscriptionPlanByUniqueIdService,
     FindSubscriptionPlanBySlugAndOfficeIdService,
+    GetAllSubscriptionPlansService,
+    GetAllSubscriptionPlansByOfficeIdService,
+    UpdateSubscriptionPlanService,
   ],
   exports: [
     SUBSCRIPTION_PLANS_REPOSITORY,
     CreateSubscriptionPlanService,
     FindSubscriptionPlanByUniqueIdService,
     FindSubscriptionPlanBySlugAndOfficeIdService,
+    GetAllSubscriptionPlansService,
+    GetAllSubscriptionPlansByOfficeIdService,
+    UpdateSubscriptionPlanService,
   ],
 })
 export class SubscriptionPlansModule {}

@@ -13,6 +13,9 @@ const create_subscription_plan_service_1 = require("./services/create-subscripti
 const find_subscription_plan_by_slug_and_office_id_service_1 = require("./services/find-subscription-plan-by-slug-and-office-id/find-subscription-plan-by-slug-and-office-id.service");
 const find_subscription_plan_by_unique_id_service_1 = require("./services/find-subscription-plan-by-unique-id/find-subscription-plan-by-unique-id.service");
 const subscription_plans_tokens_1 = require("./tokens/subscription-plans.tokens");
+const get_all_subscription_plans_service_1 = require("./services/get-all-subscription-plans/get-all-subscription-plans.service");
+const get_all_subscription_plans_by_office_id_service_1 = require("./services/get-all-subscription-plans-by-office-id/get-all-subscription-plans-by-office-id.service");
+const update_subscription_plan_service_1 = require("./services/update-subscription-plan/update-subscription-plan.service");
 let SubscriptionPlansModule = class SubscriptionPlansModule {
 };
 exports.SubscriptionPlansModule = SubscriptionPlansModule;
@@ -26,12 +29,18 @@ exports.SubscriptionPlansModule = SubscriptionPlansModule = __decorate([
             create_subscription_plan_service_1.CreateSubscriptionPlanService,
             find_subscription_plan_by_unique_id_service_1.FindSubscriptionPlanByUniqueIdService,
             find_subscription_plan_by_slug_and_office_id_service_1.FindSubscriptionPlanBySlugAndOfficeIdService,
+            get_all_subscription_plans_service_1.GetAllSubscriptionPlansService,
+            get_all_subscription_plans_by_office_id_service_1.GetAllSubscriptionPlansByOfficeIdService,
+            update_subscription_plan_service_1.UpdateSubscriptionPlanService,
         ],
         exports: [
             subscription_plans_tokens_1.SUBSCRIPTION_PLANS_REPOSITORY,
             create_subscription_plan_service_1.CreateSubscriptionPlanService,
             find_subscription_plan_by_unique_id_service_1.FindSubscriptionPlanByUniqueIdService,
             find_subscription_plan_by_slug_and_office_id_service_1.FindSubscriptionPlanBySlugAndOfficeIdService,
+            get_all_subscription_plans_service_1.GetAllSubscriptionPlansService,
+            get_all_subscription_plans_by_office_id_service_1.GetAllSubscriptionPlansByOfficeIdService,
+            update_subscription_plan_service_1.UpdateSubscriptionPlanService,
         ],
     })
 ], SubscriptionPlansModule);

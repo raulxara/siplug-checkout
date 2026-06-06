@@ -64,6 +64,10 @@ const generate_subscription_invoice_module_1 = require("./use-cases/generate-sub
 const process_recurring_payment_module_1 = require("./use-cases/process-recurring-payment/process-recurring-payment.module");
 const dev_mercado_pago_card_token_page_module_1 = require("./use-cases/dev-mercado-pago-card-token-page/dev-mercado-pago-card-token-page.module");
 const dev_picpay_temporary_card_token_page_module_1 = require("./use-cases/dev-picpay-temporary-card-token-page/dev-picpay-temporary-card-token-page.module");
+const get_subscription_plan_by_unique_id_module_1 = require("./use-cases/get-subscription-plan-by-unique-id/get-subscription-plan-by-unique-id.module");
+const list_subscription_plans_module_1 = require("./use-cases/list-subscription-plans/list-subscription-plans.module");
+const list_subscription_plans_by_office_id_module_1 = require("./use-cases/list-subscription-plans-by-office-id/list-subscription-plans-by-office-id.module");
+const update_subscription_plan_module_1 = require("./use-cases/update-subscription-plan/update-subscription-plan.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -128,6 +132,10 @@ exports.AppModule = AppModule = __decorate([
             process_recurring_payment_module_1.ProcessRecurringPaymentModule,
             dev_mercado_pago_card_token_page_module_1.DevMercadoPagoCardTokenPageModule,
             dev_picpay_temporary_card_token_page_module_1.DevPicPayTemporaryCardTokenPageModule,
+            get_subscription_plan_by_unique_id_module_1.GetSubscriptionPlanByUniqueIdModule,
+            list_subscription_plans_module_1.ListSubscriptionPlansModule,
+            list_subscription_plans_by_office_id_module_1.ListSubscriptionPlansByOfficeIdModule,
+            update_subscription_plan_module_1.UpdateSubscriptionPlanModule,
         ],
     })
 ], AppModule);

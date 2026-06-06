@@ -1,1 +1,47 @@
-export {};
+export declare class UpdateSubscriptionPlanDtoIn {
+    readonly token: string;
+    readonly subscriptionPlanId: string;
+    readonly officeId: string | null;
+    readonly clientId: string | null;
+    readonly gatewayId: string | null;
+    readonly apiCredentialId: string | null;
+    readonly name: string | null;
+    readonly slug: string | null;
+    readonly description: string | null;
+    readonly billingInterval: string | null;
+    readonly billingIntervalCount: number | null;
+    readonly amount: number | null;
+    readonly currency: string | null;
+    readonly trialDays: number | null;
+    readonly maxBillingCycles: number | null;
+    readonly gatewayPlanId: string | null;
+    readonly paymentMethods: string[] | null;
+    readonly metadata: Record<string, unknown> | null;
+    readonly config: Record<string, unknown> | null;
+    readonly status: string | null;
+    constructor(params: {
+        token?: unknown;
+        subscriptionPlanId?: unknown;
+        officeId?: unknown;
+        clientId?: unknown;
+        gatewayId?: unknown;
+        apiCredentialId?: unknown;
+        name?: unknown;
+        slug?: unknown;
+        description?: unknown;
+        billingInterval?: unknown;
+        billingIntervalCount?: unknown;
+        amount?: unknown;
+        currency?: unknown;
+        trialDays?: unknown;
+        maxBillingCycles?: unknown;
+        gatewayPlanId?: unknown;
+        paymentMethods?: unknown;
+        metadata?: unknown;
+        config?: unknown;
+        status?: unknown;
+    });
+    private toNullableString;
+    private toNullableNumber;
+    private toNullableObject;
+}
