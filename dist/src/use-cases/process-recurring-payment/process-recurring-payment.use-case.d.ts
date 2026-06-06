@@ -42,6 +42,7 @@ export declare class ProcessRecurringPaymentUseCase {
     private resolveCheckoutSessionStatus;
     private validatePaymentMethod;
     private assertNoForbiddenRawCardData;
+    private normalizeProviderName;
     private assertNoSensitiveFields;
     private sanitizeSensitiveGatewayData;
     private sanitizeUnknownGatewayValue;

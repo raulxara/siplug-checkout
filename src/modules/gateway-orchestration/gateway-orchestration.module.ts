@@ -16,6 +16,10 @@ import { PicPayGatewayPaymentProvider } from './providers/picpay/picpay-gateway-
 import { SyncGatewayPaymentStatusService } from './services/sync-gateway-payment-status/sync-gateway-payment-status.service';
 import { DispatchGatewayRecurringPaymentService } from './services/dispatch-gateway-recurring-payment/dispatch-gateway-recurring-payment.service';
 import { MercadoPagoRecurringPaymentProvider } from './providers/mercado-pago/mercado-pago-recurring-payment.provider';
+import { StripeRecurringPaymentProvider } from './providers/stripe/stripe-recurring-payment.provider';
+import { PayPalRecurringPaymentProvider } from './providers/paypal/paypal-recurring-payment.provider';
+import { PagSeguroRecurringPaymentProvider } from './providers/pagseguro/pagseguro-recurring-payment.provider';
+import { PicPayRecurringPaymentProvider } from './providers/picpay/picpay-recurring-payment.provider';
 
 @Module({
   imports: [ApiCredentialsModule, GatewaysModule],
@@ -34,6 +38,10 @@ import { MercadoPagoRecurringPaymentProvider } from './providers/mercado-pago/me
     SyncGatewayPaymentStatusService,
     DispatchGatewayRecurringPaymentService,
     MercadoPagoRecurringPaymentProvider,
+    StripeRecurringPaymentProvider,
+    PayPalRecurringPaymentProvider,
+    PagSeguroRecurringPaymentProvider,
+    PicPayRecurringPaymentProvider,
   ],
   exports: [
     ResolveGatewayPaymentProviderService,
@@ -43,6 +51,10 @@ import { MercadoPagoRecurringPaymentProvider } from './providers/mercado-pago/me
     SyncGatewayPaymentStatusService,
     DispatchGatewayRecurringPaymentService,
     MercadoPagoRecurringPaymentProvider,
+    StripeRecurringPaymentProvider,
+    PayPalRecurringPaymentProvider,
+    PagSeguroRecurringPaymentProvider,
+    PicPayRecurringPaymentProvider,
   ],
 })
 export class GatewayOrchestrationModule {}

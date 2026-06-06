@@ -53,6 +53,8 @@ import { RegisterSubscriptionPlanModule } from './use-cases/register-subscriptio
 import { RegisterSubscriptionModule } from './use-cases/register-subscription/register-subscription.module';
 import { GenerateSubscriptionInvoiceModule } from './use-cases/generate-subscription-invoice/generate-subscription-invoice.module';
 import { ProcessRecurringPaymentModule } from './use-cases/process-recurring-payment/process-recurring-payment.module';
+import { DevMercadoPagoCardTokenPageModule } from './use-cases/dev-mercado-pago-card-token-page/dev-mercado-pago-card-token-page.module';
+import { DevPicPayTemporaryCardTokenPageModule } from './use-cases/dev-picpay-temporary-card-token-page/dev-picpay-temporary-card-token-page.module';
 
 @Module({
   imports: [
@@ -112,6 +114,8 @@ import { ProcessRecurringPaymentModule } from './use-cases/process-recurring-pay
     RegisterSubscriptionModule,
     GenerateSubscriptionInvoiceModule,
     ProcessRecurringPaymentModule,
+    DevMercadoPagoCardTokenPageModule,
+    DevPicPayTemporaryCardTokenPageModule,
   ],
 })
 export class AppModule {}

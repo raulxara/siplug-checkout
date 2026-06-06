@@ -13,10 +13,22 @@ exports.DispatchGatewayRecurringPaymentService = void 0;
 const common_1 = require("@nestjs/common");
 const gateway_recurring_payment_dto_out_1 = require("../../dtos/gateway-recurring-payment.dto-out");
 const mercado_pago_recurring_payment_provider_1 = require("../../providers/mercado-pago/mercado-pago-recurring-payment.provider");
+const stripe_recurring_payment_provider_1 = require("../../providers/stripe/stripe-recurring-payment.provider");
+const paypal_recurring_payment_provider_1 = require("../../providers/paypal/paypal-recurring-payment.provider");
+const pagseguro_recurring_payment_provider_1 = require("../../providers/pagseguro/pagseguro-recurring-payment.provider");
+const picpay_recurring_payment_provider_1 = require("../../providers/picpay/picpay-recurring-payment.provider");
 let DispatchGatewayRecurringPaymentService = class DispatchGatewayRecurringPaymentService {
     mercadoPagoRecurringPaymentProvider;
-    constructor(mercadoPagoRecurringPaymentProvider) {
+    stripeRecurringPaymentProvider;
+    payPalRecurringPaymentProvider;
+    pagSeguroRecurringPaymentProvider;
+    picPayRecurringPaymentProvider;
+    constructor(mercadoPagoRecurringPaymentProvider, stripeRecurringPaymentProvider, payPalRecurringPaymentProvider, pagSeguroRecurringPaymentProvider, picPayRecurringPaymentProvider) {
         this.mercadoPagoRecurringPaymentProvider = mercadoPagoRecurringPaymentProvider;
+        this.stripeRecurringPaymentProvider = stripeRecurringPaymentProvider;
+        this.payPalRecurringPaymentProvider = payPalRecurringPaymentProvider;
+        this.pagSeguroRecurringPaymentProvider = pagSeguroRecurringPaymentProvider;
+        this.picPayRecurringPaymentProvider = picPayRecurringPaymentProvider;
     }
     async exec(dtoIn) {
         const provider = this.normalizeProvider(dtoIn.gatewayProvider);
@@ -24,16 +36,16 @@ let DispatchGatewayRecurringPaymentService = class DispatchGatewayRecurringPayme
             return await this.mercadoPagoRecurringPaymentProvider.createSubscription(dtoIn);
         }
         if (provider === 'stripe') {
-            return this.buildPendingProviderImplementation(dtoIn, 'stripe');
+            return await this.stripeRecurringPaymentProvider.createSubscription(dtoIn);
         }
         if (provider === 'paypal') {
-            return this.buildPendingProviderImplementation(dtoIn, 'paypal');
+            return await this.payPalRecurringPaymentProvider.createSubscription(dtoIn);
         }
         if (provider === 'pagseguro' || provider === 'pagbank') {
-            return this.buildPendingProviderImplementation(dtoIn, 'pagseguro');
+            return await this.pagSeguroRecurringPaymentProvider.createSubscription(dtoIn);
         }
         if (provider === 'picpay') {
-            return this.buildPendingProviderImplementation(dtoIn, 'picpay');
+            return await this.picPayRecurringPaymentProvider.createSubscription(dtoIn);
         }
         if (provider === 'infinitypay' || provider === 'infinitepay') {
             return this.buildPendingProviderImplementation(dtoIn, 'infinitypay');
@@ -70,7 +82,9 @@ let DispatchGatewayRecurringPaymentService = class DispatchGatewayRecurringPayme
             return null;
         }
         const sanitized = this.sanitizeUnknownValue(payload);
-        if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+        if (!sanitized ||
+            typeof sanitized !== 'object' ||
+            Array.isArray(sanitized)) {
             return null;
         }
         return sanitized;
@@ -143,6 +157,10 @@ let DispatchGatewayRecurringPaymentService = class DispatchGatewayRecurringPayme
 exports.DispatchGatewayRecurringPaymentService = DispatchGatewayRecurringPaymentService;
 exports.DispatchGatewayRecurringPaymentService = DispatchGatewayRecurringPaymentService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [mercado_pago_recurring_payment_provider_1.MercadoPagoRecurringPaymentProvider])
+    __metadata("design:paramtypes", [mercado_pago_recurring_payment_provider_1.MercadoPagoRecurringPaymentProvider,
+        stripe_recurring_payment_provider_1.StripeRecurringPaymentProvider,
+        paypal_recurring_payment_provider_1.PayPalRecurringPaymentProvider,
+        pagseguro_recurring_payment_provider_1.PagSeguroRecurringPaymentProvider,
+        picpay_recurring_payment_provider_1.PicPayRecurringPaymentProvider])
 ], DispatchGatewayRecurringPaymentService);
 //# sourceMappingURL=dispatch-gateway-recurring-payment.service.js.map

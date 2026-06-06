@@ -24,6 +24,10 @@ const picpay_gateway_payment_provider_1 = require("./providers/picpay/picpay-gat
 const sync_gateway_payment_status_service_1 = require("./services/sync-gateway-payment-status/sync-gateway-payment-status.service");
 const dispatch_gateway_recurring_payment_service_1 = require("./services/dispatch-gateway-recurring-payment/dispatch-gateway-recurring-payment.service");
 const mercado_pago_recurring_payment_provider_1 = require("./providers/mercado-pago/mercado-pago-recurring-payment.provider");
+const stripe_recurring_payment_provider_1 = require("./providers/stripe/stripe-recurring-payment.provider");
+const paypal_recurring_payment_provider_1 = require("./providers/paypal/paypal-recurring-payment.provider");
+const pagseguro_recurring_payment_provider_1 = require("./providers/pagseguro/pagseguro-recurring-payment.provider");
+const picpay_recurring_payment_provider_1 = require("./providers/picpay/picpay-recurring-payment.provider");
 let GatewayOrchestrationModule = class GatewayOrchestrationModule {
 };
 exports.GatewayOrchestrationModule = GatewayOrchestrationModule;
@@ -45,6 +49,10 @@ exports.GatewayOrchestrationModule = GatewayOrchestrationModule = __decorate([
             sync_gateway_payment_status_service_1.SyncGatewayPaymentStatusService,
             dispatch_gateway_recurring_payment_service_1.DispatchGatewayRecurringPaymentService,
             mercado_pago_recurring_payment_provider_1.MercadoPagoRecurringPaymentProvider,
+            stripe_recurring_payment_provider_1.StripeRecurringPaymentProvider,
+            paypal_recurring_payment_provider_1.PayPalRecurringPaymentProvider,
+            pagseguro_recurring_payment_provider_1.PagSeguroRecurringPaymentProvider,
+            picpay_recurring_payment_provider_1.PicPayRecurringPaymentProvider,
         ],
         exports: [
             resolve_gateway_payment_provider_service_1.ResolveGatewayPaymentProviderService,
@@ -54,6 +62,10 @@ exports.GatewayOrchestrationModule = GatewayOrchestrationModule = __decorate([
             sync_gateway_payment_status_service_1.SyncGatewayPaymentStatusService,
             dispatch_gateway_recurring_payment_service_1.DispatchGatewayRecurringPaymentService,
             mercado_pago_recurring_payment_provider_1.MercadoPagoRecurringPaymentProvider,
+            stripe_recurring_payment_provider_1.StripeRecurringPaymentProvider,
+            paypal_recurring_payment_provider_1.PayPalRecurringPaymentProvider,
+            pagseguro_recurring_payment_provider_1.PagSeguroRecurringPaymentProvider,
+            picpay_recurring_payment_provider_1.PicPayRecurringPaymentProvider,
         ],
     })
 ], GatewayOrchestrationModule);

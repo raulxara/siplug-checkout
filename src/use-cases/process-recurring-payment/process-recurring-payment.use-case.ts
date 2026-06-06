@@ -81,7 +81,11 @@ export class ProcessRecurringPaymentUseCase {
       );
 
       this.validatePaymentMethod(dtoIn.paymentMethod);
-      this.assertNoForbiddenRawCardData(dtoIn.paymentData);
+      this.assertNoForbiddenRawCardData({
+        paymentData: dtoIn.paymentData,
+        gatewayProvider: dtoIn.gatewayProvider,
+        paymentMethod: dtoIn.paymentMethod,
+      });
       this.assertNoSensitiveFields(dtoIn.metadata, 'metadata');
       this.assertNoSensitiveFields(dtoIn.config, 'config');
 
@@ -530,6 +534,8 @@ export class ProcessRecurringPaymentUseCase {
 
             this.resolveSubscriptionStatus(gatewayRecurringDtoOut.status),
             'ProcessRecurringPaymentUseCase.gatewayResponse',
+
+            gatewayRecurringDtoOut.gatewaySubscriptionId,
           ),
         );
 
@@ -761,34 +767,73 @@ export class ProcessRecurringPaymentUseCase {
     }
   }
 
-  private assertNoForbiddenRawCardData(
-    paymentData: Record<string, unknown> | null,
-  ): void {
-    if (paymentData === null) {
+  private assertNoForbiddenRawCardData(params: {
+    paymentData: Record<string, unknown> | null;
+    gatewayProvider: string | null;
+    paymentMethod: string;
+  }): void {
+    if (params.paymentData === null) {
       return;
     }
+
+    const normalizedGatewayProvider = this.normalizeProviderName(
+      params.gatewayProvider,
+    );
+
+    const allowsPagSeguroRecurringSecurityCode =
+      (normalizedGatewayProvider === 'pagseguro' ||
+        normalizedGatewayProvider === 'pagbank') &&
+      params.paymentMethod === 'credit_card';
 
     const forbiddenKeys = [
       'cardNumber',
       'card_number',
       'number',
-      'cvv',
-      'securityCode',
-      'security_code',
       'pan',
       'rawCard',
       'raw_card',
     ];
 
-    for (const [key, value] of Object.entries(paymentData)) {
+    const sensitiveAllowedOnlyForPagSeguroKeys = [
+      'cvv',
+      'securityCode',
+      'security_code',
+    ];
+
+    for (const [key, value] of Object.entries(params.paymentData)) {
       if (forbiddenKeys.includes(key)) {
         throw new Error(`forbidden sensitive payment field: paymentData.${key}`);
       }
 
+      if (
+        sensitiveAllowedOnlyForPagSeguroKeys.includes(key) &&
+        !allowsPagSeguroRecurringSecurityCode
+      ) {
+        throw new Error(`forbidden sensitive payment field: paymentData.${key}`);
+      }
+
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        this.assertNoForbiddenRawCardData(value as Record<string, unknown>);
+        this.assertNoForbiddenRawCardData({
+          paymentData: value as Record<string, unknown>,
+          gatewayProvider: params.gatewayProvider,
+          paymentMethod: params.paymentMethod,
+        });
       }
     }
+  }
+
+  private normalizeProviderName(provider: string | null): string {
+    if (provider === null) {
+      return '';
+    }
+
+    return provider
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/-/g, '_')
+      .replace(/\s+/g, '_');
   }
 
   private assertNoSensitiveFields(

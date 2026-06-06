@@ -11,24 +11,21 @@ const common_1 = require("@nestjs/common");
 const gateway_recurring_payment_dto_out_1 = require("../../dtos/gateway-recurring-payment.dto-out");
 let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvider {
     async createSubscription(dtoIn) {
-        const providerPayload = dtoIn.providerPayload;
         const requestPayload = this.buildPreapprovalRequest(dtoIn);
         const token = this.resolveProviderToken(dtoIn);
         const baseUrl = this.resolveBaseUrl(dtoIn);
         const response = await fetch(`${baseUrl}/preapproval`, {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'X-Idempotency-Key': dtoIn.idempotencyKey ?? dtoIn.paymentTransaction.idempotencyKey ?? '',
-            },
+            headers: this.buildHeaders({
+                token,
+                idempotencyKey: dtoIn.idempotencyKey ?? dtoIn.paymentTransaction.idempotencyKey,
+                dtoIn,
+            }),
             body: JSON.stringify(requestPayload),
         });
         const responseBody = await this.parseJsonResponse(response, 'Mercado Pago returned a non JSON recurring subscription response');
         if (!response.ok) {
-            return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(false, 'mercadopago', null, requestPayload.preapproval_plan_id ?? null, null, null, this.toNullableString(responseBody.status) ??
-                String(response.status), 'failed', 'gateway_recurring_provider_failed', this.resolveMercadoPagoErrorMessage(responseBody, response.status), this.sanitizePayload(requestPayload), this.sanitizePayload(responseBody), {
+            return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(false, 'mercadopago', null, requestPayload.preapproval_plan_id ?? null, null, null, this.toNullableString(responseBody.status) ?? String(response.status), 'failed', 'gateway_recurring_provider_failed', this.resolveMercadoPagoErrorMessage(responseBody, response.status), this.sanitizePayload(requestPayload), this.sanitizePayload(responseBody), {
                 ok: false,
                 provider: 'mercadopago',
                 endpoint: '/preapproval',
@@ -40,19 +37,54 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
         const initPoint = this.toNullableString(responseBody.init_point) ??
             this.toNullableString(responseBody.sandbox_init_point);
         const mappedStatus = this.mapGatewayStatus(gatewayStatus);
-        return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(true, 'mercadopago', gatewaySubscriptionId, requestPayload.preapproval_plan_id ?? null, null, null, gatewayStatus, mappedStatus.status, mappedStatus.processStatus, mappedStatus.processMessage, this.sanitizePayload(requestPayload), this.sanitizePayload(responseBody), {
+        return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(true, 'mercadopago', gatewaySubscriptionId, requestPayload.preapproval_plan_id ?? null, null, gatewaySubscriptionId, gatewayStatus, mappedStatus.status, mappedStatus.processStatus, mappedStatus.processMessage, this.sanitizePayload(requestPayload), this.sanitizePayload(responseBody), {
             ok: true,
             provider: 'mercadopago',
             endpoint: '/preapproval',
             httpStatus: response.status,
         }, initPoint, initPoint, null, null, null, null, gatewayStatus === 'authorized' ? this.nowAsIso() : null, null, null, null, dtoIn.paymentTransaction.expiresAt);
     }
+    buildHeaders(params) {
+        const headers = {
+            Accept: 'application/json',
+            Authorization: `Bearer ${params.token}`,
+            'Content-Type': 'application/json',
+        };
+        if (params.idempotencyKey !== null && params.idempotencyKey.trim() !== '') {
+            headers['X-Idempotency-Key'] = params.idempotencyKey;
+        }
+        if (this.shouldUseStageScope(params.dtoIn, params.token)) {
+            headers['X-scope'] = 'stage';
+        }
+        return headers;
+    }
+    shouldUseStageScope(dtoIn, token) {
+        const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
+        const gatewayConfig = this.asObject(dtoIn.config.gatewayConfig);
+        const environment = this.toNullableString(apiCredentialConfig.environment) ??
+            this.toNullableString(gatewayConfig.environment);
+        if (environment === 'sandbox' || environment === 'test') {
+            return true;
+        }
+        if (token.startsWith('TEST-')) {
+            return true;
+        }
+        return false;
+    }
     buildPreapprovalRequest(dtoIn) {
         const payer = this.asObject(dtoIn.providerPayload.payer);
         const paymentData = this.asObject(dtoIn.providerPayload.paymentData);
         const payerEmail = this.toRequiredString(payer.email, 'payer.email is required for Mercado Pago recurring payment');
+        const paymentMethod = dtoIn.paymentTransaction.paymentMethod;
         const cardTokenId = this.toNullableString(paymentData.cardTokenId) ??
-            this.toNullableString(paymentData.card_token_id);
+            this.toNullableString(paymentData.card_token_id) ??
+            this.toNullableString(paymentData.token);
+        const shouldAuthorizeCreditCard = this.shouldAuthorizeCreditCard(dtoIn, cardTokenId);
+        if (paymentMethod === 'credit_card' &&
+            shouldAuthorizeCreditCard &&
+            cardTokenId === null) {
+            throw new Error('paymentData.cardTokenId is required for Mercado Pago recurring credit_card authorized payment');
+        }
         const gatewayPlanId = this.resolveGatewayPlanId(dtoIn);
         const frequency = dtoIn.subscriptionPlan.billingIntervalCount;
         const frequencyType = this.mapFrequencyType(dtoIn.subscriptionPlan.billingInterval);
@@ -78,7 +110,9 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
                 currency_id: dtoIn.paymentTransaction.currency,
             },
             back_url: backUrl,
-            status: cardTokenId === null ? 'pending' : 'authorized',
+            status: this.shouldAuthorizeCreditCard(dtoIn, cardTokenId)
+                ? 'authorized'
+                : 'pending',
         };
         if (startDate !== null) {
             request.auto_recurring.start_date = startDate;
@@ -86,7 +120,7 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
         if (endDate !== null) {
             request.auto_recurring.end_date = endDate;
         }
-        if (cardTokenId !== null) {
+        if (shouldAuthorizeCreditCard && cardTokenId !== null) {
             request.card_token_id = cardTokenId;
         }
         if (gatewayPlanId !== null) {
@@ -105,8 +139,24 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
             this.toNullableString(mercadoPagoMapping.preapproval_plan_id) ??
             dtoIn.subscriptionPlan.gatewayPlanId);
     }
+    shouldAuthorizeCreditCard(dtoIn, cardTokenId) {
+        if (dtoIn.paymentTransaction.paymentMethod !== 'credit_card') {
+            return false;
+        }
+        if (cardTokenId === null) {
+            return false;
+        }
+        const transactionConfig = this.asObject(dtoIn.paymentTransaction.config);
+        const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
+        const subscriptionPlanConfig = this.asObject(dtoIn.subscriptionPlan.config);
+        const allowTransparentCard = transactionConfig.allowTransparentCard === true ||
+            apiCredentialConfig.allowTransparentCard === true ||
+            subscriptionPlanConfig.allowTransparentCard === true;
+        return allowTransparentCard;
+    }
     resolveStartDate(dtoIn) {
-        if (dtoIn.subscriptionPlan.trialDays !== null && dtoIn.subscriptionPlan.trialDays > 0) {
+        if (dtoIn.subscriptionPlan.trialDays !== null &&
+            dtoIn.subscriptionPlan.trialDays > 0) {
             const date = new Date();
             date.setDate(date.getDate() + dtoIn.subscriptionPlan.trialDays);
             return date.toISOString();
@@ -171,6 +221,13 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
                 status: 'pending',
                 processStatus: 'gateway_recurring_subscription_pending',
                 processMessage: 'Mercado Pago recurring subscription created and waiting buyer approval',
+            };
+        }
+        if (normalized === 'paused') {
+            return {
+                status: 'pending',
+                processStatus: 'gateway_recurring_subscription_paused',
+                processMessage: 'Mercado Pago recurring subscription paused',
             };
         }
         if (normalized === 'cancelled' || normalized === 'canceled') {
@@ -257,7 +314,9 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
             return null;
         }
         const sanitized = this.sanitizeUnknownValue(payload);
-        if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+        if (!sanitized ||
+            typeof sanitized !== 'object' ||
+            Array.isArray(sanitized)) {
             return null;
         }
         return sanitized;

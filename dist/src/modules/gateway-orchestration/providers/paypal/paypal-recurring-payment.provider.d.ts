@@ -1,0 +1,32 @@
+import { GatewayRecurringPaymentDtoIn } from '../../dtos/gateway-recurring-payment.dto-in';
+import { GatewayRecurringPaymentDtoOut } from '../../dtos/gateway-recurring-payment.dto-out';
+export declare class PayPalRecurringPaymentProvider {
+    createSubscription(dtoIn: GatewayRecurringPaymentDtoIn): Promise<GatewayRecurringPaymentDtoOut>;
+    private resolveOrCreatePlan;
+    private buildProductRequest;
+    private buildPlanRequest;
+    private buildSubscriptionRequest;
+    private resolvePayPalRedirectUrl;
+    private createAccessToken;
+    private executePayPalJsonRequest;
+    private resolveOAuthCredentials;
+    private resolvePayPalPlanId;
+    private resolvePayPalProductId;
+    private resolveBaseUrl;
+    private mapPayPalInterval;
+    private mapPayPalSubscriptionStatus;
+    private extractApprovalUrl;
+    private buildFailedResponse;
+    private parseJsonResponse;
+    private resolvePayPalErrorMessage;
+    private resolveSuccessUrl;
+    private resolveCancelUrl;
+    private centsToDecimal;
+    private sanitizePayload;
+    private sanitizeUnknownValue;
+    private isSensitiveKey;
+    private asObject;
+    private toNullableString;
+    private toRequiredString;
+    private limitText;
+}

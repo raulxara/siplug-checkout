@@ -25,8 +25,6 @@ export class MercadoPagoRecurringPaymentProvider {
   async createSubscription(
     dtoIn: GatewayRecurringPaymentDtoIn,
   ): Promise<GatewayRecurringPaymentDtoOut> {
-    const providerPayload = dtoIn.providerPayload;
-
     const requestPayload = this.buildPreapprovalRequest(dtoIn);
 
     const token = this.resolveProviderToken(dtoIn);
@@ -34,13 +32,12 @@ export class MercadoPagoRecurringPaymentProvider {
 
     const response = await fetch(`${baseUrl}/preapproval`, {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key':
-          dtoIn.idempotencyKey ?? dtoIn.paymentTransaction.idempotencyKey ?? '',
-      },
+      headers: this.buildHeaders({
+        token,
+        idempotencyKey:
+          dtoIn.idempotencyKey ?? dtoIn.paymentTransaction.idempotencyKey,
+        dtoIn,
+      }),
       body: JSON.stringify(requestPayload),
     });
 
@@ -59,8 +56,7 @@ export class MercadoPagoRecurringPaymentProvider {
         null,
         null,
 
-        this.toNullableString(responseBody.status) ??
-          String(response.status),
+        this.toNullableString(responseBody.status) ?? String(response.status),
 
         'failed',
         'gateway_recurring_provider_failed',
@@ -97,7 +93,7 @@ export class MercadoPagoRecurringPaymentProvider {
       gatewaySubscriptionId,
       requestPayload.preapproval_plan_id ?? null,
       null,
-      null,
+      gatewaySubscriptionId,
 
       gatewayStatus,
       mappedStatus.status,
@@ -129,6 +125,50 @@ export class MercadoPagoRecurringPaymentProvider {
     );
   }
 
+  private buildHeaders(params: {
+    token: string;
+    idempotencyKey: string | null;
+    dtoIn: GatewayRecurringPaymentDtoIn;
+  }): Record<string, string> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+      'Content-Type': 'application/json',
+    };
+
+    if (params.idempotencyKey !== null && params.idempotencyKey.trim() !== '') {
+      headers['X-Idempotency-Key'] = params.idempotencyKey;
+    }
+
+    if (this.shouldUseStageScope(params.dtoIn, params.token)) {
+      headers['X-scope'] = 'stage';
+    }
+
+    return headers;
+  }
+
+  private shouldUseStageScope(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+    token: string,
+  ): boolean {
+    const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
+    const gatewayConfig = this.asObject(dtoIn.config.gatewayConfig);
+
+    const environment =
+      this.toNullableString(apiCredentialConfig.environment) ??
+      this.toNullableString(gatewayConfig.environment);
+
+    if (environment === 'sandbox' || environment === 'test') {
+      return true;
+    }
+
+    if (token.startsWith('TEST-')) {
+      return true;
+    }
+
+    return false;
+  }
+
   private buildPreapprovalRequest(
     dtoIn: GatewayRecurringPaymentDtoIn,
   ): MercadoPagoPreapprovalRequest {
@@ -140,9 +180,27 @@ export class MercadoPagoRecurringPaymentProvider {
       'payer.email is required for Mercado Pago recurring payment',
     );
 
+    const paymentMethod = dtoIn.paymentTransaction.paymentMethod;
+
     const cardTokenId =
       this.toNullableString(paymentData.cardTokenId) ??
-      this.toNullableString(paymentData.card_token_id);
+      this.toNullableString(paymentData.card_token_id) ??
+      this.toNullableString(paymentData.token);
+
+    const shouldAuthorizeCreditCard = this.shouldAuthorizeCreditCard(
+      dtoIn,
+      cardTokenId,
+    );
+
+    if (
+      paymentMethod === 'credit_card' &&
+      shouldAuthorizeCreditCard &&
+      cardTokenId === null
+    ) {
+      throw new Error(
+        'paymentData.cardTokenId is required for Mercado Pago recurring credit_card authorized payment',
+      );
+    }
 
     const gatewayPlanId = this.resolveGatewayPlanId(dtoIn);
 
@@ -182,7 +240,9 @@ export class MercadoPagoRecurringPaymentProvider {
         currency_id: dtoIn.paymentTransaction.currency,
       },
       back_url: backUrl,
-      status: cardTokenId === null ? 'pending' : 'authorized',
+      status: this.shouldAuthorizeCreditCard(dtoIn, cardTokenId)
+        ? 'authorized'
+        : 'pending',
     };
 
     if (startDate !== null) {
@@ -193,7 +253,7 @@ export class MercadoPagoRecurringPaymentProvider {
       request.auto_recurring.end_date = endDate;
     }
 
-    if (cardTokenId !== null) {
+    if (shouldAuthorizeCreditCard && cardTokenId !== null) {
       request.card_token_id = cardTokenId;
     }
 
@@ -204,7 +264,9 @@ export class MercadoPagoRecurringPaymentProvider {
     return request;
   }
 
-  private resolveGatewayPlanId(dtoIn: GatewayRecurringPaymentDtoIn): string | null {
+  private resolveGatewayPlanId(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+  ): string | null {
     const planConfig = this.asObject(dtoIn.subscriptionPlan.config);
     const gatewayMappings = this.asObject(planConfig.gatewayMappings);
 
@@ -221,8 +283,35 @@ export class MercadoPagoRecurringPaymentProvider {
     );
   }
 
+  private shouldAuthorizeCreditCard(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+    cardTokenId: string | null,
+  ): boolean {
+    if (dtoIn.paymentTransaction.paymentMethod !== 'credit_card') {
+      return false;
+    }
+
+    if (cardTokenId === null) {
+      return false;
+    }
+
+    const transactionConfig = this.asObject(dtoIn.paymentTransaction.config);
+    const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
+    const subscriptionPlanConfig = this.asObject(dtoIn.subscriptionPlan.config);
+
+    const allowTransparentCard =
+      transactionConfig.allowTransparentCard === true ||
+      apiCredentialConfig.allowTransparentCard === true ||
+      subscriptionPlanConfig.allowTransparentCard === true;
+
+    return allowTransparentCard;
+  }
+
   private resolveStartDate(dtoIn: GatewayRecurringPaymentDtoIn): string | null {
-    if (dtoIn.subscriptionPlan.trialDays !== null && dtoIn.subscriptionPlan.trialDays > 0) {
+    if (
+      dtoIn.subscriptionPlan.trialDays !== null &&
+      dtoIn.subscriptionPlan.trialDays > 0
+    ) {
       const date = new Date();
       date.setDate(date.getDate() + dtoIn.subscriptionPlan.trialDays);
       return date.toISOString();
@@ -240,8 +329,7 @@ export class MercadoPagoRecurringPaymentProvider {
       return null;
     }
 
-    const startDate =
-      this.resolveStartDate(dtoIn) ?? new Date().toISOString();
+    const startDate = this.resolveStartDate(dtoIn) ?? new Date().toISOString();
 
     const endDate = new Date(startDate);
 
@@ -316,6 +404,14 @@ export class MercadoPagoRecurringPaymentProvider {
       };
     }
 
+    if (normalized === 'paused') {
+      return {
+        status: 'pending',
+        processStatus: 'gateway_recurring_subscription_paused',
+        processMessage: 'Mercado Pago recurring subscription paused',
+      };
+    }
+
     if (normalized === 'cancelled' || normalized === 'canceled') {
       return {
         status: 'canceled',
@@ -359,7 +455,9 @@ export class MercadoPagoRecurringPaymentProvider {
   private resolveBackUrl(dtoIn: GatewayRecurringPaymentDtoIn): string | null {
     const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
     const gatewayConfig = this.asObject(dtoIn.config.gatewayConfig);
-    const checkoutSessionConfig = this.asObject(dtoIn.config.checkoutSessionConfig);
+    const checkoutSessionConfig = this.asObject(
+      dtoIn.config.checkoutSessionConfig,
+    );
 
     return (
       this.toNullableString(checkoutSessionConfig.successUrl) ??
@@ -434,7 +532,11 @@ export class MercadoPagoRecurringPaymentProvider {
 
     const sanitized = this.sanitizeUnknownValue(payload);
 
-    if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+    if (
+      !sanitized ||
+      typeof sanitized !== 'object' ||
+      Array.isArray(sanitized)
+    ) {
       return null;
     }
 

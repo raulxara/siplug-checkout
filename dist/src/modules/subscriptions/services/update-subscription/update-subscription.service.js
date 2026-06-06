@@ -32,6 +32,7 @@ let UpdateSubscriptionService = class UpdateSubscriptionService {
                 dtoIn,
             });
             const updated = await this.repository.updateByUniqueId(dtoIn._id, {
+                gateway_subscription_id: dtoIn.gatewaySubscriptionId,
                 current_cycle: dtoIn.currentCycle,
                 next_billing_at: dtoIn.nextBillingAt,
                 started_at: dtoIn.startedAt,
@@ -65,6 +66,7 @@ let UpdateSubscriptionService = class UpdateSubscriptionService {
         this.appendChange(oldValues, newValues, 'canceledAt', params.current.canceledAt, params.dtoIn.canceledAt);
         this.appendChange(oldValues, newValues, 'endedAt', params.current.endedAt, params.dtoIn.endedAt);
         this.appendChange(oldValues, newValues, 'status', params.current.status, params.dtoIn.status);
+        this.appendChange(oldValues, newValues, 'gatewaySubscriptionId', params.current.gatewaySubscriptionId, params.dtoIn.gatewaySubscriptionId);
         return [...previous, changes];
     }
     appendChange(oldValues, newValues, field, oldValue, newValue) {

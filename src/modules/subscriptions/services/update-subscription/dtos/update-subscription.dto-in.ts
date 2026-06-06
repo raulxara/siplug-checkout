@@ -13,5 +13,7 @@ export class UpdateSubscriptionDtoIn {
 
     public readonly status: string | null,
     public readonly source: string,
+
+    public readonly gatewaySubscriptionId: string | null = null,
   ) {}
 }

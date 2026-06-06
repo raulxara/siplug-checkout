@@ -9,5 +9,6 @@ export declare class UpdateSubscriptionDtoIn {
     readonly config: Record<string, unknown> | null;
     readonly status: string | null;
     readonly source: string;
-    constructor(_id: string, currentCycle: number | null, nextBillingAt: string | null, startedAt: string | null, canceledAt: string | null, endedAt: string | null, metadata: Record<string, unknown> | null, config: Record<string, unknown> | null, status: string | null, source: string);
+    readonly gatewaySubscriptionId: string | null;
+    constructor(_id: string, currentCycle: number | null, nextBillingAt: string | null, startedAt: string | null, canceledAt: string | null, endedAt: string | null, metadata: Record<string, unknown> | null, config: Record<string, unknown> | null, status: string | null, source: string, gatewaySubscriptionId?: string | null);
 }

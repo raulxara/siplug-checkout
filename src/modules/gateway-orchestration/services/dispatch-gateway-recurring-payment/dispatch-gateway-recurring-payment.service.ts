@@ -2,11 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { GatewayRecurringPaymentDtoIn } from '../../dtos/gateway-recurring-payment.dto-in';
 import { GatewayRecurringPaymentDtoOut } from '../../dtos/gateway-recurring-payment.dto-out';
 import { MercadoPagoRecurringPaymentProvider } from '../../providers/mercado-pago/mercado-pago-recurring-payment.provider';
+import { StripeRecurringPaymentProvider } from '../../providers/stripe/stripe-recurring-payment.provider';
+import { PayPalRecurringPaymentProvider } from '../../providers/paypal/paypal-recurring-payment.provider';
+import { PagSeguroRecurringPaymentProvider } from '../../providers/pagseguro/pagseguro-recurring-payment.provider';
+import { PicPayRecurringPaymentProvider } from '../../providers/picpay/picpay-recurring-payment.provider';
 
 @Injectable()
 export class DispatchGatewayRecurringPaymentService {
   constructor(
     private readonly mercadoPagoRecurringPaymentProvider: MercadoPagoRecurringPaymentProvider,
+    private readonly stripeRecurringPaymentProvider: StripeRecurringPaymentProvider,
+    private readonly payPalRecurringPaymentProvider: PayPalRecurringPaymentProvider,
+    private readonly pagSeguroRecurringPaymentProvider: PagSeguroRecurringPaymentProvider,
+    private readonly picPayRecurringPaymentProvider: PicPayRecurringPaymentProvider,
   ) {}
 
   async exec(
@@ -21,19 +29,25 @@ export class DispatchGatewayRecurringPaymentService {
     }
 
     if (provider === 'stripe') {
-      return this.buildPendingProviderImplementation(dtoIn, 'stripe');
+      return await this.stripeRecurringPaymentProvider.createSubscription(
+        dtoIn,
+      );
     }
 
     if (provider === 'paypal') {
-      return this.buildPendingProviderImplementation(dtoIn, 'paypal');
+      return await this.payPalRecurringPaymentProvider.createSubscription(
+        dtoIn,
+      );
     }
 
     if (provider === 'pagseguro' || provider === 'pagbank') {
-      return this.buildPendingProviderImplementation(dtoIn, 'pagseguro');
+      return await this.pagSeguroRecurringPaymentProvider.createSubscription(
+        dtoIn,
+      );
     }
 
     if (provider === 'picpay') {
-      return this.buildPendingProviderImplementation(dtoIn, 'picpay');
+      return await this.picPayRecurringPaymentProvider.createSubscription(dtoIn);
     }
 
     if (provider === 'infinitypay' || provider === 'infinitepay') {
@@ -124,7 +138,11 @@ export class DispatchGatewayRecurringPaymentService {
 
     const sanitized = this.sanitizeUnknownValue(payload);
 
-    if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+    if (
+      !sanitized ||
+      typeof sanitized !== 'object' ||
+      Array.isArray(sanitized)
+    ) {
       return null;
     }
 

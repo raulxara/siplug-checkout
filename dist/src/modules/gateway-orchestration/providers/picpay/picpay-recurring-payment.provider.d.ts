@@ -1,0 +1,31 @@
+import { GatewayRecurringPaymentDtoIn } from '../../dtos/gateway-recurring-payment.dto-in';
+import { GatewayRecurringPaymentDtoOut } from '../../dtos/gateway-recurring-payment.dto-out';
+export declare class PicPayRecurringPaymentProvider {
+    createSubscription(dtoIn: GatewayRecurringPaymentDtoIn): Promise<GatewayRecurringPaymentDtoOut>;
+    private resolveOrCreatePlan;
+    private buildPlanRequest;
+    private buildSubscriptionRequest;
+    private createAccessToken;
+    private executePicPayJsonRequest;
+    private resolveApiBaseUrl;
+    private resolveTokenUrl;
+    private resolvePicPayPlanId;
+    private mapPicPayBillingCycle;
+    private resolveInitialGraceCycles;
+    private mapPicPaySubscriptionStatus;
+    private extractFirstChargeId;
+    private buildFailedResponse;
+    private parseJsonResponse;
+    private resolvePicPayErrorMessage;
+    private normalizeDocumentType;
+    private normalizeIdempotencyKey;
+    private onlyDigits;
+    private sanitizePayload;
+    private sanitizeUnknownValue;
+    private isSensitiveKey;
+    private asObject;
+    private toNullableString;
+    private toRequiredString;
+    private limitText;
+    private nowAsIso;
+}
