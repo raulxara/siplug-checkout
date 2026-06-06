@@ -7,7 +7,7 @@ import { SUBSCRIPTION_PLANS_REPOSITORY } from './tokens/subscription-plans.token
 import { GetAllSubscriptionPlansService } from './services/get-all-subscription-plans/get-all-subscription-plans.service';
 import { GetAllSubscriptionPlansByOfficeIdService } from './services/get-all-subscription-plans-by-office-id/get-all-subscription-plans-by-office-id.service';
 import { UpdateSubscriptionPlanService } from './services/update-subscription-plan/update-subscription-plan.service';
-
+import { BuildChangesHistoryService } from '../../common/services/changes-history/build-changes-history.service';
 @Module({
   providers: [
     {
@@ -20,6 +20,7 @@ import { UpdateSubscriptionPlanService } from './services/update-subscription-pl
     GetAllSubscriptionPlansService,
     GetAllSubscriptionPlansByOfficeIdService,
     UpdateSubscriptionPlanService,
+    BuildChangesHistoryService,
   ],
   exports: [
     SUBSCRIPTION_PLANS_REPOSITORY,

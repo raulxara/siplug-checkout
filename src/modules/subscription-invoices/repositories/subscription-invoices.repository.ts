@@ -159,6 +159,33 @@ export class SubscriptionInvoicesRepository
     return this.toRow(model);
   }
 
+  async getAll(): Promise<SubscriptionInvoiceEntity[]> {
+    const rows = await this.prisma.subscriptionInvoice.findMany({
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    return rows as unknown as SubscriptionInvoiceEntity[];
+  }
+
+  async getAllByOfficeId(
+    officeId: string,
+  ): Promise<SubscriptionInvoiceEntity[]> {
+    const rows = await this.prisma.subscriptionInvoice.findMany({
+      where: {
+        subscription: {
+          office_id: officeId,
+        },
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    return rows as unknown as SubscriptionInvoiceEntity[];
+  }
+
   async findByUniqueId(_id: string): Promise<SubscriptionInvoiceRow | null> {
     const model = await this.prisma.subscriptionInvoice.findUnique({
       where: {

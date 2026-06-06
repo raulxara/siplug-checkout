@@ -41,6 +41,10 @@ export interface ISubscriptionInvoicesRepository {
 
   findByUniqueId(_id: string): Promise<SubscriptionInvoiceRow | null>;
 
+  getAll(): Promise<SubscriptionInvoiceEntity[]>;
+
+  getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceEntity[]>;
+
   findByInvoiceNumber(invoiceNumber: string): Promise<SubscriptionInvoiceRow | null>;
 
   getAllBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow[]>;

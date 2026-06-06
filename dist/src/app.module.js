@@ -68,6 +68,14 @@ const get_subscription_plan_by_unique_id_module_1 = require("./use-cases/get-sub
 const list_subscription_plans_module_1 = require("./use-cases/list-subscription-plans/list-subscription-plans.module");
 const list_subscription_plans_by_office_id_module_1 = require("./use-cases/list-subscription-plans-by-office-id/list-subscription-plans-by-office-id.module");
 const update_subscription_plan_module_1 = require("./use-cases/update-subscription-plan/update-subscription-plan.module");
+const get_subscription_by_unique_id_module_1 = require("./use-cases/get-subscription-by-unique-id/get-subscription-by-unique-id.module");
+const list_subscriptions_module_1 = require("./use-cases/list-subscriptions/list-subscriptions.module");
+const list_subscriptions_by_office_id_module_1 = require("./use-cases/list-subscriptions-by-office-id/list-subscriptions-by-office-id.module");
+const update_subscription_module_1 = require("./use-cases/update-subscription/update-subscription.module");
+const get_subscription_invoice_by_unique_id_module_1 = require("./use-cases/get-subscription-invoice-by-unique-id/get-subscription-invoice-by-unique-id.module");
+const list_subscription_invoices_module_1 = require("./use-cases/list-subscription-invoices/list-subscription-invoices.module");
+const list_subscription_invoices_by_office_id_module_1 = require("./use-cases/list-subscription-invoices-by-office-id/list-subscription-invoices-by-office-id.module");
+const update_subscription_invoice_module_1 = require("./use-cases/update-subscription-invoice/update-subscription-invoice.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -136,6 +144,14 @@ exports.AppModule = AppModule = __decorate([
             list_subscription_plans_module_1.ListSubscriptionPlansModule,
             list_subscription_plans_by_office_id_module_1.ListSubscriptionPlansByOfficeIdModule,
             update_subscription_plan_module_1.UpdateSubscriptionPlanModule,
+            get_subscription_by_unique_id_module_1.GetSubscriptionByUniqueIdModule,
+            list_subscriptions_module_1.ListSubscriptionsModule,
+            list_subscriptions_by_office_id_module_1.ListSubscriptionsByOfficeIdModule,
+            update_subscription_module_1.UpdateSubscriptionModule,
+            get_subscription_invoice_by_unique_id_module_1.GetSubscriptionInvoiceByUniqueIdModule,
+            list_subscription_invoices_module_1.ListSubscriptionInvoicesModule,
+            list_subscription_invoices_by_office_id_module_1.ListSubscriptionInvoicesByOfficeIdModule,
+            update_subscription_invoice_module_1.UpdateSubscriptionInvoiceModule,
         ],
     })
 ], AppModule);

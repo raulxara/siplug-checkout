@@ -16,6 +16,7 @@ const subscription_plans_tokens_1 = require("./tokens/subscription-plans.tokens"
 const get_all_subscription_plans_service_1 = require("./services/get-all-subscription-plans/get-all-subscription-plans.service");
 const get_all_subscription_plans_by_office_id_service_1 = require("./services/get-all-subscription-plans-by-office-id/get-all-subscription-plans-by-office-id.service");
 const update_subscription_plan_service_1 = require("./services/update-subscription-plan/update-subscription-plan.service");
+const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
 let SubscriptionPlansModule = class SubscriptionPlansModule {
 };
 exports.SubscriptionPlansModule = SubscriptionPlansModule;
@@ -32,6 +33,7 @@ exports.SubscriptionPlansModule = SubscriptionPlansModule = __decorate([
             get_all_subscription_plans_service_1.GetAllSubscriptionPlansService,
             get_all_subscription_plans_by_office_id_service_1.GetAllSubscriptionPlansByOfficeIdService,
             update_subscription_plan_service_1.UpdateSubscriptionPlanService,
+            build_changes_history_service_1.BuildChangesHistoryService,
         ],
         exports: [
             subscription_plans_tokens_1.SUBSCRIPTION_PLANS_REPOSITORY,

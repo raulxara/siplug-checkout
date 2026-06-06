@@ -25,6 +25,8 @@ export interface ISubscriptionInvoicesRepository {
     create(entity: SubscriptionInvoiceEntity): Promise<SubscriptionInvoiceEntity>;
     updateByUniqueId(_id: string, data: Record<string, unknown>): Promise<SubscriptionInvoiceRow>;
     findByUniqueId(_id: string): Promise<SubscriptionInvoiceRow | null>;
+    getAll(): Promise<SubscriptionInvoiceEntity[]>;
+    getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceEntity[]>;
     findByInvoiceNumber(invoiceNumber: string): Promise<SubscriptionInvoiceRow | null>;
     getAllBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow[]>;
 }

@@ -5,6 +5,8 @@ import { FindSubscriptionByExternalReferenceAndOfficeIdService } from './service
 import { FindSubscriptionByUniqueIdService } from './services/find-subscription-by-unique-id/find-subscription-by-unique-id.service';
 import { UpdateSubscriptionService } from './services/update-subscription/update-subscription.service';
 import { SUBSCRIPTIONS_REPOSITORY } from './tokens/subscriptions.tokens';
+import { GetAllSubscriptionsService } from './services/get-all-subscriptions/get-all-subscriptions.service';
+import { GetAllSubscriptionsByOfficeIdService } from './services/get-all-subscriptions-by-office-id/get-all-subscriptions-by-office-id.service';
 
 @Module({
   providers: [
@@ -16,6 +18,8 @@ import { SUBSCRIPTIONS_REPOSITORY } from './tokens/subscriptions.tokens';
     FindSubscriptionByUniqueIdService,
     FindSubscriptionByExternalReferenceAndOfficeIdService,
     UpdateSubscriptionService,
+    GetAllSubscriptionsService,
+    GetAllSubscriptionsByOfficeIdService,
   ],
   exports: [
     SUBSCRIPTIONS_REPOSITORY,
@@ -23,6 +27,8 @@ import { SUBSCRIPTIONS_REPOSITORY } from './tokens/subscriptions.tokens';
     FindSubscriptionByUniqueIdService,
     FindSubscriptionByExternalReferenceAndOfficeIdService,
     UpdateSubscriptionService,
+    GetAllSubscriptionsService,
+    GetAllSubscriptionsByOfficeIdService,
   ],
 })
 export class SubscriptionsModule {}

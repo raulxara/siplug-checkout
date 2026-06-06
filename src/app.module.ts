@@ -59,6 +59,14 @@ import { GetSubscriptionPlanByUniqueIdModule } from './use-cases/get-subscriptio
 import { ListSubscriptionPlansModule } from './use-cases/list-subscription-plans/list-subscription-plans.module';
 import { ListSubscriptionPlansByOfficeIdModule } from './use-cases/list-subscription-plans-by-office-id/list-subscription-plans-by-office-id.module';
 import { UpdateSubscriptionPlanModule } from './use-cases/update-subscription-plan/update-subscription-plan.module';
+import { GetSubscriptionByUniqueIdModule } from './use-cases/get-subscription-by-unique-id/get-subscription-by-unique-id.module';
+import { ListSubscriptionsModule } from './use-cases/list-subscriptions/list-subscriptions.module';
+import { ListSubscriptionsByOfficeIdModule } from './use-cases/list-subscriptions-by-office-id/list-subscriptions-by-office-id.module';
+import { UpdateSubscriptionModule } from './use-cases/update-subscription/update-subscription.module';
+import { GetSubscriptionInvoiceByUniqueIdModule } from './use-cases/get-subscription-invoice-by-unique-id/get-subscription-invoice-by-unique-id.module';
+import { ListSubscriptionInvoicesModule } from './use-cases/list-subscription-invoices/list-subscription-invoices.module';
+import { ListSubscriptionInvoicesByOfficeIdModule } from './use-cases/list-subscription-invoices-by-office-id/list-subscription-invoices-by-office-id.module';
+import { UpdateSubscriptionInvoiceModule } from './use-cases/update-subscription-invoice/update-subscription-invoice.module';
 
 @Module({
   imports: [
@@ -124,6 +132,14 @@ import { UpdateSubscriptionPlanModule } from './use-cases/update-subscription-pl
     ListSubscriptionPlansModule,
     ListSubscriptionPlansByOfficeIdModule,
     UpdateSubscriptionPlanModule,
+    GetSubscriptionByUniqueIdModule,
+    ListSubscriptionsModule,
+    ListSubscriptionsByOfficeIdModule,
+    UpdateSubscriptionModule,
+    GetSubscriptionInvoiceByUniqueIdModule,
+    ListSubscriptionInvoicesModule,
+    ListSubscriptionInvoicesByOfficeIdModule,
+    UpdateSubscriptionInvoiceModule,
   ],
 })
 export class AppModule {}

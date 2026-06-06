@@ -6,6 +6,8 @@ export declare class SubscriptionInvoicesRepository implements ISubscriptionInvo
     constructor(prisma: PrismaService);
     create(entity: SubscriptionInvoiceEntity): Promise<SubscriptionInvoiceEntity>;
     updateByUniqueId(_id: string, data: Record<string, unknown>): Promise<SubscriptionInvoiceRow>;
+    getAll(): Promise<SubscriptionInvoiceEntity[]>;
+    getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceEntity[]>;
     findByUniqueId(_id: string): Promise<SubscriptionInvoiceRow | null>;
     findByInvoiceNumber(invoiceNumber: string): Promise<SubscriptionInvoiceRow | null>;
     getAllBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow[]>;

@@ -13,6 +13,8 @@ const create_subscription_invoice_service_1 = require("./services/create-subscri
 const find_subscription_invoice_by_unique_id_service_1 = require("./services/find-subscription-invoice-by-unique-id/find-subscription-invoice-by-unique-id.service");
 const update_subscription_invoice_service_1 = require("./services/update-subscription-invoice/update-subscription-invoice.service");
 const subscription_invoices_tokens_1 = require("./tokens/subscription-invoices.tokens");
+const get_all_subscription_invoices_service_1 = require("./services/get-all-subscription-invoices/get-all-subscription-invoices.service");
+const get_all_subscription_invoices_by_office_id_service_1 = require("./services/get-all-subscription-invoices-by-office-id/get-all-subscription-invoices-by-office-id.service");
 let SubscriptionInvoicesModule = class SubscriptionInvoicesModule {
 };
 exports.SubscriptionInvoicesModule = SubscriptionInvoicesModule;
@@ -26,12 +28,16 @@ exports.SubscriptionInvoicesModule = SubscriptionInvoicesModule = __decorate([
             create_subscription_invoice_service_1.CreateSubscriptionInvoiceService,
             find_subscription_invoice_by_unique_id_service_1.FindSubscriptionInvoiceByUniqueIdService,
             update_subscription_invoice_service_1.UpdateSubscriptionInvoiceService,
+            get_all_subscription_invoices_service_1.GetAllSubscriptionInvoicesService,
+            get_all_subscription_invoices_by_office_id_service_1.GetAllSubscriptionInvoicesByOfficeIdService,
         ],
         exports: [
             subscription_invoices_tokens_1.SUBSCRIPTION_INVOICES_REPOSITORY,
             create_subscription_invoice_service_1.CreateSubscriptionInvoiceService,
             find_subscription_invoice_by_unique_id_service_1.FindSubscriptionInvoiceByUniqueIdService,
             update_subscription_invoice_service_1.UpdateSubscriptionInvoiceService,
+            get_all_subscription_invoices_service_1.GetAllSubscriptionInvoicesService,
+            get_all_subscription_invoices_by_office_id_service_1.GetAllSubscriptionInvoicesByOfficeIdService,
         ],
     })
 ], SubscriptionInvoicesModule);

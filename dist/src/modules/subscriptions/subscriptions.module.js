@@ -14,6 +14,8 @@ const find_subscription_by_external_reference_and_office_id_service_1 = require(
 const find_subscription_by_unique_id_service_1 = require("./services/find-subscription-by-unique-id/find-subscription-by-unique-id.service");
 const update_subscription_service_1 = require("./services/update-subscription/update-subscription.service");
 const subscriptions_tokens_1 = require("./tokens/subscriptions.tokens");
+const get_all_subscriptions_service_1 = require("./services/get-all-subscriptions/get-all-subscriptions.service");
+const get_all_subscriptions_by_office_id_service_1 = require("./services/get-all-subscriptions-by-office-id/get-all-subscriptions-by-office-id.service");
 let SubscriptionsModule = class SubscriptionsModule {
 };
 exports.SubscriptionsModule = SubscriptionsModule;
@@ -28,6 +30,8 @@ exports.SubscriptionsModule = SubscriptionsModule = __decorate([
             find_subscription_by_unique_id_service_1.FindSubscriptionByUniqueIdService,
             find_subscription_by_external_reference_and_office_id_service_1.FindSubscriptionByExternalReferenceAndOfficeIdService,
             update_subscription_service_1.UpdateSubscriptionService,
+            get_all_subscriptions_service_1.GetAllSubscriptionsService,
+            get_all_subscriptions_by_office_id_service_1.GetAllSubscriptionsByOfficeIdService,
         ],
         exports: [
             subscriptions_tokens_1.SUBSCRIPTIONS_REPOSITORY,
@@ -35,6 +39,8 @@ exports.SubscriptionsModule = SubscriptionsModule = __decorate([
             find_subscription_by_unique_id_service_1.FindSubscriptionByUniqueIdService,
             find_subscription_by_external_reference_and_office_id_service_1.FindSubscriptionByExternalReferenceAndOfficeIdService,
             update_subscription_service_1.UpdateSubscriptionService,
+            get_all_subscriptions_service_1.GetAllSubscriptionsService,
+            get_all_subscriptions_by_office_id_service_1.GetAllSubscriptionsByOfficeIdService,
         ],
     })
 ], SubscriptionsModule);
