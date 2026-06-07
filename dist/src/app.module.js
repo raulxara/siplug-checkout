@@ -76,6 +76,11 @@ const get_subscription_invoice_by_unique_id_module_1 = require("./use-cases/get-
 const list_subscription_invoices_module_1 = require("./use-cases/list-subscription-invoices/list-subscription-invoices.module");
 const list_subscription_invoices_by_office_id_module_1 = require("./use-cases/list-subscription-invoices-by-office-id/list-subscription-invoices-by-office-id.module");
 const update_subscription_invoice_module_1 = require("./use-cases/update-subscription-invoice/update-subscription-invoice.module");
+const register_split_recipient_module_1 = require("./use-cases/register-split-recipient/register-split-recipient.module");
+const get_split_recipient_by_unique_id_module_1 = require("./use-cases/get-split-recipient-by-unique-id/get-split-recipient-by-unique-id.module");
+const list_split_recipients_module_1 = require("./use-cases/list-split-recipients/list-split-recipients.module");
+const list_split_recipients_by_office_id_module_1 = require("./use-cases/list-split-recipients-by-office-id/list-split-recipients-by-office-id.module");
+const update_split_recipient_module_1 = require("./use-cases/update-split-recipient/update-split-recipient.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -152,6 +157,11 @@ exports.AppModule = AppModule = __decorate([
             list_subscription_invoices_module_1.ListSubscriptionInvoicesModule,
             list_subscription_invoices_by_office_id_module_1.ListSubscriptionInvoicesByOfficeIdModule,
             update_subscription_invoice_module_1.UpdateSubscriptionInvoiceModule,
+            register_split_recipient_module_1.RegisterSplitRecipientModule,
+            get_split_recipient_by_unique_id_module_1.GetSplitRecipientByUniqueIdModule,
+            list_split_recipients_module_1.ListSplitRecipientsModule,
+            list_split_recipients_by_office_id_module_1.ListSplitRecipientsByOfficeIdModule,
+            update_split_recipient_module_1.UpdateSplitRecipientModule,
         ],
     })
 ], AppModule);

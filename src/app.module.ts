@@ -67,6 +67,11 @@ import { GetSubscriptionInvoiceByUniqueIdModule } from './use-cases/get-subscrip
 import { ListSubscriptionInvoicesModule } from './use-cases/list-subscription-invoices/list-subscription-invoices.module';
 import { ListSubscriptionInvoicesByOfficeIdModule } from './use-cases/list-subscription-invoices-by-office-id/list-subscription-invoices-by-office-id.module';
 import { UpdateSubscriptionInvoiceModule } from './use-cases/update-subscription-invoice/update-subscription-invoice.module';
+import { RegisterSplitRecipientModule } from './use-cases/register-split-recipient/register-split-recipient.module';
+import { GetSplitRecipientByUniqueIdModule } from './use-cases/get-split-recipient-by-unique-id/get-split-recipient-by-unique-id.module';
+import { ListSplitRecipientsModule } from './use-cases/list-split-recipients/list-split-recipients.module';
+import { ListSplitRecipientsByOfficeIdModule } from './use-cases/list-split-recipients-by-office-id/list-split-recipients-by-office-id.module';
+import { UpdateSplitRecipientModule } from './use-cases/update-split-recipient/update-split-recipient.module';
 
 @Module({
   imports: [
@@ -140,6 +145,11 @@ import { UpdateSubscriptionInvoiceModule } from './use-cases/update-subscription
     ListSubscriptionInvoicesModule,
     ListSubscriptionInvoicesByOfficeIdModule,
     UpdateSubscriptionInvoiceModule,
+    RegisterSplitRecipientModule,
+    GetSplitRecipientByUniqueIdModule,
+    ListSplitRecipientsModule,
+    ListSplitRecipientsByOfficeIdModule,
+    UpdateSplitRecipientModule,
   ],
 })
 export class AppModule {}
