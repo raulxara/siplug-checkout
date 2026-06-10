@@ -81,6 +81,14 @@ const get_split_recipient_by_unique_id_module_1 = require("./use-cases/get-split
 const list_split_recipients_module_1 = require("./use-cases/list-split-recipients/list-split-recipients.module");
 const list_split_recipients_by_office_id_module_1 = require("./use-cases/list-split-recipients-by-office-id/list-split-recipients-by-office-id.module");
 const update_split_recipient_module_1 = require("./use-cases/update-split-recipient/update-split-recipient.module");
+const register_split_rule_module_1 = require("./use-cases/register-split-rule/register-split-rule.module");
+const sync_split_rule_recipients_module_1 = require("./use-cases/sync-split-rule-recipients/sync-split-rule-recipients.module");
+const get_split_rule_by_unique_id_module_1 = require("./use-cases/get-split-rule-by-unique-id/get-split-rule-by-unique-id.module");
+const list_split_rules_module_1 = require("./use-cases/list-split-rules/list-split-rules.module");
+const list_split_rules_by_office_id_module_1 = require("./use-cases/list-split-rules-by-office-id/list-split-rules-by-office-id.module");
+const update_split_rule_module_1 = require("./use-cases/update-split-rule/update-split-rule.module");
+const calculate_payment_split_module_1 = require("./use-cases/calculate-payment-split/calculate-payment-split.module");
+const register_payment_split_module_1 = require("./use-cases/register-payment-split/register-payment-split.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -162,6 +170,14 @@ exports.AppModule = AppModule = __decorate([
             list_split_recipients_module_1.ListSplitRecipientsModule,
             list_split_recipients_by_office_id_module_1.ListSplitRecipientsByOfficeIdModule,
             update_split_recipient_module_1.UpdateSplitRecipientModule,
+            register_split_rule_module_1.RegisterSplitRuleModule,
+            sync_split_rule_recipients_module_1.SyncSplitRuleRecipientsModule,
+            get_split_rule_by_unique_id_module_1.GetSplitRuleByUniqueIdModule,
+            list_split_rules_module_1.ListSplitRulesModule,
+            list_split_rules_by_office_id_module_1.ListSplitRulesByOfficeIdModule,
+            update_split_rule_module_1.UpdateSplitRuleModule,
+            calculate_payment_split_module_1.CalculatePaymentSplitModule,
+            register_payment_split_module_1.RegisterPaymentSplitModule,
         ],
     })
 ], AppModule);

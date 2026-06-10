@@ -72,6 +72,14 @@ import { GetSplitRecipientByUniqueIdModule } from './use-cases/get-split-recipie
 import { ListSplitRecipientsModule } from './use-cases/list-split-recipients/list-split-recipients.module';
 import { ListSplitRecipientsByOfficeIdModule } from './use-cases/list-split-recipients-by-office-id/list-split-recipients-by-office-id.module';
 import { UpdateSplitRecipientModule } from './use-cases/update-split-recipient/update-split-recipient.module';
+import { RegisterSplitRuleModule } from './use-cases/register-split-rule/register-split-rule.module';
+import { SyncSplitRuleRecipientsModule } from './use-cases/sync-split-rule-recipients/sync-split-rule-recipients.module';
+import { GetSplitRuleByUniqueIdModule } from './use-cases/get-split-rule-by-unique-id/get-split-rule-by-unique-id.module';
+import { ListSplitRulesModule } from './use-cases/list-split-rules/list-split-rules.module';
+import { ListSplitRulesByOfficeIdModule } from './use-cases/list-split-rules-by-office-id/list-split-rules-by-office-id.module';
+import { UpdateSplitRuleModule } from './use-cases/update-split-rule/update-split-rule.module';
+import { CalculatePaymentSplitModule } from './use-cases/calculate-payment-split/calculate-payment-split.module';
+import { RegisterPaymentSplitModule } from './use-cases/register-payment-split/register-payment-split.module';
 
 @Module({
   imports: [
@@ -150,6 +158,14 @@ import { UpdateSplitRecipientModule } from './use-cases/update-split-recipient/u
     ListSplitRecipientsModule,
     ListSplitRecipientsByOfficeIdModule,
     UpdateSplitRecipientModule,
+    RegisterSplitRuleModule,
+    SyncSplitRuleRecipientsModule,
+    GetSplitRuleByUniqueIdModule,
+    ListSplitRulesModule,
+    ListSplitRulesByOfficeIdModule,
+    UpdateSplitRuleModule,
+    CalculatePaymentSplitModule,
+    RegisterPaymentSplitModule,
   ],
 })
 export class AppModule {}
