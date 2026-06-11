@@ -35,6 +35,13 @@ import { ResolveActorAuthorizationService } from '../../modules/security/service
 import { ProcessPaymentDtoIn } from './dtos/process-payment.dto-in';
 import { ProcessPaymentDtoOut } from './dtos/process-payment.dto-out';
 
+import { CreatePaymentSplitRecipientDtoIn } from '../../modules/payment-split-recipients/services/create-payment-split-recipient/dtos/create-payment-split-recipient.dto-in';
+import { CreatePaymentSplitRecipientService } from '../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service';
+import { CreatePaymentSplitDtoIn } from '../../modules/payment-splits/services/create-payment-split/dtos/create-payment-split.dto-in';
+import { CreatePaymentSplitService } from '../../modules/payment-splits/services/create-payment-split/create-payment-split.service';
+import { CalculatePaymentSplitDtoIn } from '../../modules/split-calculations/services/calculate-payment-split/dtos/calculate-payment-split.dto-in';
+import { CalculatePaymentSplitService } from '../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service';
+
 @Injectable()
 export class ProcessPaymentUseCase {
   constructor(
@@ -53,6 +60,10 @@ export class ProcessPaymentUseCase {
 
     private readonly createPaymentTransactionService: CreatePaymentTransactionService,
     private readonly updatePaymentTransactionService: UpdatePaymentTransactionService,
+
+    private readonly calculatePaymentSplitService: CalculatePaymentSplitService,
+    private readonly createPaymentSplitService: CreatePaymentSplitService,
+    private readonly createPaymentSplitRecipientService: CreatePaymentSplitRecipientService,
 
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
   ) {}
@@ -186,7 +197,7 @@ export class ProcessPaymentUseCase {
       const resolvedApiCredential =
         resolvedGatewayCredentialDtoOut.apiCredential;
 
-      const rawProviderPayload: Record<string, unknown> = {
+      let rawProviderPayload: Record<string, unknown> = {
         checkoutSession: {
           _id: checkoutSession._id,
           code: checkoutSession.code,
@@ -203,6 +214,11 @@ export class ProcessPaymentUseCase {
 
       const sanitizedProviderPayload =
         this.sanitizeSensitiveGatewayData(rawProviderPayload);
+
+      const splitRequired = this.resolveSplitRequired(
+        checkoutSession.config,
+        dtoIn.config,
+      );
 
       const transactionDtoOut =
         await this.createPaymentTransactionService.exec(
@@ -248,7 +264,7 @@ export class ProcessPaymentUseCase {
             boletoUrl: null,
             checkoutUrl: null,
 
-            splitRequired: Boolean(checkoutSession.config?.splitRequired),
+            splitRequired,
             hasSplit: false,
 
             paidAt: null,
@@ -274,8 +290,53 @@ export class ProcessPaymentUseCase {
           }),
         );
 
-      const createdPaymentTransaction =
+      let createdPaymentTransaction =
         this.buildPaymentTransactionRowFromCreateDtoOut(transactionDtoOut);
+
+        const paymentSplitSnapshot = await this.registerPaymentSplitForTransaction({
+  checkoutSessionConfig: checkoutSession.config,
+  requestConfig: dtoIn.config,
+  token: dtoIn.token,
+  paymentTransaction: createdPaymentTransaction,
+  gatewayProvider: resolvedGateway.provider,
+  metadata: {
+    source: 'ProcessPaymentUseCase',
+    checkoutSessionId: checkoutSession._id,
+    paymentTransactionId: createdPaymentTransaction._id,
+  },
+});
+
+if (paymentSplitSnapshot !== null) {
+  rawProviderPayload = {
+    ...rawProviderPayload,
+    split: paymentSplitSnapshot,
+  };
+
+  const updatedWithSplitDtoOut =
+    await this.updatePaymentTransactionService.exec(
+      new UpdatePaymentTransactionDtoIn({
+        _id: createdPaymentTransaction._id,
+
+        hasSplit: true,
+
+        providerPayload: this.sanitizeSensitiveGatewayData(rawProviderPayload),
+
+        config: {
+          ...(createdPaymentTransaction.config ?? {}),
+          split: {
+            required: true,
+            paymentSplitId: String(paymentSplitSnapshot.paymentSplitId),
+            splitRuleId: String(paymentSplitSnapshot.splitRuleId),
+            mode: 'internal-calculation',
+          },
+        },
+
+        source: 'ProcessPaymentUseCase.registerPaymentSplit',
+      }),
+    );
+
+  createdPaymentTransaction = updatedWithSplitDtoOut.paymentTransaction;
+}
 
       const gatewayPaymentDtoOut =
         await this.dispatchGatewayPaymentService.exec(
@@ -591,6 +652,221 @@ export class ProcessPaymentUseCase {
 
     return 'processing';
   }
+
+  private resolveSplitRequired(
+  checkoutSessionConfig: Record<string, unknown> | null,
+  requestConfig: Record<string, unknown> | null,
+): boolean {
+  const requestValue = this.getBooleanFromConfig(requestConfig, 'splitRequired');
+
+  if (requestValue !== null) {
+    return requestValue;
+  }
+
+  const checkoutSessionValue = this.getBooleanFromConfig(
+    checkoutSessionConfig,
+    'splitRequired',
+  );
+
+  return checkoutSessionValue ?? false;
+}
+
+private async registerPaymentSplitForTransaction(params: {
+  checkoutSessionConfig: Record<string, unknown> | null;
+  requestConfig: Record<string, unknown> | null;
+  token: string;
+  paymentTransaction: PaymentTransactionRow;
+  gatewayProvider: string;
+  metadata: Record<string, unknown>;
+}): Promise<Record<string, unknown> | null> {
+  if (!params.paymentTransaction.splitRequired) {
+    return null;
+  }
+
+  const splitRuleId = this.resolveSplitRuleId(
+    params.checkoutSessionConfig,
+    params.requestConfig,
+  );
+
+  if (splitRuleId === null) {
+    throw new Error('splitRuleId is required when splitRequired is true');
+  }
+
+  const calculation = await this.calculatePaymentSplitService.exec(
+    new CalculatePaymentSplitDtoIn(
+      splitRuleId,
+      params.paymentTransaction.amount,
+      null,
+      null,
+      params.paymentTransaction.currency,
+      params.metadata,
+    ),
+  );
+
+  const splitRule = calculation.splitRule;
+
+  const paymentSplitConfig = {
+    splitRuleId,
+    mode: 'internal-calculation',
+    calculationSnapshot: {
+      calculationBase: calculation.calculationBase,
+      grossAmount: calculation.grossAmount,
+      gatewayFeeAmount: calculation.gatewayFeeAmount,
+      netAmount: calculation.netAmount,
+      baseAmount: calculation.baseAmount,
+      allocatedAmount: calculation.allocatedAmount,
+      unallocatedAmount: calculation.unallocatedAmount,
+      currency: calculation.currency,
+    },
+  };
+
+  const paymentSplitDtoOut = await this.createPaymentSplitService.exec(
+    new CreatePaymentSplitDtoIn(
+      String(splitRule.officeId),
+      String(splitRule.clientId),
+      params.paymentTransaction.checkoutSessionId,
+      params.paymentTransaction._id,
+      null,
+      null,
+      splitRuleId,
+
+      params.gatewayProvider,
+      null,
+
+      calculation.allocatedAmount,
+      calculation.currency,
+
+      null,
+      null,
+      null,
+      params.metadata,
+      paymentSplitConfig,
+
+      'created',
+    ),
+  );
+
+  const paymentSplitRecipients: Array<Record<string, unknown>> = [];
+
+  for (const recipient of calculation.recipients) {
+    const recipientConfig = {
+      ...(recipient.config ?? {}),
+      splitRuleRecipientId: recipient.splitRuleRecipientId,
+      fixedAmount: recipient.fixedAmount,
+      liableForGatewayFee: recipient.liableForGatewayFee,
+      liableForRefund: recipient.liableForRefund,
+      priority: recipient.priority,
+    };
+
+    const paymentSplitRecipientDtoOut =
+      await this.createPaymentSplitRecipientService.exec(
+        new CreatePaymentSplitRecipientDtoIn(
+          String(paymentSplitDtoOut.paymentSplit._id),
+          recipient.splitRecipientId,
+
+          null,
+          null,
+
+          recipient.role,
+          recipient.amount,
+          recipient.percentage,
+          recipient.currency,
+
+          null,
+          null,
+          null,
+          recipient.metadata,
+          recipientConfig,
+
+          'created',
+        ),
+      );
+
+    paymentSplitRecipients.push(
+      paymentSplitRecipientDtoOut.paymentSplitRecipient,
+    );
+  }
+
+  return {
+    paymentSplitId: paymentSplitDtoOut.paymentSplit._id,
+    splitRuleId,
+    calculationBase: calculation.calculationBase,
+    grossAmount: calculation.grossAmount,
+    gatewayFeeAmount: calculation.gatewayFeeAmount,
+    netAmount: calculation.netAmount,
+    baseAmount: calculation.baseAmount,
+    allocatedAmount: calculation.allocatedAmount,
+    unallocatedAmount: calculation.unallocatedAmount,
+    currency: calculation.currency,
+    recipients: paymentSplitRecipients,
+  };
+}
+
+private resolveSplitRuleId(
+  checkoutSessionConfig: Record<string, unknown> | null,
+  requestConfig: Record<string, unknown> | null,
+): string | null {
+  const requestSplitRuleId = this.getStringFromConfig(
+    requestConfig,
+    'splitRuleId',
+  );
+
+  if (requestSplitRuleId !== null) {
+    return requestSplitRuleId;
+  }
+
+  return this.getStringFromConfig(checkoutSessionConfig, 'splitRuleId');
+}
+
+private getStringFromConfig(
+  config: Record<string, unknown> | null,
+  key: string,
+): string | null {
+  if (config === null) {
+    return null;
+  }
+
+  const value = config[key];
+
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const stringValue = String(value).trim();
+
+  return stringValue === '' ? null : stringValue;
+}
+
+private getBooleanFromConfig(
+  config: Record<string, unknown> | null,
+  key: string,
+): boolean | null {
+  if (config === null) {
+    return null;
+  }
+
+  const value = config[key];
+
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (['true', '1', 'yes', 'sim'].includes(normalized)) {
+    return true;
+  }
+
+  if (['false', '0', 'no', 'nao', 'não'].includes(normalized)) {
+    return false;
+  }
+
+  return null;
+}
 
   private buildPaymentTransactionRowFromCreateDtoOut(
     transactionDtoOut: {

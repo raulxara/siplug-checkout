@@ -102,6 +102,19 @@ export class PaymentSplitsRepository implements IPaymentSplitsRepository {
     return fresh;
   }
 
+  async getAllByOfficeId(officeId: string): Promise<PaymentSplitRow[]> {
+    const rows = await this.prisma.paymentSplit.findMany({
+      where: {
+        office_id: officeId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return rows.map((row) => this.toRow(row));
+  }
+
   async updateByUniqueId(
     _id: string,
     data: Record<string, unknown>,

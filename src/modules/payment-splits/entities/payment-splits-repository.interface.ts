@@ -43,4 +43,6 @@ export interface IPaymentSplitsRepository {
   getAllByPaymentTransactionId(
     paymentTransactionId: string,
   ): Promise<PaymentSplitRow[]>;
+
+  getAllByOfficeId(officeId: string): Promise<PaymentSplitRow[]>;
 }

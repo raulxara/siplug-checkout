@@ -12,6 +12,9 @@ import { UpdatePaymentTransactionService } from '../../modules/payment-transacti
 import { ResolveActorAuthorizationService } from '../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service';
 import { ProcessPaymentDtoIn } from './dtos/process-payment.dto-in';
 import { ProcessPaymentDtoOut } from './dtos/process-payment.dto-out';
+import { CreatePaymentSplitRecipientService } from '../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service';
+import { CreatePaymentSplitService } from '../../modules/payment-splits/services/create-payment-split/create-payment-split.service';
+import { CalculatePaymentSplitService } from '../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service';
 export declare class ProcessPaymentUseCase {
     private readonly resolveActorAuthorizationService;
     private readonly findCheckoutSessionByUniqueIdService;
@@ -24,8 +27,11 @@ export declare class ProcessPaymentUseCase {
     private readonly dispatchGatewayPaymentService;
     private readonly createPaymentTransactionService;
     private readonly updatePaymentTransactionService;
+    private readonly calculatePaymentSplitService;
+    private readonly createPaymentSplitService;
+    private readonly createPaymentSplitRecipientService;
     private readonly handleUseCaseExceptionService;
-    constructor(resolveActorAuthorizationService: ResolveActorAuthorizationService, findCheckoutSessionByUniqueIdService: FindCheckoutSessionByUniqueIdService, getAllCheckoutSessionItemsByCheckoutSessionIdService: GetAllCheckoutSessionItemsByCheckoutSessionIdService, updateCheckoutSessionService: UpdateCheckoutSessionService, findOfficeByUniqueIdService: FindOfficeByUniqueIdService, findClientByUniqueIdService: FindClientByUniqueIdService, findPaymentCustomerByUniqueIdService: FindPaymentCustomerByUniqueIdService, resolvePaymentGatewayCredentialService: ResolvePaymentGatewayCredentialService, dispatchGatewayPaymentService: DispatchGatewayPaymentService, createPaymentTransactionService: CreatePaymentTransactionService, updatePaymentTransactionService: UpdatePaymentTransactionService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(resolveActorAuthorizationService: ResolveActorAuthorizationService, findCheckoutSessionByUniqueIdService: FindCheckoutSessionByUniqueIdService, getAllCheckoutSessionItemsByCheckoutSessionIdService: GetAllCheckoutSessionItemsByCheckoutSessionIdService, updateCheckoutSessionService: UpdateCheckoutSessionService, findOfficeByUniqueIdService: FindOfficeByUniqueIdService, findClientByUniqueIdService: FindClientByUniqueIdService, findPaymentCustomerByUniqueIdService: FindPaymentCustomerByUniqueIdService, resolvePaymentGatewayCredentialService: ResolvePaymentGatewayCredentialService, dispatchGatewayPaymentService: DispatchGatewayPaymentService, createPaymentTransactionService: CreatePaymentTransactionService, updatePaymentTransactionService: UpdatePaymentTransactionService, calculatePaymentSplitService: CalculatePaymentSplitService, createPaymentSplitService: CreatePaymentSplitService, createPaymentSplitRecipientService: CreatePaymentSplitRecipientService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ProcessPaymentDtoIn): Promise<ProcessPaymentDtoOut>;
     private validatePaymentType;
     private validatePaymentMethod;
@@ -36,5 +42,10 @@ export declare class ProcessPaymentUseCase {
     private assertNoForbiddenSensitivePaymentData;
     private assertNoForbiddenKeys;
     private resolveCheckoutSessionStatus;
+    private resolveSplitRequired;
+    private registerPaymentSplitForTransaction;
+    private resolveSplitRuleId;
+    private getStringFromConfig;
+    private getBooleanFromConfig;
     private buildPaymentTransactionRowFromCreateDtoOut;
 }

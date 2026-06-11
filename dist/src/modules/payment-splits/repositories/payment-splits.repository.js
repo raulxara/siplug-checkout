@@ -83,6 +83,17 @@ let PaymentSplitsRepository = class PaymentSplitsRepository {
         fresh.updatedAt = (0, format_date_time_util_1.formatDateTime)(model.updated_at);
         return fresh;
     }
+    async getAllByOfficeId(officeId) {
+        const rows = await this.prisma.paymentSplit.findMany({
+            where: {
+                office_id: officeId,
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+        return rows.map((row) => this.toRow(row));
+    }
     async updateByUniqueId(_id, data) {
         const updateData = {};
         if (data.gateway_split_id !== undefined && data.gateway_split_id !== null) {

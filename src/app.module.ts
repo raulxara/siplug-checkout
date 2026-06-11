@@ -80,6 +80,9 @@ import { ListSplitRulesByOfficeIdModule } from './use-cases/list-split-rules-by-
 import { UpdateSplitRuleModule } from './use-cases/update-split-rule/update-split-rule.module';
 import { CalculatePaymentSplitModule } from './use-cases/calculate-payment-split/calculate-payment-split.module';
 import { RegisterPaymentSplitModule } from './use-cases/register-payment-split/register-payment-split.module';
+import { GetPaymentSplitByUniqueIdModule } from './use-cases/get-payment-split-by-unique-id/get-payment-split-by-unique-id.module';
+import { ListPaymentSplitsByPaymentTransactionIdModule } from './use-cases/list-payment-splits-by-payment-transaction-id/list-payment-splits-by-payment-transaction-id.module';
+import { ListPaymentSplitsByOfficeIdModule } from './use-cases/list-payment-splits-by-office-id/list-payment-splits-by-office-id.module';
 
 @Module({
   imports: [
@@ -166,6 +169,9 @@ import { RegisterPaymentSplitModule } from './use-cases/register-payment-split/r
     UpdateSplitRuleModule,
     CalculatePaymentSplitModule,
     RegisterPaymentSplitModule,
+    GetPaymentSplitByUniqueIdModule,
+    ListPaymentSplitsByPaymentTransactionIdModule,
+    ListPaymentSplitsByOfficeIdModule,
   ],
 })
 export class AppModule {}

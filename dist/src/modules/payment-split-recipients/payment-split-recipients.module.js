@@ -12,6 +12,7 @@ const prisma_module_1 = require("../../infra/database/prisma/prisma.module");
 const payment_split_recipients_repository_1 = require("./repositories/payment-split-recipients.repository");
 const create_payment_split_recipient_service_1 = require("./services/create-payment-split-recipient/create-payment-split-recipient.service");
 const payment_split_recipients_tokens_1 = require("./tokens/payment-split-recipients.tokens");
+const get_all_payment_split_recipients_by_payment_split_id_service_1 = require("./services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service");
 let PaymentSplitRecipientsModule = class PaymentSplitRecipientsModule {
 };
 exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule;
@@ -24,10 +25,12 @@ exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule = __decorate
                 useClass: payment_split_recipients_repository_1.PaymentSplitRecipientsRepository,
             },
             create_payment_split_recipient_service_1.CreatePaymentSplitRecipientService,
+            get_all_payment_split_recipients_by_payment_split_id_service_1.GetAllPaymentSplitRecipientsByPaymentSplitIdService,
         ],
         exports: [
             payment_split_recipients_tokens_1.PAYMENT_SPLIT_RECIPIENTS_REPOSITORY,
             create_payment_split_recipient_service_1.CreatePaymentSplitRecipientService,
+            get_all_payment_split_recipients_by_payment_split_id_service_1.GetAllPaymentSplitRecipientsByPaymentSplitIdService,
         ],
     })
 ], PaymentSplitRecipientsModule);

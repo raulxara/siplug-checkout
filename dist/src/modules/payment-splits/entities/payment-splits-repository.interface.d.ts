@@ -28,4 +28,5 @@ export interface IPaymentSplitsRepository {
     updateByUniqueId(_id: string, data: Record<string, unknown>): Promise<PaymentSplitRow>;
     findByUniqueId(_id: string): Promise<PaymentSplitRow | null>;
     getAllByPaymentTransactionId(paymentTransactionId: string): Promise<PaymentSplitRow[]>;
+    getAllByOfficeId(officeId: string): Promise<PaymentSplitRow[]>;
 }

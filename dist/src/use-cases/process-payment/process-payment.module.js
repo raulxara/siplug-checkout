@@ -18,6 +18,9 @@ const payment_transactions_module_1 = require("../../modules/payment-transaction
 const security_module_1 = require("../../modules/security/security.module");
 const process_payment_controller_1 = require("./process-payment.controller");
 const process_payment_use_case_1 = require("./process-payment.use-case");
+const payment_split_recipients_module_1 = require("../../modules/payment-split-recipients/payment-split-recipients.module");
+const payment_splits_module_1 = require("../../modules/payment-splits/payment-splits.module");
+const split_calculations_module_1 = require("../../modules/split-calculations/split-calculations.module");
 let ProcessPaymentModule = class ProcessPaymentModule {
 };
 exports.ProcessPaymentModule = ProcessPaymentModule;
@@ -32,6 +35,9 @@ exports.ProcessPaymentModule = ProcessPaymentModule = __decorate([
             gateway_orchestration_module_1.GatewayOrchestrationModule,
             security_module_1.SecurityModule,
             use_case_support_module_1.UseCaseSupportModule,
+            split_calculations_module_1.SplitCalculationsModule,
+            payment_splits_module_1.PaymentSplitsModule,
+            payment_split_recipients_module_1.PaymentSplitRecipientsModule,
         ],
         controllers: [process_payment_controller_1.ProcessPaymentController],
         providers: [process_payment_use_case_1.ProcessPaymentUseCase],

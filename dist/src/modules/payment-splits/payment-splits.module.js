@@ -13,6 +13,8 @@ const payment_splits_repository_1 = require("./repositories/payment-splits.repos
 const create_payment_split_service_1 = require("./services/create-payment-split/create-payment-split.service");
 const find_payment_split_by_unique_id_service_1 = require("./services/find-payment-split-by-unique-id/find-payment-split-by-unique-id.service");
 const payment_splits_tokens_1 = require("./tokens/payment-splits.tokens");
+const get_all_payment_splits_by_payment_transaction_id_service_1 = require("./services/get-all-payment-splits-by-payment-transaction-id/get-all-payment-splits-by-payment-transaction-id.service");
+const get_all_payment_splits_by_office_id_service_1 = require("./services/get-all-payment-splits-by-office-id/get-all-payment-splits-by-office-id.service");
 let PaymentSplitsModule = class PaymentSplitsModule {
 };
 exports.PaymentSplitsModule = PaymentSplitsModule;
@@ -26,11 +28,15 @@ exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
             },
             create_payment_split_service_1.CreatePaymentSplitService,
             find_payment_split_by_unique_id_service_1.FindPaymentSplitByUniqueIdService,
+            get_all_payment_splits_by_payment_transaction_id_service_1.GetAllPaymentSplitsByPaymentTransactionIdService,
+            get_all_payment_splits_by_office_id_service_1.GetAllPaymentSplitsByOfficeIdService,
         ],
         exports: [
             payment_splits_tokens_1.PAYMENT_SPLITS_REPOSITORY,
             create_payment_split_service_1.CreatePaymentSplitService,
             find_payment_split_by_unique_id_service_1.FindPaymentSplitByUniqueIdService,
+            get_all_payment_splits_by_payment_transaction_id_service_1.GetAllPaymentSplitsByPaymentTransactionIdService,
+            get_all_payment_splits_by_office_id_service_1.GetAllPaymentSplitsByOfficeIdService,
         ],
     })
 ], PaymentSplitsModule);

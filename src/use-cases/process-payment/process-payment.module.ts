@@ -9,6 +9,9 @@ import { PaymentTransactionsModule } from '../../modules/payment-transactions/pa
 import { SecurityModule } from '../../modules/security/security.module';
 import { ProcessPaymentController } from './process-payment.controller';
 import { ProcessPaymentUseCase } from './process-payment.use-case';
+import { PaymentSplitRecipientsModule } from '../../modules/payment-split-recipients/payment-split-recipients.module';
+import { PaymentSplitsModule } from '../../modules/payment-splits/payment-splits.module';
+import { SplitCalculationsModule } from '../../modules/split-calculations/split-calculations.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { ProcessPaymentUseCase } from './process-payment.use-case';
     GatewayOrchestrationModule,
     SecurityModule,
     UseCaseSupportModule,
+    SplitCalculationsModule,
+    PaymentSplitsModule,
+    PaymentSplitRecipientsModule,
   ],
   controllers: [ProcessPaymentController],
   providers: [ProcessPaymentUseCase],

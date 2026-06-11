@@ -36,6 +36,12 @@ const update_payment_transaction_service_1 = require("../../modules/payment-tran
 const resolve_actor_authorization_dto_in_1 = require("../../modules/security/services/resolve-actor-authorization/dtos/resolve-actor-authorization.dto-in");
 const resolve_actor_authorization_service_1 = require("../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service");
 const process_payment_dto_out_1 = require("./dtos/process-payment.dto-out");
+const create_payment_split_recipient_dto_in_1 = require("../../modules/payment-split-recipients/services/create-payment-split-recipient/dtos/create-payment-split-recipient.dto-in");
+const create_payment_split_recipient_service_1 = require("../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service");
+const create_payment_split_dto_in_1 = require("../../modules/payment-splits/services/create-payment-split/dtos/create-payment-split.dto-in");
+const create_payment_split_service_1 = require("../../modules/payment-splits/services/create-payment-split/create-payment-split.service");
+const calculate_payment_split_dto_in_1 = require("../../modules/split-calculations/services/calculate-payment-split/dtos/calculate-payment-split.dto-in");
+const calculate_payment_split_service_1 = require("../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service");
 let ProcessPaymentUseCase = class ProcessPaymentUseCase {
     resolveActorAuthorizationService;
     findCheckoutSessionByUniqueIdService;
@@ -48,8 +54,11 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
     dispatchGatewayPaymentService;
     createPaymentTransactionService;
     updatePaymentTransactionService;
+    calculatePaymentSplitService;
+    createPaymentSplitService;
+    createPaymentSplitRecipientService;
     handleUseCaseExceptionService;
-    constructor(resolveActorAuthorizationService, findCheckoutSessionByUniqueIdService, getAllCheckoutSessionItemsByCheckoutSessionIdService, updateCheckoutSessionService, findOfficeByUniqueIdService, findClientByUniqueIdService, findPaymentCustomerByUniqueIdService, resolvePaymentGatewayCredentialService, dispatchGatewayPaymentService, createPaymentTransactionService, updatePaymentTransactionService, handleUseCaseExceptionService) {
+    constructor(resolveActorAuthorizationService, findCheckoutSessionByUniqueIdService, getAllCheckoutSessionItemsByCheckoutSessionIdService, updateCheckoutSessionService, findOfficeByUniqueIdService, findClientByUniqueIdService, findPaymentCustomerByUniqueIdService, resolvePaymentGatewayCredentialService, dispatchGatewayPaymentService, createPaymentTransactionService, updatePaymentTransactionService, calculatePaymentSplitService, createPaymentSplitService, createPaymentSplitRecipientService, handleUseCaseExceptionService) {
         this.resolveActorAuthorizationService = resolveActorAuthorizationService;
         this.findCheckoutSessionByUniqueIdService = findCheckoutSessionByUniqueIdService;
         this.getAllCheckoutSessionItemsByCheckoutSessionIdService = getAllCheckoutSessionItemsByCheckoutSessionIdService;
@@ -61,6 +70,9 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         this.dispatchGatewayPaymentService = dispatchGatewayPaymentService;
         this.createPaymentTransactionService = createPaymentTransactionService;
         this.updatePaymentTransactionService = updatePaymentTransactionService;
+        this.calculatePaymentSplitService = calculatePaymentSplitService;
+        this.createPaymentSplitService = createPaymentSplitService;
+        this.createPaymentSplitRecipientService = createPaymentSplitRecipientService;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
     }
     async exec(dtoIn) {
@@ -136,7 +148,7 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
             }));
             const resolvedGateway = resolvedGatewayCredentialDtoOut.gateway;
             const resolvedApiCredential = resolvedGatewayCredentialDtoOut.apiCredential;
-            const rawProviderPayload = {
+            let rawProviderPayload = {
                 checkoutSession: {
                     _id: checkoutSession._id,
                     code: checkoutSession.code,
@@ -151,6 +163,7 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
                 items: activeItems,
             };
             const sanitizedProviderPayload = this.sanitizeSensitiveGatewayData(rawProviderPayload);
+            const splitRequired = this.resolveSplitRequired(checkoutSession.config, dtoIn.config);
             const transactionDtoOut = await this.createPaymentTransactionService.exec(new create_payment_transaction_dto_in_1.CreatePaymentTransactionDtoIn({
                 officeId: checkoutSession.officeId,
                 clientId: checkoutSession.clientId,
@@ -180,7 +193,7 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
                 qrCodeBase64: null,
                 boletoUrl: null,
                 checkoutUrl: null,
-                splitRequired: Boolean(checkoutSession.config?.splitRequired),
+                splitRequired,
                 hasSplit: false,
                 paidAt: null,
                 authorizedAt: null,
@@ -201,7 +214,41 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
                     ...(dtoIn.config ?? {}),
                 },
             }));
-            const createdPaymentTransaction = this.buildPaymentTransactionRowFromCreateDtoOut(transactionDtoOut);
+            let createdPaymentTransaction = this.buildPaymentTransactionRowFromCreateDtoOut(transactionDtoOut);
+            const paymentSplitSnapshot = await this.registerPaymentSplitForTransaction({
+                checkoutSessionConfig: checkoutSession.config,
+                requestConfig: dtoIn.config,
+                token: dtoIn.token,
+                paymentTransaction: createdPaymentTransaction,
+                gatewayProvider: resolvedGateway.provider,
+                metadata: {
+                    source: 'ProcessPaymentUseCase',
+                    checkoutSessionId: checkoutSession._id,
+                    paymentTransactionId: createdPaymentTransaction._id,
+                },
+            });
+            if (paymentSplitSnapshot !== null) {
+                rawProviderPayload = {
+                    ...rawProviderPayload,
+                    split: paymentSplitSnapshot,
+                };
+                const updatedWithSplitDtoOut = await this.updatePaymentTransactionService.exec(new update_payment_transaction_dto_in_1.UpdatePaymentTransactionDtoIn({
+                    _id: createdPaymentTransaction._id,
+                    hasSplit: true,
+                    providerPayload: this.sanitizeSensitiveGatewayData(rawProviderPayload),
+                    config: {
+                        ...(createdPaymentTransaction.config ?? {}),
+                        split: {
+                            required: true,
+                            paymentSplitId: String(paymentSplitSnapshot.paymentSplitId),
+                            splitRuleId: String(paymentSplitSnapshot.splitRuleId),
+                            mode: 'internal-calculation',
+                        },
+                    },
+                    source: 'ProcessPaymentUseCase.registerPaymentSplit',
+                }));
+                createdPaymentTransaction = updatedWithSplitDtoOut.paymentTransaction;
+            }
             const gatewayPaymentDtoOut = await this.dispatchGatewayPaymentService.exec(new gateway_payment_dto_in_1.GatewayPaymentDtoIn({
                 gatewayProvider: resolvedGateway.provider,
                 gatewaySlug: resolvedGateway.slug,
@@ -412,6 +459,104 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         }
         return 'processing';
     }
+    resolveSplitRequired(checkoutSessionConfig, requestConfig) {
+        const requestValue = this.getBooleanFromConfig(requestConfig, 'splitRequired');
+        if (requestValue !== null) {
+            return requestValue;
+        }
+        const checkoutSessionValue = this.getBooleanFromConfig(checkoutSessionConfig, 'splitRequired');
+        return checkoutSessionValue ?? false;
+    }
+    async registerPaymentSplitForTransaction(params) {
+        if (!params.paymentTransaction.splitRequired) {
+            return null;
+        }
+        const splitRuleId = this.resolveSplitRuleId(params.checkoutSessionConfig, params.requestConfig);
+        if (splitRuleId === null) {
+            throw new Error('splitRuleId is required when splitRequired is true');
+        }
+        const calculation = await this.calculatePaymentSplitService.exec(new calculate_payment_split_dto_in_1.CalculatePaymentSplitDtoIn(splitRuleId, params.paymentTransaction.amount, null, null, params.paymentTransaction.currency, params.metadata));
+        const splitRule = calculation.splitRule;
+        const paymentSplitConfig = {
+            splitRuleId,
+            mode: 'internal-calculation',
+            calculationSnapshot: {
+                calculationBase: calculation.calculationBase,
+                grossAmount: calculation.grossAmount,
+                gatewayFeeAmount: calculation.gatewayFeeAmount,
+                netAmount: calculation.netAmount,
+                baseAmount: calculation.baseAmount,
+                allocatedAmount: calculation.allocatedAmount,
+                unallocatedAmount: calculation.unallocatedAmount,
+                currency: calculation.currency,
+            },
+        };
+        const paymentSplitDtoOut = await this.createPaymentSplitService.exec(new create_payment_split_dto_in_1.CreatePaymentSplitDtoIn(String(splitRule.officeId), String(splitRule.clientId), params.paymentTransaction.checkoutSessionId, params.paymentTransaction._id, null, null, splitRuleId, params.gatewayProvider, null, calculation.allocatedAmount, calculation.currency, null, null, null, params.metadata, paymentSplitConfig, 'created'));
+        const paymentSplitRecipients = [];
+        for (const recipient of calculation.recipients) {
+            const recipientConfig = {
+                ...(recipient.config ?? {}),
+                splitRuleRecipientId: recipient.splitRuleRecipientId,
+                fixedAmount: recipient.fixedAmount,
+                liableForGatewayFee: recipient.liableForGatewayFee,
+                liableForRefund: recipient.liableForRefund,
+                priority: recipient.priority,
+            };
+            const paymentSplitRecipientDtoOut = await this.createPaymentSplitRecipientService.exec(new create_payment_split_recipient_dto_in_1.CreatePaymentSplitRecipientDtoIn(String(paymentSplitDtoOut.paymentSplit._id), recipient.splitRecipientId, null, null, recipient.role, recipient.amount, recipient.percentage, recipient.currency, null, null, null, recipient.metadata, recipientConfig, 'created'));
+            paymentSplitRecipients.push(paymentSplitRecipientDtoOut.paymentSplitRecipient);
+        }
+        return {
+            paymentSplitId: paymentSplitDtoOut.paymentSplit._id,
+            splitRuleId,
+            calculationBase: calculation.calculationBase,
+            grossAmount: calculation.grossAmount,
+            gatewayFeeAmount: calculation.gatewayFeeAmount,
+            netAmount: calculation.netAmount,
+            baseAmount: calculation.baseAmount,
+            allocatedAmount: calculation.allocatedAmount,
+            unallocatedAmount: calculation.unallocatedAmount,
+            currency: calculation.currency,
+            recipients: paymentSplitRecipients,
+        };
+    }
+    resolveSplitRuleId(checkoutSessionConfig, requestConfig) {
+        const requestSplitRuleId = this.getStringFromConfig(requestConfig, 'splitRuleId');
+        if (requestSplitRuleId !== null) {
+            return requestSplitRuleId;
+        }
+        return this.getStringFromConfig(checkoutSessionConfig, 'splitRuleId');
+    }
+    getStringFromConfig(config, key) {
+        if (config === null) {
+            return null;
+        }
+        const value = config[key];
+        if (value === undefined || value === null) {
+            return null;
+        }
+        const stringValue = String(value).trim();
+        return stringValue === '' ? null : stringValue;
+    }
+    getBooleanFromConfig(config, key) {
+        if (config === null) {
+            return null;
+        }
+        const value = config[key];
+        if (value === undefined || value === null) {
+            return null;
+        }
+        if (typeof value === 'boolean') {
+            return value;
+        }
+        const normalized = String(value).trim().toLowerCase();
+        if (['true', '1', 'yes', 'sim'].includes(normalized)) {
+            return true;
+        }
+        if (['false', '0', 'no', 'nao', 'não'].includes(normalized)) {
+            return false;
+        }
+        return null;
+    }
     buildPaymentTransactionRowFromCreateDtoOut(transactionDtoOut) {
         return {
             id: transactionDtoOut.id,
@@ -474,6 +619,9 @@ exports.ProcessPaymentUseCase = ProcessPaymentUseCase = __decorate([
         dispatch_gateway_payment_service_1.DispatchGatewayPaymentService,
         create_payment_transaction_service_1.CreatePaymentTransactionService,
         update_payment_transaction_service_1.UpdatePaymentTransactionService,
+        calculate_payment_split_service_1.CalculatePaymentSplitService,
+        create_payment_split_service_1.CreatePaymentSplitService,
+        create_payment_split_recipient_service_1.CreatePaymentSplitRecipientService,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])
 ], ProcessPaymentUseCase);
 //# sourceMappingURL=process-payment.use-case.js.map

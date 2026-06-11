@@ -89,6 +89,9 @@ const list_split_rules_by_office_id_module_1 = require("./use-cases/list-split-r
 const update_split_rule_module_1 = require("./use-cases/update-split-rule/update-split-rule.module");
 const calculate_payment_split_module_1 = require("./use-cases/calculate-payment-split/calculate-payment-split.module");
 const register_payment_split_module_1 = require("./use-cases/register-payment-split/register-payment-split.module");
+const get_payment_split_by_unique_id_module_1 = require("./use-cases/get-payment-split-by-unique-id/get-payment-split-by-unique-id.module");
+const list_payment_splits_by_payment_transaction_id_module_1 = require("./use-cases/list-payment-splits-by-payment-transaction-id/list-payment-splits-by-payment-transaction-id.module");
+const list_payment_splits_by_office_id_module_1 = require("./use-cases/list-payment-splits-by-office-id/list-payment-splits-by-office-id.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -178,6 +181,9 @@ exports.AppModule = AppModule = __decorate([
             update_split_rule_module_1.UpdateSplitRuleModule,
             calculate_payment_split_module_1.CalculatePaymentSplitModule,
             register_payment_split_module_1.RegisterPaymentSplitModule,
+            get_payment_split_by_unique_id_module_1.GetPaymentSplitByUniqueIdModule,
+            list_payment_splits_by_payment_transaction_id_module_1.ListPaymentSplitsByPaymentTransactionIdModule,
+            list_payment_splits_by_office_id_module_1.ListPaymentSplitsByOfficeIdModule,
         ],
     })
 ], AppModule);

@@ -4,6 +4,7 @@ import { PrismaModule } from '../../infra/database/prisma/prisma.module';
 import { PaymentSplitRecipientsRepository } from './repositories/payment-split-recipients.repository';
 import { CreatePaymentSplitRecipientService } from './services/create-payment-split-recipient/create-payment-split-recipient.service';
 import { PAYMENT_SPLIT_RECIPIENTS_REPOSITORY } from './tokens/payment-split-recipients.tokens';
+import { GetAllPaymentSplitRecipientsByPaymentSplitIdService } from './services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service';
 
 @Module({
   imports: [PrismaModule],
@@ -14,11 +15,13 @@ import { PAYMENT_SPLIT_RECIPIENTS_REPOSITORY } from './tokens/payment-split-reci
     },
 
     CreatePaymentSplitRecipientService,
+    GetAllPaymentSplitRecipientsByPaymentSplitIdService,
   ],
   exports: [
     PAYMENT_SPLIT_RECIPIENTS_REPOSITORY,
 
     CreatePaymentSplitRecipientService,
+    GetAllPaymentSplitRecipientsByPaymentSplitIdService,
   ],
 })
 export class PaymentSplitRecipientsModule {}
