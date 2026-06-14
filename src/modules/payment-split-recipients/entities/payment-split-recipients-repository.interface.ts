@@ -40,4 +40,6 @@ export interface IPaymentSplitRecipientsRepository {
   getAllByPaymentSplitId(
     paymentSplitId: string,
   ): Promise<PaymentSplitRecipientRow[]>;
+
+  findByUniqueId(_id: string): Promise<PaymentSplitRecipientRow | null>;
 }

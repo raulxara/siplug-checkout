@@ -135,6 +135,14 @@ let PaymentSplitRecipientsRepository = class PaymentSplitRecipientsRepository {
         });
         return rows.map((row) => this.toRow(row));
     }
+    async findByUniqueId(_id) {
+        const model = await this.prisma.paymentSplitRecipient.findUnique({
+            where: {
+                unique_id: _id,
+            },
+        });
+        return model ? this.toRow(model) : null;
+    }
     toRow(model) {
         return {
             id: model.id,

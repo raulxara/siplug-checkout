@@ -15,6 +15,8 @@ const find_payment_split_by_unique_id_service_1 = require("./services/find-payme
 const payment_splits_tokens_1 = require("./tokens/payment-splits.tokens");
 const get_all_payment_splits_by_payment_transaction_id_service_1 = require("./services/get-all-payment-splits-by-payment-transaction-id/get-all-payment-splits-by-payment-transaction-id.service");
 const get_all_payment_splits_by_office_id_service_1 = require("./services/get-all-payment-splits-by-office-id/get-all-payment-splits-by-office-id.service");
+const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
+const update_payment_split_status_service_1 = require("./services/update-payment-split-status/update-payment-split-status.service");
 let PaymentSplitsModule = class PaymentSplitsModule {
 };
 exports.PaymentSplitsModule = PaymentSplitsModule;
@@ -30,6 +32,8 @@ exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
             find_payment_split_by_unique_id_service_1.FindPaymentSplitByUniqueIdService,
             get_all_payment_splits_by_payment_transaction_id_service_1.GetAllPaymentSplitsByPaymentTransactionIdService,
             get_all_payment_splits_by_office_id_service_1.GetAllPaymentSplitsByOfficeIdService,
+            update_payment_split_status_service_1.UpdatePaymentSplitStatusService,
+            build_changes_history_service_1.BuildChangesHistoryService,
         ],
         exports: [
             payment_splits_tokens_1.PAYMENT_SPLITS_REPOSITORY,
@@ -37,6 +41,7 @@ exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
             find_payment_split_by_unique_id_service_1.FindPaymentSplitByUniqueIdService,
             get_all_payment_splits_by_payment_transaction_id_service_1.GetAllPaymentSplitsByPaymentTransactionIdService,
             get_all_payment_splits_by_office_id_service_1.GetAllPaymentSplitsByOfficeIdService,
+            update_payment_split_status_service_1.UpdatePaymentSplitStatusService,
         ],
     })
 ], PaymentSplitsModule);

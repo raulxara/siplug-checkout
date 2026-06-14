@@ -7,6 +7,7 @@ export declare class PaymentSplitRecipientsRepository implements IPaymentSplitRe
     create(entity: PaymentSplitRecipientEntity): Promise<PaymentSplitRecipientEntity>;
     updateByUniqueId(_id: string, data: Record<string, unknown>): Promise<PaymentSplitRecipientRow>;
     getAllByPaymentSplitId(paymentSplitId: string): Promise<PaymentSplitRecipientRow[]>;
+    findByUniqueId(_id: string): Promise<PaymentSplitRecipientRow | null>;
     private toRow;
     private parseJsonObject;
     private parseChangesHistory;

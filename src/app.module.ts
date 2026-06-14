@@ -83,6 +83,7 @@ import { RegisterPaymentSplitModule } from './use-cases/register-payment-split/r
 import { GetPaymentSplitByUniqueIdModule } from './use-cases/get-payment-split-by-unique-id/get-payment-split-by-unique-id.module';
 import { ListPaymentSplitsByPaymentTransactionIdModule } from './use-cases/list-payment-splits-by-payment-transaction-id/list-payment-splits-by-payment-transaction-id.module';
 import { ListPaymentSplitsByOfficeIdModule } from './use-cases/list-payment-splits-by-office-id/list-payment-splits-by-office-id.module';
+import { UpdatePaymentSplitLifecycleModule } from './use-cases/update-payment-split-lifecycle/update-payment-split-lifecycle.module';
 
 @Module({
   imports: [
@@ -172,6 +173,7 @@ import { ListPaymentSplitsByOfficeIdModule } from './use-cases/list-payment-spli
     GetPaymentSplitByUniqueIdModule,
     ListPaymentSplitsByPaymentTransactionIdModule,
     ListPaymentSplitsByOfficeIdModule,
+    UpdatePaymentSplitLifecycleModule,
   ],
 })
 export class AppModule {}

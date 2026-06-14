@@ -92,6 +92,7 @@ const register_payment_split_module_1 = require("./use-cases/register-payment-sp
 const get_payment_split_by_unique_id_module_1 = require("./use-cases/get-payment-split-by-unique-id/get-payment-split-by-unique-id.module");
 const list_payment_splits_by_payment_transaction_id_module_1 = require("./use-cases/list-payment-splits-by-payment-transaction-id/list-payment-splits-by-payment-transaction-id.module");
 const list_payment_splits_by_office_id_module_1 = require("./use-cases/list-payment-splits-by-office-id/list-payment-splits-by-office-id.module");
+const update_payment_split_lifecycle_module_1 = require("./use-cases/update-payment-split-lifecycle/update-payment-split-lifecycle.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -184,6 +185,7 @@ exports.AppModule = AppModule = __decorate([
             get_payment_split_by_unique_id_module_1.GetPaymentSplitByUniqueIdModule,
             list_payment_splits_by_payment_transaction_id_module_1.ListPaymentSplitsByPaymentTransactionIdModule,
             list_payment_splits_by_office_id_module_1.ListPaymentSplitsByOfficeIdModule,
+            update_payment_split_lifecycle_module_1.UpdatePaymentSplitLifecycleModule,
         ],
     })
 ], AppModule);

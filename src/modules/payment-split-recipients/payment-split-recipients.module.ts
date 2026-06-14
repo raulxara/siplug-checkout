@@ -5,6 +5,8 @@ import { PaymentSplitRecipientsRepository } from './repositories/payment-split-r
 import { CreatePaymentSplitRecipientService } from './services/create-payment-split-recipient/create-payment-split-recipient.service';
 import { PAYMENT_SPLIT_RECIPIENTS_REPOSITORY } from './tokens/payment-split-recipients.tokens';
 import { GetAllPaymentSplitRecipientsByPaymentSplitIdService } from './services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service';
+import { BuildChangesHistoryService } from '../../common/services/changes-history/build-changes-history.service';
+import { UpdatePaymentSplitRecipientStatusService } from './services/update-payment-split-recipient-status/update-payment-split-recipient-status.service';
 
 @Module({
   imports: [PrismaModule],
@@ -16,12 +18,15 @@ import { GetAllPaymentSplitRecipientsByPaymentSplitIdService } from './services/
 
     CreatePaymentSplitRecipientService,
     GetAllPaymentSplitRecipientsByPaymentSplitIdService,
+    BuildChangesHistoryService,
+    UpdatePaymentSplitRecipientStatusService,
   ],
   exports: [
     PAYMENT_SPLIT_RECIPIENTS_REPOSITORY,
 
     CreatePaymentSplitRecipientService,
     GetAllPaymentSplitRecipientsByPaymentSplitIdService,
+    UpdatePaymentSplitRecipientStatusService,
   ],
 })
 export class PaymentSplitRecipientsModule {}

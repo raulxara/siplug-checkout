@@ -7,6 +7,8 @@ import { FindPaymentSplitByUniqueIdService } from './services/find-payment-split
 import { PAYMENT_SPLITS_REPOSITORY } from './tokens/payment-splits.tokens';
 import { GetAllPaymentSplitsByPaymentTransactionIdService } from './services/get-all-payment-splits-by-payment-transaction-id/get-all-payment-splits-by-payment-transaction-id.service';
 import { GetAllPaymentSplitsByOfficeIdService } from './services/get-all-payment-splits-by-office-id/get-all-payment-splits-by-office-id.service';
+import { BuildChangesHistoryService } from '../../common/services/changes-history/build-changes-history.service';
+import { UpdatePaymentSplitStatusService } from './services/update-payment-split-status/update-payment-split-status.service';
 
 @Module({
   imports: [PrismaModule],
@@ -20,6 +22,8 @@ import { GetAllPaymentSplitsByOfficeIdService } from './services/get-all-payment
     FindPaymentSplitByUniqueIdService,
     GetAllPaymentSplitsByPaymentTransactionIdService,
     GetAllPaymentSplitsByOfficeIdService,
+    UpdatePaymentSplitStatusService,
+    BuildChangesHistoryService,
   ],
   exports: [
     PAYMENT_SPLITS_REPOSITORY,
@@ -28,6 +32,7 @@ import { GetAllPaymentSplitsByOfficeIdService } from './services/get-all-payment
     FindPaymentSplitByUniqueIdService,
     GetAllPaymentSplitsByPaymentTransactionIdService,
     GetAllPaymentSplitsByOfficeIdService,
+    UpdatePaymentSplitStatusService,
   ],
 })
 export class PaymentSplitsModule {}
