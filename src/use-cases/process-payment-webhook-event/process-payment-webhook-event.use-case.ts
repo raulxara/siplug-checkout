@@ -719,20 +719,72 @@ export class ProcessPaymentWebhookEventUseCase {
         };
     }
 
-    if (params.event.provider === 'stripe') {
+    switch (params.event.provider) {
+      case 'stripe':
         return this.resolveStripeSplitDispatchDecision({
-        event: params.event,
-        paymentSplitId,
+          event: params.event,
+          paymentSplitId,
         });
-    }
 
-    return {
-        required: true,
-        reason: 'paid webhook event requires split dispatch',
-        sourceTransactionId: this.resolveGenericSourceTransactionId(params.event),
-        paymentSplitId,
-        authoritativeEvent: true,
-    };
+      case 'mercado_pago':
+        return {
+          required: false,
+          reason:
+            'mercado_pago split dispatch is not executed from webhook in this version',
+          sourceTransactionId: null,
+          paymentSplitId,
+          authoritativeEvent: false,
+        };
+
+      case 'pagseguro':
+        return {
+          required: false,
+          reason:
+            'pagseguro split dispatch is not implemented in webhook flow yet',
+          sourceTransactionId: null,
+          paymentSplitId,
+          authoritativeEvent: false,
+        };
+
+      case 'paypal':
+        return {
+          required: false,
+          reason:
+            'paypal split dispatch is not implemented in webhook flow yet',
+          sourceTransactionId: null,
+          paymentSplitId,
+          authoritativeEvent: false,
+        };
+
+      case 'picpay':
+        return {
+          required: false,
+          reason:
+            'picpay split dispatch is not implemented in webhook flow yet',
+          sourceTransactionId: null,
+          paymentSplitId,
+          authoritativeEvent: false,
+        };
+
+      case 'infinity_pay':
+        return {
+          required: false,
+          reason:
+            'infinity_pay split dispatch is not implemented in webhook flow yet',
+          sourceTransactionId: null,
+          paymentSplitId,
+          authoritativeEvent: false,
+        };
+
+      default:
+        return {
+          required: false,
+          reason: 'gateway provider does not support split dispatch in webhook flow',
+          sourceTransactionId: null,
+          paymentSplitId,
+          authoritativeEvent: false,
+        };
+    }
     }
 
     private resolveStripeSplitDispatchDecision(params: {

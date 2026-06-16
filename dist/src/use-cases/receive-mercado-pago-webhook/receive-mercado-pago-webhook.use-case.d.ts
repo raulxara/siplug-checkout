@@ -1,0 +1,29 @@
+import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
+import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
+import { FindApiCredentialByUniqueIdService } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service';
+import { GetMercadoPagoPaymentService } from '../../modules/payment-webhook-gateways/mercado-pago/services/get-mercado-pago-payment/get-mercado-pago-payment.service';
+import { NormalizeMercadoPagoWebhookService } from '../../modules/payment-webhook-gateways/mercado-pago/services/normalize-mercado-pago-webhook/normalize-mercado-pago-webhook.service';
+import { ValidateMercadoPagoWebhookService } from '../../modules/payment-webhook-gateways/mercado-pago/services/validate-mercado-pago-webhook/validate-mercado-pago-webhook.service';
+import { RegisterPaymentWebhookEventService } from '../../modules/payment-webhook-events/services/register-payment-webhook-event/register-payment-webhook-event.service';
+import { ProcessPaymentWebhookEventUseCase } from '../process-payment-webhook-event/process-payment-webhook-event.use-case';
+import { ReceiveMercadoPagoWebhookDtoIn } from './dtos/receive-mercado-pago-webhook.dto-in';
+import { ReceiveMercadoPagoWebhookDtoOut } from './dtos/receive-mercado-pago-webhook.dto-out';
+export declare class ReceiveMercadoPagoWebhookUseCase {
+    private readonly findApiCredentialByUniqueIdService;
+    private readonly decryptApiCredentialSecretService;
+    private readonly validateMercadoPagoWebhookService;
+    private readonly getMercadoPagoPaymentService;
+    private readonly normalizeMercadoPagoWebhookService;
+    private readonly registerPaymentWebhookEventService;
+    private readonly processPaymentWebhookEventUseCase;
+    private readonly handleUseCaseExceptionService;
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validateMercadoPagoWebhookService: ValidateMercadoPagoWebhookService, getMercadoPagoPaymentService: GetMercadoPagoPaymentService, normalizeMercadoPagoWebhookService: NormalizeMercadoPagoWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    exec(dtoIn: ReceiveMercadoPagoWebhookDtoIn): Promise<ReceiveMercadoPagoWebhookDtoOut>;
+    private resolveCredentialData;
+    private resolvePaymentId;
+    private extractObject;
+    private extractString;
+    private resolveSignatureDataId;
+    private normalizeProvider;
+    private toRecordOrNull;
+}

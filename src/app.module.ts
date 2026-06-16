@@ -23,7 +23,7 @@ import { GetUserModule } from './use-cases/get-user/get-user.module';
 import { ListUsersModule } from './use-cases/list-users/list-users.module';
 import { GetAllUsersByOfficeIdModule } from './use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module';
 import { UpdateApiCredentialModule } from './use-cases/update-api-credential/update-api-credential.module';
-import { GatewaysModule } from './modules/gateways/gateways.module';
+
 import { RegisterGatewayModule } from './use-cases/register-gateway/register-gateway.module';
 import { UpdateGatewayModule } from './use-cases/update-gateway/update-gateway.module';
 import { GetAllGatewaysModule } from './use-cases/get-all-gateways/get-all-gateways.module';
@@ -86,6 +86,7 @@ import { ListPaymentSplitsByOfficeIdModule } from './use-cases/list-payment-spli
 import { UpdatePaymentSplitLifecycleModule } from './use-cases/update-payment-split-lifecycle/update-payment-split-lifecycle.module';
 import { ProcessPaymentWebhookEventModule } from './use-cases/process-payment-webhook-event/process-payment-webhook-event.module';
 import { ReceiveStripeWebhookModule } from './use-cases/receive-stripe-webhook/receive-stripe-webhook.module';
+import { ReceiveMercadoPagoWebhookModule } from './use-cases/receive-mercado-pago-webhook/receive-mercado-pago-webhook.module';
 
 @Module({
   imports: [
@@ -115,7 +116,6 @@ import { ReceiveStripeWebhookModule } from './use-cases/receive-stripe-webhook/r
     ListUsersModule,
     GetAllUsersByOfficeIdModule,
     UpdateApiCredentialModule,
-    GatewaysModule,
     RegisterGatewayModule,
     UpdateGatewayModule,
     GetAllGatewaysModule,
@@ -178,6 +178,7 @@ import { ReceiveStripeWebhookModule } from './use-cases/receive-stripe-webhook/r
     UpdatePaymentSplitLifecycleModule,
     ProcessPaymentWebhookEventModule,
     ReceiveStripeWebhookModule,
+    ReceiveMercadoPagoWebhookModule,
   ],
 })
 export class AppModule {}

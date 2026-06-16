@@ -3,8 +3,26 @@ import { Module } from '@nestjs/common';
 import { NormalizeStripeWebhookService } from './stripe/services/normalize-stripe-webhook/normalize-stripe-webhook.service';
 import { ValidateStripeWebhookService } from './stripe/services/validate-stripe-webhook/validate-stripe-webhook.service';
 
+import { GetMercadoPagoPaymentService } from './mercado-pago/services/get-mercado-pago-payment/get-mercado-pago-payment.service';
+import { NormalizeMercadoPagoWebhookService } from './mercado-pago/services/normalize-mercado-pago-webhook/normalize-mercado-pago-webhook.service';
+import { ValidateMercadoPagoWebhookService } from './mercado-pago/services/validate-mercado-pago-webhook/validate-mercado-pago-webhook.service';
+
 @Module({
-  providers: [ValidateStripeWebhookService, NormalizeStripeWebhookService],
-  exports: [ValidateStripeWebhookService, NormalizeStripeWebhookService],
+  providers: [
+    ValidateStripeWebhookService,
+    NormalizeStripeWebhookService,
+
+    ValidateMercadoPagoWebhookService,
+    GetMercadoPagoPaymentService,
+    NormalizeMercadoPagoWebhookService,
+  ],
+  exports: [
+    ValidateStripeWebhookService,
+    NormalizeStripeWebhookService,
+
+    ValidateMercadoPagoWebhookService,
+    GetMercadoPagoPaymentService,
+    NormalizeMercadoPagoWebhookService,
+  ],
 })
 export class PaymentWebhookGatewaysModule {}

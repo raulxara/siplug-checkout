@@ -10,13 +10,28 @@ exports.PaymentWebhookGatewaysModule = void 0;
 const common_1 = require("@nestjs/common");
 const normalize_stripe_webhook_service_1 = require("./stripe/services/normalize-stripe-webhook/normalize-stripe-webhook.service");
 const validate_stripe_webhook_service_1 = require("./stripe/services/validate-stripe-webhook/validate-stripe-webhook.service");
+const get_mercado_pago_payment_service_1 = require("./mercado-pago/services/get-mercado-pago-payment/get-mercado-pago-payment.service");
+const normalize_mercado_pago_webhook_service_1 = require("./mercado-pago/services/normalize-mercado-pago-webhook/normalize-mercado-pago-webhook.service");
+const validate_mercado_pago_webhook_service_1 = require("./mercado-pago/services/validate-mercado-pago-webhook/validate-mercado-pago-webhook.service");
 let PaymentWebhookGatewaysModule = class PaymentWebhookGatewaysModule {
 };
 exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule;
 exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule = __decorate([
     (0, common_1.Module)({
-        providers: [validate_stripe_webhook_service_1.ValidateStripeWebhookService, normalize_stripe_webhook_service_1.NormalizeStripeWebhookService],
-        exports: [validate_stripe_webhook_service_1.ValidateStripeWebhookService, normalize_stripe_webhook_service_1.NormalizeStripeWebhookService],
+        providers: [
+            validate_stripe_webhook_service_1.ValidateStripeWebhookService,
+            normalize_stripe_webhook_service_1.NormalizeStripeWebhookService,
+            validate_mercado_pago_webhook_service_1.ValidateMercadoPagoWebhookService,
+            get_mercado_pago_payment_service_1.GetMercadoPagoPaymentService,
+            normalize_mercado_pago_webhook_service_1.NormalizeMercadoPagoWebhookService,
+        ],
+        exports: [
+            validate_stripe_webhook_service_1.ValidateStripeWebhookService,
+            normalize_stripe_webhook_service_1.NormalizeStripeWebhookService,
+            validate_mercado_pago_webhook_service_1.ValidateMercadoPagoWebhookService,
+            get_mercado_pago_payment_service_1.GetMercadoPagoPaymentService,
+            normalize_mercado_pago_webhook_service_1.NormalizeMercadoPagoWebhookService,
+        ],
     })
 ], PaymentWebhookGatewaysModule);
 //# sourceMappingURL=payment-webhook-gateways.module.js.map

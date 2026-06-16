@@ -32,7 +32,6 @@ const get_user_module_1 = require("./use-cases/get-user/get-user.module");
 const list_users_module_1 = require("./use-cases/list-users/list-users.module");
 const get_all_users_by_office_id_module_1 = require("./use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module");
 const update_api_credential_module_1 = require("./use-cases/update-api-credential/update-api-credential.module");
-const gateways_module_1 = require("./modules/gateways/gateways.module");
 const register_gateway_module_1 = require("./use-cases/register-gateway/register-gateway.module");
 const update_gateway_module_1 = require("./use-cases/update-gateway/update-gateway.module");
 const get_all_gateways_module_1 = require("./use-cases/get-all-gateways/get-all-gateways.module");
@@ -95,6 +94,7 @@ const list_payment_splits_by_office_id_module_1 = require("./use-cases/list-paym
 const update_payment_split_lifecycle_module_1 = require("./use-cases/update-payment-split-lifecycle/update-payment-split-lifecycle.module");
 const process_payment_webhook_event_module_1 = require("./use-cases/process-payment-webhook-event/process-payment-webhook-event.module");
 const receive_stripe_webhook_module_1 = require("./use-cases/receive-stripe-webhook/receive-stripe-webhook.module");
+const receive_mercado_pago_webhook_module_1 = require("./use-cases/receive-mercado-pago-webhook/receive-mercado-pago-webhook.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -127,7 +127,6 @@ exports.AppModule = AppModule = __decorate([
             list_users_module_1.ListUsersModule,
             get_all_users_by_office_id_module_1.GetAllUsersByOfficeIdModule,
             update_api_credential_module_1.UpdateApiCredentialModule,
-            gateways_module_1.GatewaysModule,
             register_gateway_module_1.RegisterGatewayModule,
             update_gateway_module_1.UpdateGatewayModule,
             get_all_gateways_module_1.GetAllGatewaysModule,
@@ -190,6 +189,7 @@ exports.AppModule = AppModule = __decorate([
             update_payment_split_lifecycle_module_1.UpdatePaymentSplitLifecycleModule,
             process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
             receive_stripe_webhook_module_1.ReceiveStripeWebhookModule,
+            receive_mercado_pago_webhook_module_1.ReceiveMercadoPagoWebhookModule,
         ],
     })
 ], AppModule);
