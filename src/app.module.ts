@@ -84,6 +84,8 @@ import { GetPaymentSplitByUniqueIdModule } from './use-cases/get-payment-split-b
 import { ListPaymentSplitsByPaymentTransactionIdModule } from './use-cases/list-payment-splits-by-payment-transaction-id/list-payment-splits-by-payment-transaction-id.module';
 import { ListPaymentSplitsByOfficeIdModule } from './use-cases/list-payment-splits-by-office-id/list-payment-splits-by-office-id.module';
 import { UpdatePaymentSplitLifecycleModule } from './use-cases/update-payment-split-lifecycle/update-payment-split-lifecycle.module';
+import { ProcessPaymentWebhookEventModule } from './use-cases/process-payment-webhook-event/process-payment-webhook-event.module';
+import { ReceiveStripeWebhookModule } from './use-cases/receive-stripe-webhook/receive-stripe-webhook.module';
 
 @Module({
   imports: [
@@ -174,6 +176,8 @@ import { UpdatePaymentSplitLifecycleModule } from './use-cases/update-payment-sp
     ListPaymentSplitsByPaymentTransactionIdModule,
     ListPaymentSplitsByOfficeIdModule,
     UpdatePaymentSplitLifecycleModule,
+    ProcessPaymentWebhookEventModule,
+    ReceiveStripeWebhookModule,
   ],
 })
 export class AppModule {}

@@ -93,6 +93,8 @@ const get_payment_split_by_unique_id_module_1 = require("./use-cases/get-payment
 const list_payment_splits_by_payment_transaction_id_module_1 = require("./use-cases/list-payment-splits-by-payment-transaction-id/list-payment-splits-by-payment-transaction-id.module");
 const list_payment_splits_by_office_id_module_1 = require("./use-cases/list-payment-splits-by-office-id/list-payment-splits-by-office-id.module");
 const update_payment_split_lifecycle_module_1 = require("./use-cases/update-payment-split-lifecycle/update-payment-split-lifecycle.module");
+const process_payment_webhook_event_module_1 = require("./use-cases/process-payment-webhook-event/process-payment-webhook-event.module");
+const receive_stripe_webhook_module_1 = require("./use-cases/receive-stripe-webhook/receive-stripe-webhook.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -186,6 +188,8 @@ exports.AppModule = AppModule = __decorate([
             list_payment_splits_by_payment_transaction_id_module_1.ListPaymentSplitsByPaymentTransactionIdModule,
             list_payment_splits_by_office_id_module_1.ListPaymentSplitsByOfficeIdModule,
             update_payment_split_lifecycle_module_1.UpdatePaymentSplitLifecycleModule,
+            process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
+            receive_stripe_webhook_module_1.ReceiveStripeWebhookModule,
         ],
     })
 ], AppModule);

@@ -653,62 +653,163 @@ if (paymentSplitSnapshot !== null) {
     return 'processing';
   }
 
-  private resolveSplitRequired(
-  checkoutSessionConfig: Record<string, unknown> | null,
-  requestConfig: Record<string, unknown> | null,
-): boolean {
-  const requestValue = this.getBooleanFromConfig(requestConfig, 'splitRequired');
+ private resolveSplitRequired(
+    checkoutSessionConfig: Record<string, unknown> | null,
+    requestConfig: Record<string, unknown> | null,
+  ): boolean {
+    const requestSplitRequired = this.getBooleanFromConfig(
+      requestConfig,
+      'splitRequired',
+    );
 
-  if (requestValue !== null) {
-    return requestValue;
+    if (requestSplitRequired === false) {
+      return false;
+    }
+
+    const requestSplitRuleId = this.getStringFromConfig(
+      requestConfig,
+      'splitRuleId',
+    );
+
+    if (requestSplitRuleId !== null) {
+      return true;
+    }
+
+    if (requestSplitRequired === true) {
+      throw new Error('splitRuleId is required when splitRequired is true');
+    }
+
+    const checkoutSessionSplitRuleId = this.getStringFromConfig(
+      checkoutSessionConfig,
+      'splitRuleId',
+    );
+
+    if (checkoutSessionSplitRuleId !== null) {
+      return true;
+    }
+
+    return false;
   }
 
-  const checkoutSessionValue = this.getBooleanFromConfig(
-    checkoutSessionConfig,
-    'splitRequired',
-  );
+  private async registerPaymentSplitForTransaction(params: {
+    checkoutSessionConfig: Record<string, unknown> | null;
+    requestConfig: Record<string, unknown> | null;
+    token: string;
+    paymentTransaction: PaymentTransactionRow;
+    gatewayProvider: string;
+    metadata: Record<string, unknown>;
+  }): Promise<Record<string, unknown> | null> {
+    if (!params.paymentTransaction.splitRequired) {
+      return null;
+    }
 
-  return checkoutSessionValue ?? false;
-}
+    const splitRuleId = this.resolveSplitRuleId(
+      params.checkoutSessionConfig,
+      params.requestConfig,
+    );
 
-private async registerPaymentSplitForTransaction(params: {
-  checkoutSessionConfig: Record<string, unknown> | null;
-  requestConfig: Record<string, unknown> | null;
-  token: string;
-  paymentTransaction: PaymentTransactionRow;
-  gatewayProvider: string;
-  metadata: Record<string, unknown>;
-}): Promise<Record<string, unknown> | null> {
-  if (!params.paymentTransaction.splitRequired) {
-    return null;
-  }
+    if (splitRuleId === null) {
+      throw new Error('splitRuleId is required when splitRequired is true');
+    }
 
-  const splitRuleId = this.resolveSplitRuleId(
-    params.checkoutSessionConfig,
-    params.requestConfig,
-  );
+    const calculation = await this.calculatePaymentSplitService.exec(
+      new CalculatePaymentSplitDtoIn(
+        splitRuleId,
+        params.paymentTransaction.amount,
+        null,
+        null,
+        params.paymentTransaction.currency,
+        params.metadata,
+      ),
+    );
 
-  if (splitRuleId === null) {
-    throw new Error('splitRuleId is required when splitRequired is true');
-  }
+    const splitRule = calculation.splitRule;
 
-  const calculation = await this.calculatePaymentSplitService.exec(
-    new CalculatePaymentSplitDtoIn(
+    const paymentSplitConfig = {
       splitRuleId,
-      params.paymentTransaction.amount,
-      null,
-      null,
-      params.paymentTransaction.currency,
-      params.metadata,
-    ),
-  );
+      mode: 'internal-calculation',
+      calculationSnapshot: {
+        calculationBase: calculation.calculationBase,
+        grossAmount: calculation.grossAmount,
+        gatewayFeeAmount: calculation.gatewayFeeAmount,
+        netAmount: calculation.netAmount,
+        baseAmount: calculation.baseAmount,
+        allocatedAmount: calculation.allocatedAmount,
+        unallocatedAmount: calculation.unallocatedAmount,
+        currency: calculation.currency,
+      },
+    };
 
-  const splitRule = calculation.splitRule;
+    const paymentSplitDtoOut = await this.createPaymentSplitService.exec(
+      new CreatePaymentSplitDtoIn(
+        String(splitRule.officeId),
+        String(splitRule.clientId),
+        params.paymentTransaction.checkoutSessionId,
+        params.paymentTransaction._id,
+        null,
+        null,
+        splitRuleId,
 
-  const paymentSplitConfig = {
-    splitRuleId,
-    mode: 'internal-calculation',
-    calculationSnapshot: {
+        params.gatewayProvider,
+        null,
+
+        calculation.allocatedAmount,
+        calculation.currency,
+
+        null,
+        null,
+        null,
+        params.metadata,
+        paymentSplitConfig,
+
+        'created',
+      ),
+    );
+
+    const paymentSplitRecipients: Array<Record<string, unknown>> = [];
+
+    for (const recipient of calculation.recipients) {
+      const recipientConfig = {
+        ...(recipient.config ?? {}),
+        splitRuleRecipientId: recipient.splitRuleRecipientId,
+        fixedAmount: recipient.fixedAmount,
+        liableForGatewayFee: recipient.liableForGatewayFee,
+        liableForRefund: recipient.liableForRefund,
+        priority: recipient.priority,
+      };
+
+      const paymentSplitRecipientDtoOut =
+        await this.createPaymentSplitRecipientService.exec(
+          new CreatePaymentSplitRecipientDtoIn(
+            String(paymentSplitDtoOut.paymentSplit._id),
+            recipient.splitRecipientId,
+
+            null,
+            null,
+
+            recipient.role,
+            recipient.amount,
+            recipient.percentage,
+            recipient.currency,
+
+            null,
+            null,
+            null,
+            recipient.metadata,
+            recipientConfig,
+
+            'created',
+          ),
+        );
+
+      paymentSplitRecipients.push(
+        paymentSplitRecipientDtoOut.paymentSplitRecipient,
+      );
+    }
+
+    return {
+      paymentSplitId: paymentSplitDtoOut.paymentSplit._id,
+      splitRuleId,
       calculationBase: calculation.calculationBase,
       grossAmount: calculation.grossAmount,
       gatewayFeeAmount: calculation.gatewayFeeAmount,
@@ -717,204 +818,123 @@ private async registerPaymentSplitForTransaction(params: {
       allocatedAmount: calculation.allocatedAmount,
       unallocatedAmount: calculation.unallocatedAmount,
       currency: calculation.currency,
-    },
-  };
-
-  const paymentSplitDtoOut = await this.createPaymentSplitService.exec(
-    new CreatePaymentSplitDtoIn(
-      String(splitRule.officeId),
-      String(splitRule.clientId),
-      params.paymentTransaction.checkoutSessionId,
-      params.paymentTransaction._id,
-      null,
-      null,
-      splitRuleId,
-
-      params.gatewayProvider,
-      null,
-
-      calculation.allocatedAmount,
-      calculation.currency,
-
-      null,
-      null,
-      null,
-      params.metadata,
-      paymentSplitConfig,
-
-      'created',
-    ),
-  );
-
-  const paymentSplitRecipients: Array<Record<string, unknown>> = [];
-
-  for (const recipient of calculation.recipients) {
-    const recipientConfig = {
-      ...(recipient.config ?? {}),
-      splitRuleRecipientId: recipient.splitRuleRecipientId,
-      fixedAmount: recipient.fixedAmount,
-      liableForGatewayFee: recipient.liableForGatewayFee,
-      liableForRefund: recipient.liableForRefund,
-      priority: recipient.priority,
+      recipients: paymentSplitRecipients,
     };
+  }
 
-    const paymentSplitRecipientDtoOut =
-      await this.createPaymentSplitRecipientService.exec(
-        new CreatePaymentSplitRecipientDtoIn(
-          String(paymentSplitDtoOut.paymentSplit._id),
-          recipient.splitRecipientId,
-
-          null,
-          null,
-
-          recipient.role,
-          recipient.amount,
-          recipient.percentage,
-          recipient.currency,
-
-          null,
-          null,
-          null,
-          recipient.metadata,
-          recipientConfig,
-
-          'created',
-        ),
-      );
-
-    paymentSplitRecipients.push(
-      paymentSplitRecipientDtoOut.paymentSplitRecipient,
+  private resolveSplitRuleId(
+    checkoutSessionConfig: Record<string, unknown> | null,
+    requestConfig: Record<string, unknown> | null,
+  ): string | null {
+    const requestSplitRuleId = this.getStringFromConfig(
+      requestConfig,
+      'splitRuleId',
     );
+
+    if (requestSplitRuleId !== null) {
+      return requestSplitRuleId;
+    }
+
+    return this.getStringFromConfig(checkoutSessionConfig, 'splitRuleId');
   }
 
-  return {
-    paymentSplitId: paymentSplitDtoOut.paymentSplit._id,
-    splitRuleId,
-    calculationBase: calculation.calculationBase,
-    grossAmount: calculation.grossAmount,
-    gatewayFeeAmount: calculation.gatewayFeeAmount,
-    netAmount: calculation.netAmount,
-    baseAmount: calculation.baseAmount,
-    allocatedAmount: calculation.allocatedAmount,
-    unallocatedAmount: calculation.unallocatedAmount,
-    currency: calculation.currency,
-    recipients: paymentSplitRecipients,
-  };
-}
+  private getStringFromConfig(
+    config: Record<string, unknown> | null,
+    key: string,
+  ): string | null {
+    if (config === null) {
+      return null;
+    }
 
-private resolveSplitRuleId(
-  checkoutSessionConfig: Record<string, unknown> | null,
-  requestConfig: Record<string, unknown> | null,
-): string | null {
-  const requestSplitRuleId = this.getStringFromConfig(
-    requestConfig,
-    'splitRuleId',
-  );
+    const value = config[key];
 
-  if (requestSplitRuleId !== null) {
-    return requestSplitRuleId;
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const stringValue = String(value).trim();
+
+    return stringValue === '' ? null : stringValue;
   }
 
-  return this.getStringFromConfig(checkoutSessionConfig, 'splitRuleId');
-}
+  private getBooleanFromConfig(
+    config: Record<string, unknown> | null,
+    key: string,
+  ): boolean | null {
+    if (config === null) {
+      return null;
+    }
 
-private getStringFromConfig(
-  config: Record<string, unknown> | null,
-  key: string,
-): string | null {
-  if (config === null) {
+    const value = config[key];
+
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+
+    if (['true', '1', 'yes', 'sim'].includes(normalized)) {
+      return true;
+    }
+
+    if (['false', '0', 'no', 'nao', 'não'].includes(normalized)) {
+      return false;
+    }
+
     return null;
   }
-
-  const value = config[key];
-
-  if (value === undefined || value === null) {
-    return null;
-  }
-
-  const stringValue = String(value).trim();
-
-  return stringValue === '' ? null : stringValue;
-}
-
-private getBooleanFromConfig(
-  config: Record<string, unknown> | null,
-  key: string,
-): boolean | null {
-  if (config === null) {
-    return null;
-  }
-
-  const value = config[key];
-
-  if (value === undefined || value === null) {
-    return null;
-  }
-
-  if (typeof value === 'boolean') {
-    return value;
-  }
-
-  const normalized = String(value).trim().toLowerCase();
-
-  if (['true', '1', 'yes', 'sim'].includes(normalized)) {
-    return true;
-  }
-
-  if (['false', '0', 'no', 'nao', 'não'].includes(normalized)) {
-    return false;
-  }
-
-  return null;
-}
 
   private buildPaymentTransactionRowFromCreateDtoOut(
-    transactionDtoOut: {
-      id: number;
-      _id: string;
-      officeId: string;
-      clientId: string;
-      checkoutSessionId: string | null;
-      paymentCustomerId: string | null;
-      gatewayId: string;
-      apiCredentialId: string | null;
-      gatewayTransactionId: string | null;
-      externalReference: string | null;
-      idempotencyKey: string | null;
-      paymentType: string;
-      paymentMethod: string;
-      amount: number;
-      currency: string;
-      installments: number | null;
-      installmentAmount: number | null;
-      interestAmount: number | null;
-      interestType: string | null;
-      gatewayStatus: string | null;
-      status: string;
-      processStatus: string;
-      processMessage: string | null;
-      providerPayload: Record<string, unknown> | null;
-      providerResponse: Record<string, unknown> | null;
-      gatewayResponse: Record<string, unknown> | null;
-      qrCode: string | null;
-      qrCodeBase64: string | null;
-      boletoUrl: string | null;
-      checkoutUrl: string | null;
-      splitRequired: boolean;
-      hasSplit: boolean;
-      paidAt: string | null;
-      authorizedAt: string | null;
-      canceledAt: string | null;
-      failedAt: string | null;
-      refundedAt: string | null;
-      expiresAt: string | null;
-      metadata: Record<string, unknown> | null;
-      config: Record<string, unknown> | null;
-      changesHistory: Array<Record<string, unknown>> | null;
-      createdAt: string | null;
-      updatedAt: string | null;
-    },
-  ): PaymentTransactionRow {
+  transactionDtoOut: {
+    id: number;
+    _id: string;
+    officeId: string;
+    clientId: string;
+    checkoutSessionId: string | null;
+    paymentCustomerId: string | null;
+    gatewayId: string;
+    apiCredentialId: string | null;
+    gatewayTransactionId: string | null;
+    externalReference: string | null;
+    idempotencyKey: string | null;
+    paymentType: string;
+    paymentMethod: string;
+    amount: number;
+    currency: string;
+    installments: number | null;
+    installmentAmount: number | null;
+    interestAmount: number | null;
+    interestType: string | null;
+    gatewayStatus: string | null;
+    status: string;
+    processStatus: string;
+    processMessage: string | null;
+    providerPayload: Record<string, unknown> | null;
+    providerResponse: Record<string, unknown> | null;
+    gatewayResponse: Record<string, unknown> | null;
+    qrCode: string | null;
+    qrCodeBase64: string | null;
+    boletoUrl: string | null;
+    checkoutUrl: string | null;
+    splitRequired: boolean;
+    hasSplit: boolean;
+    paidAt: string | null;
+    authorizedAt: string | null;
+    canceledAt: string | null;
+    failedAt: string | null;
+    refundedAt: string | null;
+    expiresAt: string | null;
+    metadata: Record<string, unknown> | null;
+    config: Record<string, unknown> | null;
+    changesHistory: Array<Record<string, unknown>> | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  },
+): PaymentTransactionRow {
     return {
       id: transactionDtoOut.id,
       _id: transactionDtoOut._id,

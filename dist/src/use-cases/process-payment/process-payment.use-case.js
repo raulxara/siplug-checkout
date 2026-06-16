@@ -460,12 +460,22 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         return 'processing';
     }
     resolveSplitRequired(checkoutSessionConfig, requestConfig) {
-        const requestValue = this.getBooleanFromConfig(requestConfig, 'splitRequired');
-        if (requestValue !== null) {
-            return requestValue;
+        const requestSplitRequired = this.getBooleanFromConfig(requestConfig, 'splitRequired');
+        if (requestSplitRequired === false) {
+            return false;
         }
-        const checkoutSessionValue = this.getBooleanFromConfig(checkoutSessionConfig, 'splitRequired');
-        return checkoutSessionValue ?? false;
+        const requestSplitRuleId = this.getStringFromConfig(requestConfig, 'splitRuleId');
+        if (requestSplitRuleId !== null) {
+            return true;
+        }
+        if (requestSplitRequired === true) {
+            throw new Error('splitRuleId is required when splitRequired is true');
+        }
+        const checkoutSessionSplitRuleId = this.getStringFromConfig(checkoutSessionConfig, 'splitRuleId');
+        if (checkoutSessionSplitRuleId !== null) {
+            return true;
+        }
+        return false;
     }
     async registerPaymentSplitForTransaction(params) {
         if (!params.paymentTransaction.splitRequired) {
