@@ -17,6 +17,9 @@ const get_all_payment_splits_by_payment_transaction_id_service_1 = require("./se
 const get_all_payment_splits_by_office_id_service_1 = require("./services/get-all-payment-splits-by-office-id/get-all-payment-splits-by-office-id.service");
 const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
 const update_payment_split_status_service_1 = require("./services/update-payment-split-status/update-payment-split-status.service");
+const resolve_payment_split_dispatch_eligibility_service_1 = require("./services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service");
+const reserve_payment_split_dispatch_service_1 = require("./services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service");
+const update_payment_split_service_1 = require("./services/update-payment-split/update-payment-split.service");
 let PaymentSplitsModule = class PaymentSplitsModule {
 };
 exports.PaymentSplitsModule = PaymentSplitsModule;
@@ -34,6 +37,9 @@ exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
             get_all_payment_splits_by_office_id_service_1.GetAllPaymentSplitsByOfficeIdService,
             update_payment_split_status_service_1.UpdatePaymentSplitStatusService,
             build_changes_history_service_1.BuildChangesHistoryService,
+            resolve_payment_split_dispatch_eligibility_service_1.ResolvePaymentSplitDispatchEligibilityService,
+            reserve_payment_split_dispatch_service_1.ReservePaymentSplitDispatchService,
+            update_payment_split_service_1.UpdatePaymentSplitService,
         ],
         exports: [
             payment_splits_tokens_1.PAYMENT_SPLITS_REPOSITORY,
@@ -42,6 +48,9 @@ exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
             get_all_payment_splits_by_payment_transaction_id_service_1.GetAllPaymentSplitsByPaymentTransactionIdService,
             get_all_payment_splits_by_office_id_service_1.GetAllPaymentSplitsByOfficeIdService,
             update_payment_split_status_service_1.UpdatePaymentSplitStatusService,
+            resolve_payment_split_dispatch_eligibility_service_1.ResolvePaymentSplitDispatchEligibilityService,
+            reserve_payment_split_dispatch_service_1.ReservePaymentSplitDispatchService,
+            update_payment_split_service_1.UpdatePaymentSplitService,
         ],
     })
 ], PaymentSplitsModule);

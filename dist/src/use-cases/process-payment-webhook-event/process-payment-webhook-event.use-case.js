@@ -28,6 +28,12 @@ const get_all_payment_transactions_by_checkout_session_id_service_1 = require(".
 const update_payment_transaction_dto_in_1 = require("../../modules/payment-transactions/services/update-payment-transaction/dtos/update-payment-transaction.dto-in");
 const update_payment_transaction_service_1 = require("../../modules/payment-transactions/services/update-payment-transaction/update-payment-transaction.service");
 const process_payment_webhook_event_dto_out_1 = require("./dtos/process-payment-webhook-event.dto-out");
+const resolve_payment_split_dispatch_eligibility_dto_in_1 = require("../../modules/payment-splits/services/resolve-payment-split-dispatch-eligibility/dtos/resolve-payment-split-dispatch-eligibility.dto-in");
+const resolve_payment_split_dispatch_eligibility_service_1 = require("../../modules/payment-splits/services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service");
+const reserve_payment_split_dispatch_dto_in_1 = require("../../modules/payment-splits/services/reserve-payment-split-dispatch/dtos/reserve-payment-split-dispatch.dto-in");
+const reserve_payment_split_dispatch_service_1 = require("../../modules/payment-splits/services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service");
+const dispatch_payment_split_to_gateway_dto_in_1 = require("../dispatch-payment-split-to-gateway/dtos/dispatch-payment-split-to-gateway.dto-in");
+const dispatch_payment_split_to_gateway_use_case_1 = require("../dispatch-payment-split-to-gateway/dispatch-payment-split-to-gateway.use-case");
 let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase {
     markPaymentWebhookEventAsProcessingService;
     markPaymentWebhookEventAsProcessedService;
@@ -36,8 +42,11 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
     findPaymentTransactionByGatewayTransactionIdService;
     getAllPaymentTransactionsByCheckoutSessionIdService;
     updatePaymentTransactionService;
+    resolvePaymentSplitDispatchEligibilityService;
+    reservePaymentSplitDispatchService;
+    dispatchPaymentSplitToGatewayUseCase;
     handleUseCaseExceptionService;
-    constructor(markPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService, handleUseCaseExceptionService) {
+    constructor(markPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService, resolvePaymentSplitDispatchEligibilityService, reservePaymentSplitDispatchService, dispatchPaymentSplitToGatewayUseCase, handleUseCaseExceptionService) {
         this.markPaymentWebhookEventAsProcessingService = markPaymentWebhookEventAsProcessingService;
         this.markPaymentWebhookEventAsProcessedService = markPaymentWebhookEventAsProcessedService;
         this.markPaymentWebhookEventAsFailedService = markPaymentWebhookEventAsFailedService;
@@ -45,6 +54,9 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
         this.findPaymentTransactionByGatewayTransactionIdService = findPaymentTransactionByGatewayTransactionIdService;
         this.getAllPaymentTransactionsByCheckoutSessionIdService = getAllPaymentTransactionsByCheckoutSessionIdService;
         this.updatePaymentTransactionService = updatePaymentTransactionService;
+        this.resolvePaymentSplitDispatchEligibilityService = resolvePaymentSplitDispatchEligibilityService;
+        this.reservePaymentSplitDispatchService = reservePaymentSplitDispatchService;
+        this.dispatchPaymentSplitToGatewayUseCase = dispatchPaymentSplitToGatewayUseCase;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
     }
     async exec(dtoIn) {
@@ -123,16 +135,56 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
                 }),
                 source: 'ProcessPaymentWebhookEventUseCase.updateTransaction',
             }));
-            const splitDispatchDecision = this.resolveSplitDispatchDecision({
+            const initialSplitDispatchDecision = this.resolveSplitDispatchDecision({
                 event: dtoIn.normalizedEvent,
                 paymentTransaction: updatedTransactionDtoOut.paymentTransaction,
             });
-            const splitDispatchRequired = splitDispatchDecision.required;
+            const splitDispatchEligibility = await this.resolveSplitDispatchEligibilitySafe({
+                initialDecision: initialSplitDispatchDecision,
+            });
+            const splitDispatchRequired = initialSplitDispatchDecision.required &&
+                splitDispatchEligibility.eligible;
+            const splitDispatchDecision = {
+                ...initialSplitDispatchDecision,
+                required: splitDispatchRequired,
+                originalRequired: initialSplitDispatchDecision.required,
+                eligibility: splitDispatchEligibility,
+                reason: splitDispatchRequired
+                    ? initialSplitDispatchDecision.reason
+                    : splitDispatchEligibility.reason,
+            };
+            const splitDispatchReservation = await this.reservePaymentSplitDispatchIfRequired({
+                splitDispatchRequired,
+                splitDispatchDecision,
+                event: dtoIn.normalizedEvent,
+                paymentTransaction: updatedTransactionDtoOut.paymentTransaction,
+            });
+            const finalSplitDispatchRequired = splitDispatchRequired && splitDispatchReservation.reserved;
+            const finalSplitDispatchDecision = {
+                ...splitDispatchDecision,
+                required: finalSplitDispatchRequired,
+                reservation: splitDispatchReservation,
+                reason: finalSplitDispatchRequired
+                    ? splitDispatchDecision.reason
+                    : splitDispatchReservation.reason,
+            };
+            const splitGatewayDispatchResult = await this.dispatchPaymentSplitToGatewayFromWebhookSafe({
+                splitDispatchRequired: finalSplitDispatchRequired,
+                splitDispatchDecision: finalSplitDispatchDecision,
+                paymentTransactionId: String(updatedTransactionDtoOut.paymentTransaction._id),
+                paymentWebhookEventId: dtoIn.paymentWebhookEventId,
+                provider: dtoIn.normalizedEvent.provider,
+                eventId: dtoIn.normalizedEvent.eventId,
+                eventType: dtoIn.normalizedEvent.eventType,
+                eventAction: dtoIn.normalizedEvent.eventAction,
+                canonicalStatus: dtoIn.normalizedEvent.canonicalStatus,
+            });
             const processingResult = {
                 ignored: false,
                 transactionUpdated: true,
-                splitDispatchRequired,
-                splitDispatchDecision,
+                splitDispatchRequired: finalSplitDispatchRequired,
+                splitDispatchDecision: finalSplitDispatchDecision,
+                splitGatewayDispatchResult,
                 provider: dtoIn.normalizedEvent.provider,
                 eventId: dtoIn.normalizedEvent.eventId,
                 eventType: dtoIn.normalizedEvent.eventType,
@@ -147,7 +199,7 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
                 processingResult,
                 source: 'ProcessPaymentWebhookEventUseCase.processed',
             }));
-            return new process_payment_webhook_event_dto_out_1.ProcessPaymentWebhookEventDtoOut(webhookDtoOut.paymentWebhookEvent, updatedTransactionDtoOut.paymentTransaction, true, splitDispatchRequired, processingResult);
+            return new process_payment_webhook_event_dto_out_1.ProcessPaymentWebhookEventDtoOut(webhookDtoOut.paymentWebhookEvent, updatedTransactionDtoOut.paymentTransaction, true, finalSplitDispatchRequired, processingResult);
         }
         catch (error) {
             const message = error instanceof Error
@@ -205,6 +257,64 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
         }
         catch {
             return null;
+        }
+    }
+    async dispatchPaymentSplitToGatewayFromWebhookSafe(params) {
+        if (!params.splitDispatchRequired) {
+            return {
+                dispatched: false,
+                reason: params.splitDispatchDecision.reason,
+                paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+                sourceTransactionId: params.splitDispatchDecision.sourceTransactionId,
+            };
+        }
+        if (params.splitDispatchDecision.paymentSplitId === null) {
+            return {
+                dispatched: false,
+                reason: 'paymentSplitId is required for split gateway dispatch',
+                paymentSplitId: null,
+                sourceTransactionId: params.splitDispatchDecision.sourceTransactionId,
+            };
+        }
+        if (params.splitDispatchDecision.sourceTransactionId === null) {
+            return {
+                dispatched: false,
+                reason: 'sourceTransactionId is required for split gateway dispatch',
+                paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+                sourceTransactionId: null,
+            };
+        }
+        try {
+            const dtoOut = await this.dispatchPaymentSplitToGatewayUseCase.exec(new dispatch_payment_split_to_gateway_dto_in_1.DispatchPaymentSplitToGatewayDtoIn({
+                paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+                sourceTransactionId: params.splitDispatchDecision.sourceTransactionId,
+                paymentTransactionId: params.paymentTransactionId,
+                paymentWebhookEventId: params.paymentWebhookEventId,
+                provider: params.provider,
+                eventId: params.eventId,
+                eventType: params.eventType,
+                eventAction: params.eventAction,
+                canonicalStatus: params.canonicalStatus,
+            }));
+            return {
+                dispatched: dtoOut.dispatched,
+                reason: dtoOut.reason,
+                paymentSplit: dtoOut.paymentSplit,
+                paymentSplitRecipients: dtoOut.paymentSplitRecipients,
+                gatewayResult: dtoOut.gatewayResult,
+            };
+        }
+        catch (error) {
+            const message = error instanceof Error
+                ? error.message
+                : 'error on dispatch payment split to gateway from webhook';
+            return {
+                dispatched: false,
+                reason: message,
+                paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+                sourceTransactionId: params.splitDispatchDecision.sourceTransactionId,
+                errorMessage: message,
+            };
         }
     }
     async findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId) {
@@ -473,6 +583,86 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
         catch {
         }
     }
+    async resolveSplitDispatchEligibilitySafe(params) {
+        if (!params.initialDecision.required) {
+            return {
+                eligible: false,
+                reason: params.initialDecision.reason,
+                paymentSplitId: params.initialDecision.paymentSplitId,
+                currentStatus: null,
+                paymentSplit: null,
+            };
+        }
+        if (params.initialDecision.paymentSplitId === null) {
+            return {
+                eligible: false,
+                reason: 'payment split id not found in split dispatch decision',
+                paymentSplitId: null,
+                currentStatus: null,
+                paymentSplit: null,
+            };
+        }
+        const dtoOut = await this.resolvePaymentSplitDispatchEligibilityService.exec(new resolve_payment_split_dispatch_eligibility_dto_in_1.ResolvePaymentSplitDispatchEligibilityDtoIn({
+            paymentSplitId: params.initialDecision.paymentSplitId,
+            source: 'ProcessPaymentWebhookEventUseCase.resolveSplitDispatchEligibility',
+        }));
+        return {
+            eligible: dtoOut.eligible,
+            reason: dtoOut.reason,
+            paymentSplitId: dtoOut.paymentSplitId,
+            currentStatus: dtoOut.currentStatus,
+            paymentSplit: dtoOut.paymentSplit,
+        };
+    }
+    async reservePaymentSplitDispatchIfRequired(params) {
+        if (!params.splitDispatchRequired) {
+            return {
+                reserved: false,
+                reason: params.splitDispatchDecision.reason,
+                paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+                previousStatus: null,
+                currentStatus: null,
+                reservation: null,
+            };
+        }
+        if (params.splitDispatchDecision.paymentSplitId === null) {
+            return {
+                reserved: false,
+                reason: 'paymentSplitId is required to reserve split dispatch',
+                paymentSplitId: null,
+                previousStatus: null,
+                currentStatus: null,
+                reservation: null,
+            };
+        }
+        if (params.splitDispatchDecision.sourceTransactionId === null) {
+            return {
+                reserved: false,
+                reason: 'sourceTransactionId is required to reserve split dispatch',
+                paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+                previousStatus: null,
+                currentStatus: null,
+                reservation: null,
+            };
+        }
+        const dtoOut = await this.reservePaymentSplitDispatchService.exec(new reserve_payment_split_dispatch_dto_in_1.ReservePaymentSplitDispatchDtoIn({
+            paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+            paymentTransactionId: params.paymentTransaction._id,
+            provider: params.event.provider,
+            sourceTransactionId: params.splitDispatchDecision.sourceTransactionId,
+            webhookEventId: params.event.eventId,
+            webhookEventType: params.event.eventType,
+            source: 'ProcessPaymentWebhookEventUseCase.reservePaymentSplitDispatch',
+        }));
+        return {
+            reserved: dtoOut.reserved,
+            reason: dtoOut.reason,
+            paymentSplitId: dtoOut.paymentSplitId,
+            previousStatus: dtoOut.previousStatus,
+            currentStatus: dtoOut.currentStatus,
+            reservation: dtoOut.reservation,
+        };
+    }
 };
 exports.ProcessPaymentWebhookEventUseCase = ProcessPaymentWebhookEventUseCase;
 exports.ProcessPaymentWebhookEventUseCase = ProcessPaymentWebhookEventUseCase = __decorate([
@@ -484,6 +674,9 @@ exports.ProcessPaymentWebhookEventUseCase = ProcessPaymentWebhookEventUseCase = 
         find_payment_transaction_by_gateway_transaction_id_service_1.FindPaymentTransactionByGatewayTransactionIdService,
         get_all_payment_transactions_by_checkout_session_id_service_1.GetAllPaymentTransactionsByCheckoutSessionIdService,
         update_payment_transaction_service_1.UpdatePaymentTransactionService,
+        resolve_payment_split_dispatch_eligibility_service_1.ResolvePaymentSplitDispatchEligibilityService,
+        reserve_payment_split_dispatch_service_1.ReservePaymentSplitDispatchService,
+        dispatch_payment_split_to_gateway_use_case_1.DispatchPaymentSplitToGatewayUseCase,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])
 ], ProcessPaymentWebhookEventUseCase);
 //# sourceMappingURL=process-payment-webhook-event.use-case.js.map

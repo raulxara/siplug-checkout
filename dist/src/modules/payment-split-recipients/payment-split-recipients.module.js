@@ -15,6 +15,7 @@ const payment_split_recipients_tokens_1 = require("./tokens/payment-split-recipi
 const get_all_payment_split_recipients_by_payment_split_id_service_1 = require("./services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service");
 const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
 const update_payment_split_recipient_status_service_1 = require("./services/update-payment-split-recipient-status/update-payment-split-recipient-status.service");
+const update_payment_split_recipient_service_1 = require("./services/update-payment-split-recipient/update-payment-split-recipient.service");
 let PaymentSplitRecipientsModule = class PaymentSplitRecipientsModule {
 };
 exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule;
@@ -30,12 +31,14 @@ exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule = __decorate
             get_all_payment_split_recipients_by_payment_split_id_service_1.GetAllPaymentSplitRecipientsByPaymentSplitIdService,
             build_changes_history_service_1.BuildChangesHistoryService,
             update_payment_split_recipient_status_service_1.UpdatePaymentSplitRecipientStatusService,
+            update_payment_split_recipient_service_1.UpdatePaymentSplitRecipientService,
         ],
         exports: [
             payment_split_recipients_tokens_1.PAYMENT_SPLIT_RECIPIENTS_REPOSITORY,
             create_payment_split_recipient_service_1.CreatePaymentSplitRecipientService,
             get_all_payment_split_recipients_by_payment_split_id_service_1.GetAllPaymentSplitRecipientsByPaymentSplitIdService,
             update_payment_split_recipient_status_service_1.UpdatePaymentSplitRecipientStatusService,
+            update_payment_split_recipient_service_1.UpdatePaymentSplitRecipientService,
         ],
     })
 ], PaymentSplitRecipientsModule);

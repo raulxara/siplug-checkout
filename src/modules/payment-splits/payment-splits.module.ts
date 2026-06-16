@@ -9,6 +9,9 @@ import { GetAllPaymentSplitsByPaymentTransactionIdService } from './services/get
 import { GetAllPaymentSplitsByOfficeIdService } from './services/get-all-payment-splits-by-office-id/get-all-payment-splits-by-office-id.service';
 import { BuildChangesHistoryService } from '../../common/services/changes-history/build-changes-history.service';
 import { UpdatePaymentSplitStatusService } from './services/update-payment-split-status/update-payment-split-status.service';
+import { ResolvePaymentSplitDispatchEligibilityService } from './services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service';
+import { ReservePaymentSplitDispatchService } from './services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service';
+import { UpdatePaymentSplitService } from './services/update-payment-split/update-payment-split.service';
 
 @Module({
   imports: [PrismaModule],
@@ -24,6 +27,9 @@ import { UpdatePaymentSplitStatusService } from './services/update-payment-split
     GetAllPaymentSplitsByOfficeIdService,
     UpdatePaymentSplitStatusService,
     BuildChangesHistoryService,
+    ResolvePaymentSplitDispatchEligibilityService,
+    ReservePaymentSplitDispatchService,
+    UpdatePaymentSplitService,
   ],
   exports: [
     PAYMENT_SPLITS_REPOSITORY,
@@ -33,6 +39,9 @@ import { UpdatePaymentSplitStatusService } from './services/update-payment-split
     GetAllPaymentSplitsByPaymentTransactionIdService,
     GetAllPaymentSplitsByOfficeIdService,
     UpdatePaymentSplitStatusService,
+    ResolvePaymentSplitDispatchEligibilityService,
+    ReservePaymentSplitDispatchService,
+    UpdatePaymentSplitService,
   ],
 })
 export class PaymentSplitsModule {}

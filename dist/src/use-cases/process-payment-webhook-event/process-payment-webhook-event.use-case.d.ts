@@ -8,6 +8,9 @@ import { GetAllPaymentTransactionsByCheckoutSessionIdService } from '../../modul
 import { UpdatePaymentTransactionService } from '../../modules/payment-transactions/services/update-payment-transaction/update-payment-transaction.service';
 import { ProcessPaymentWebhookEventDtoIn } from './dtos/process-payment-webhook-event.dto-in';
 import { ProcessPaymentWebhookEventDtoOut } from './dtos/process-payment-webhook-event.dto-out';
+import { ResolvePaymentSplitDispatchEligibilityService } from '../../modules/payment-splits/services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service';
+import { ReservePaymentSplitDispatchService } from '../../modules/payment-splits/services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service';
+import { DispatchPaymentSplitToGatewayUseCase } from '../dispatch-payment-split-to-gateway/dispatch-payment-split-to-gateway.use-case';
 export declare class ProcessPaymentWebhookEventUseCase {
     private readonly markPaymentWebhookEventAsProcessingService;
     private readonly markPaymentWebhookEventAsProcessedService;
@@ -16,11 +19,15 @@ export declare class ProcessPaymentWebhookEventUseCase {
     private readonly findPaymentTransactionByGatewayTransactionIdService;
     private readonly getAllPaymentTransactionsByCheckoutSessionIdService;
     private readonly updatePaymentTransactionService;
+    private readonly resolvePaymentSplitDispatchEligibilityService;
+    private readonly reservePaymentSplitDispatchService;
+    private readonly dispatchPaymentSplitToGatewayUseCase;
     private readonly handleUseCaseExceptionService;
-    constructor(markPaymentWebhookEventAsProcessingService: MarkPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService: MarkPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService: MarkPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService: GetAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService: UpdatePaymentTransactionService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(markPaymentWebhookEventAsProcessingService: MarkPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService: MarkPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService: MarkPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService: GetAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService: UpdatePaymentTransactionService, resolvePaymentSplitDispatchEligibilityService: ResolvePaymentSplitDispatchEligibilityService, reservePaymentSplitDispatchService: ReservePaymentSplitDispatchService, dispatchPaymentSplitToGatewayUseCase: DispatchPaymentSplitToGatewayUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ProcessPaymentWebhookEventDtoIn): Promise<ProcessPaymentWebhookEventDtoOut>;
     private resolvePaymentTransaction;
     private findPaymentTransactionByUniqueIdSafe;
+    private dispatchPaymentSplitToGatewayFromWebhookSafe;
     private findPaymentTransactionByGatewayTransactionIdSafe;
     private getPaymentTransactionsByCheckoutSessionIdSafe;
     private resolveTransactionStatusUpdate;
@@ -33,4 +40,6 @@ export declare class ProcessPaymentWebhookEventUseCase {
     private resolveGenericSourceTransactionId;
     private extractPaymentSplitIdFromTransactionConfig;
     private markPaymentWebhookEventAsFailedSafe;
+    private resolveSplitDispatchEligibilitySafe;
+    private reservePaymentSplitDispatchIfRequired;
 }
