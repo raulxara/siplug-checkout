@@ -6,6 +6,8 @@ import { ValidateStripeWebhookService } from './stripe/services/validate-stripe-
 import { GetMercadoPagoPaymentService } from './mercado-pago/services/get-mercado-pago-payment/get-mercado-pago-payment.service';
 import { NormalizeMercadoPagoWebhookService } from './mercado-pago/services/normalize-mercado-pago-webhook/normalize-mercado-pago-webhook.service';
 import { ValidateMercadoPagoWebhookService } from './mercado-pago/services/validate-mercado-pago-webhook/validate-mercado-pago-webhook.service';
+import { NormalizePagSeguroWebhookService } from './pagseguro/services/normalize-pagseguro-webhook/normalize-pagseguro-webhook.service';
+import { ValidatePagSeguroWebhookService } from './pagseguro/services/validate-pagseguro-webhook/validate-pagseguro-webhook.service';
 
 @Module({
   providers: [
@@ -15,6 +17,8 @@ import { ValidateMercadoPagoWebhookService } from './mercado-pago/services/valid
     ValidateMercadoPagoWebhookService,
     GetMercadoPagoPaymentService,
     NormalizeMercadoPagoWebhookService,
+    NormalizePagSeguroWebhookService,
+    ValidatePagSeguroWebhookService,
   ],
   exports: [
     ValidateStripeWebhookService,
@@ -23,6 +27,8 @@ import { ValidateMercadoPagoWebhookService } from './mercado-pago/services/valid
     ValidateMercadoPagoWebhookService,
     GetMercadoPagoPaymentService,
     NormalizeMercadoPagoWebhookService,
+    NormalizePagSeguroWebhookService,
+    ValidatePagSeguroWebhookService,
   ],
 })
 export class PaymentWebhookGatewaysModule {}

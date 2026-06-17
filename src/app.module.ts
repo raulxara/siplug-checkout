@@ -23,7 +23,7 @@ import { GetUserModule } from './use-cases/get-user/get-user.module';
 import { ListUsersModule } from './use-cases/list-users/list-users.module';
 import { GetAllUsersByOfficeIdModule } from './use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module';
 import { UpdateApiCredentialModule } from './use-cases/update-api-credential/update-api-credential.module';
-
+import { ReceivePagSeguroWebhookModule } from './use-cases/receive-pagseguro-webhook/receive-pagseguro-webhook.module';
 import { RegisterGatewayModule } from './use-cases/register-gateway/register-gateway.module';
 import { UpdateGatewayModule } from './use-cases/update-gateway/update-gateway.module';
 import { GetAllGatewaysModule } from './use-cases/get-all-gateways/get-all-gateways.module';
@@ -179,6 +179,7 @@ import { ReceiveMercadoPagoWebhookModule } from './use-cases/receive-mercado-pag
     ProcessPaymentWebhookEventModule,
     ReceiveStripeWebhookModule,
     ReceiveMercadoPagoWebhookModule,
+    ReceivePagSeguroWebhookModule,
   ],
 })
 export class AppModule {}

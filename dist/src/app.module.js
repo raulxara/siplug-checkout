@@ -32,6 +32,7 @@ const get_user_module_1 = require("./use-cases/get-user/get-user.module");
 const list_users_module_1 = require("./use-cases/list-users/list-users.module");
 const get_all_users_by_office_id_module_1 = require("./use-cases/get-all-users-by-office-id/get-all-users-by-office-id.module");
 const update_api_credential_module_1 = require("./use-cases/update-api-credential/update-api-credential.module");
+const receive_pagseguro_webhook_module_1 = require("./use-cases/receive-pagseguro-webhook/receive-pagseguro-webhook.module");
 const register_gateway_module_1 = require("./use-cases/register-gateway/register-gateway.module");
 const update_gateway_module_1 = require("./use-cases/update-gateway/update-gateway.module");
 const get_all_gateways_module_1 = require("./use-cases/get-all-gateways/get-all-gateways.module");
@@ -190,6 +191,7 @@ exports.AppModule = AppModule = __decorate([
             process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
             receive_stripe_webhook_module_1.ReceiveStripeWebhookModule,
             receive_mercado_pago_webhook_module_1.ReceiveMercadoPagoWebhookModule,
+            receive_pagseguro_webhook_module_1.ReceivePagSeguroWebhookModule,
         ],
     })
 ], AppModule);
