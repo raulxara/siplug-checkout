@@ -99,6 +99,7 @@ const receive_mercado_pago_webhook_module_1 = require("./use-cases/receive-merca
 const receive_picpay_webhook_module_1 = require("./use-cases/receive-picpay-webhook/receive-picpay-webhook.module");
 const capture_paypal_order_return_module_1 = require("./use-cases/capture-paypal-order-return/capture-paypal-order-return.module");
 const receive_paypal_webhook_module_1 = require("./use-cases/receive-paypal-webhook/receive-paypal-webhook.module");
+const receive_infinitepay_webhook_module_1 = require("./use-cases/receive-infinitepay-webhook/receive-infinitepay-webhook.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -148,6 +149,7 @@ exports.AppModule = AppModule = __decorate([
             process_payment_module_1.ProcessPaymentModule,
             gateway_orchestration_module_1.GatewayOrchestrationModule,
             dispatch_payment_transaction_to_gateway_module_1.DispatchPaymentTransactionToGatewayModule,
+            receive_infinitepay_webhook_module_1.ReceiveInfinitePayWebhookModule,
             receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
             create_gateway_card_token_module_1.CreateGatewayCardTokenModule,
             dev_pagseguro_encrypted_card_page_module_1.DevPagSeguroEncryptedCardPageModule,

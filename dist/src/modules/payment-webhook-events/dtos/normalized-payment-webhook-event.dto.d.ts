@@ -1,4 +1,4 @@
-export type PaymentWebhookProvider = 'stripe' | 'mercado_pago' | 'pagseguro' | 'paypal' | 'picpay' | 'infinity_pay';
+export type PaymentWebhookProvider = 'stripe' | 'mercado_pago' | 'pagseguro' | 'paypal' | 'picpay' | 'infinitepay' | 'infinity_pay';
 export type PaymentWebhookCanonicalStatus = 'pending' | 'authorized' | 'paid' | 'failed' | 'canceled' | 'expired' | 'refunded' | 'chargeback' | 'subscription_active' | 'subscription_canceled' | 'invoice_paid' | 'invoice_payment_failed' | 'ignored';
 export declare class NormalizedPaymentWebhookEventDto {
     readonly provider: PaymentWebhookProvider;

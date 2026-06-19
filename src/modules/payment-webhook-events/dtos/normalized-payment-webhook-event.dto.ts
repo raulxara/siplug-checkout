@@ -4,6 +4,7 @@ export type PaymentWebhookProvider =
   | 'pagseguro'
   | 'paypal'
   | 'picpay'
+  | 'infinitepay'
   | 'infinity_pay';
 
 export type PaymentWebhookCanonicalStatus =
@@ -122,6 +123,7 @@ export class NormalizedPaymentWebhookEventDto {
       'pagseguro',
       'paypal',
       'picpay',
+      'infinitepay',
       'infinity_pay',
     ];
 

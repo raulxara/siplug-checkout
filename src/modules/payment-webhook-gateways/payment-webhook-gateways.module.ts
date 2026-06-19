@@ -12,6 +12,8 @@ import { NormalizePicPayWebhookService } from './picpay/services/normalize-picpa
 import { ValidatePicPayWebhookService } from './picpay/services/validate-picpay-webhook/validate-picpay-webhook.service';
 import { NormalizePayPalWebhookService } from './paypal/services/normalize-paypal-webhook/normalize-paypal-webhook.service';
 import { ValidatePayPalWebhookService } from './paypal/services/validate-paypal-webhook/validate-paypal-webhook.service';
+import { NormalizeInfinitePayWebhookService } from './infinitepay/services/normalize-infinitepay-webhook/normalize-infinitepay-webhook.service';
+
 @Module({
   providers: [
     ValidateStripeWebhookService,
@@ -26,6 +28,7 @@ import { ValidatePayPalWebhookService } from './paypal/services/validate-paypal-
     ValidatePicPayWebhookService,
     NormalizePayPalWebhookService,
     ValidatePayPalWebhookService,
+    NormalizeInfinitePayWebhookService,
   ],
   exports: [
     ValidateStripeWebhookService,
@@ -40,6 +43,7 @@ import { ValidatePayPalWebhookService } from './paypal/services/validate-paypal-
     ValidatePicPayWebhookService,
     NormalizePayPalWebhookService,
     ValidatePayPalWebhookService,
+    NormalizeInfinitePayWebhookService,
   ],
 })
 export class PaymentWebhookGatewaysModule {}

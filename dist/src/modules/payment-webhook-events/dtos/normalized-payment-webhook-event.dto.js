@@ -53,6 +53,7 @@ class NormalizedPaymentWebhookEventDto {
             'pagseguro',
             'paypal',
             'picpay',
+            'infinitepay',
             'infinity_pay',
         ];
         if (!allowedProviders.includes(provider)) {

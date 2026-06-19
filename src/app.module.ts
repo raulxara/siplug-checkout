@@ -90,6 +90,7 @@ import { ReceiveMercadoPagoWebhookModule } from './use-cases/receive-mercado-pag
 import { ReceivePicPayWebhookModule } from './use-cases/receive-picpay-webhook/receive-picpay-webhook.module';
 import { CapturePayPalOrderReturnModule } from './use-cases/capture-paypal-order-return/capture-paypal-order-return.module';
 import { ReceivePayPalWebhookModule } from './use-cases/receive-paypal-webhook/receive-paypal-webhook.module';
+import { ReceiveInfinitePayWebhookModule } from './use-cases/receive-infinitepay-webhook/receive-infinitepay-webhook.module';
 
 @Module({
   imports: [
@@ -136,6 +137,7 @@ import { ReceivePayPalWebhookModule } from './use-cases/receive-paypal-webhook/r
     ProcessPaymentModule,
     GatewayOrchestrationModule,
     DispatchPaymentTransactionToGatewayModule,
+    ReceiveInfinitePayWebhookModule,
     ReceiveGatewayWebhookModule,
     CreateGatewayCardTokenModule,
     DevPagSeguroEncryptedCardPageModule,

@@ -19,6 +19,7 @@ const normalize_picpay_webhook_service_1 = require("./picpay/services/normalize-
 const validate_picpay_webhook_service_1 = require("./picpay/services/validate-picpay-webhook/validate-picpay-webhook.service");
 const normalize_paypal_webhook_service_1 = require("./paypal/services/normalize-paypal-webhook/normalize-paypal-webhook.service");
 const validate_paypal_webhook_service_1 = require("./paypal/services/validate-paypal-webhook/validate-paypal-webhook.service");
+const normalize_infinitepay_webhook_service_1 = require("./infinitepay/services/normalize-infinitepay-webhook/normalize-infinitepay-webhook.service");
 let PaymentWebhookGatewaysModule = class PaymentWebhookGatewaysModule {
 };
 exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule;
@@ -36,6 +37,7 @@ exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule = __decorate
             validate_picpay_webhook_service_1.ValidatePicPayWebhookService,
             normalize_paypal_webhook_service_1.NormalizePayPalWebhookService,
             validate_paypal_webhook_service_1.ValidatePayPalWebhookService,
+            normalize_infinitepay_webhook_service_1.NormalizeInfinitePayWebhookService,
         ],
         exports: [
             validate_stripe_webhook_service_1.ValidateStripeWebhookService,
@@ -49,6 +51,7 @@ exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule = __decorate
             validate_picpay_webhook_service_1.ValidatePicPayWebhookService,
             normalize_paypal_webhook_service_1.NormalizePayPalWebhookService,
             validate_paypal_webhook_service_1.ValidatePayPalWebhookService,
+            normalize_infinitepay_webhook_service_1.NormalizeInfinitePayWebhookService,
         ],
     })
 ], PaymentWebhookGatewaysModule);
