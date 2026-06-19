@@ -554,15 +554,24 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
   private extractApprovalUrl(responseBody: PayPalOrderResponse): string | null {
     const links = Array.isArray(responseBody.links) ? responseBody.links : [];
 
-    const approveLink = links.find(
-      (link) => this.normalize(String(link.rel ?? '')) === 'approve',
-    );
+    const payerActionLink = links.find((link) => {
+      return this.normalize(String(link.rel ?? '')) === 'payer_action';
+    });
+
+    const approveLink = links.find((link) => {
+      return this.normalize(String(link.rel ?? '')) === 'approve';
+    });
+
+    const checkoutNowLink = links.find((link) => {
+      const href = this.toNullableString(link.href);
+
+      return href !== null && href.includes('/checkoutnow?token=');
+    });
 
     return (
+      this.toNullableString(payerActionLink?.href) ??
       this.toNullableString(approveLink?.href) ??
-      links
-        .map((link) => this.toNullableString(link.href))
-        .find((href): href is string => href !== null) ??
+      this.toNullableString(checkoutNowLink?.href) ??
       null
     );
   }

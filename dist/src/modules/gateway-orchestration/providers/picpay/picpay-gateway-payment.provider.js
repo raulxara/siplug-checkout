@@ -39,6 +39,10 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                         message: 'payment method not implemented for PicPay adapter',
                     },
                     gatewayResponse: null,
+                    qrCode: null,
+                    qrCodeBase64: null,
+                    boletoUrl: null,
+                    checkoutUrl: null,
                     failedAt: this.nowAsSqlDateTime(),
                     expiresAt: dtoIn.paymentTransaction.expiresAt,
                 });
@@ -58,6 +62,33 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
             });
             const responseBody = await this.parsePicPayResponse(response);
             if (!response.ok) {
+                if (response.status >= 500) {
+                    return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
+                        success: false,
+                        provider: this.getProviderName(),
+                        gatewayTransactionId: this.extractPaymentLinkId(responseBody) ??
+                            requestPayload.charge.order_number,
+                        gatewayStatus: String(response.status),
+                        status: 'pending',
+                        processStatus: 'gateway_unavailable_retryable',
+                        processMessage: this.extractPicPayErrorMessage(responseBody) ??
+                            `PicPay gateway unavailable with status ${response.status}`,
+                        providerRequest: requestPayload,
+                        providerResponse: responseBody,
+                        gatewayResponse: {
+                            ok: false,
+                            httpStatus: response.status,
+                            endpoint: `${apiPath}/paymentlink/create`,
+                            retryable: true,
+                        },
+                        qrCode: null,
+                        qrCodeBase64: null,
+                        boletoUrl: null,
+                        checkoutUrl: null,
+                        failedAt: null,
+                        expiresAt: dtoIn.paymentTransaction.expiresAt,
+                    });
+                }
                 return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                     success: false,
                     provider: this.getProviderName(),
@@ -75,6 +106,10 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                         httpStatus: response.status,
                         endpoint: `${apiPath}/paymentlink/create`,
                     },
+                    qrCode: null,
+                    qrCodeBase64: null,
+                    boletoUrl: null,
+                    checkoutUrl: null,
                     failedAt: this.nowAsSqlDateTime(),
                     expiresAt: dtoIn.paymentTransaction.expiresAt,
                 });
@@ -98,15 +133,25 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                         endpoint: `${apiPath}/paymentlink/create`,
                         missingCheckoutUrl: true,
                     },
+                    qrCode: null,
+                    qrCodeBase64: null,
+                    boletoUrl: null,
+                    checkoutUrl: null,
                     failedAt: this.nowAsSqlDateTime(),
                     expiresAt: dtoIn.paymentTransaction.expiresAt,
                 });
             }
             const gatewayStatus = this.toNullableString(responseBody.status) ?? 'created';
+            const paymentLinkPublicId = this.extractPaymentLinkPublicId(responseBody);
+            const txid = this.toNullableString(responseBody.txid);
+            const brcode = this.toNullableString(responseBody.brcode);
+            const deeplink = this.toNullableString(responseBody.deeplink);
+            const publicLink = this.toNullableString(responseBody.link);
             return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                 success: true,
                 provider: this.getProviderName(),
-                gatewayTransactionId: this.extractPaymentLinkId(responseBody) ?? requestPayload.charge.order_number,
+                gatewayTransactionId: this.extractPaymentLinkId(responseBody) ??
+                    requestPayload.charge.order_number,
                 gatewayStatus,
                 status: this.mapPicPayStatusToInternalStatus(gatewayStatus),
                 processStatus: this.mapPicPayStatusToProcessStatus(gatewayStatus),
@@ -118,9 +163,14 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                     httpStatus: response.status,
                     endpoint: `${apiPath}/paymentlink/create`,
                     paymentLinkId: this.extractPaymentLinkId(responseBody),
+                    paymentLinkPublicId,
+                    txid,
+                    link: publicLink,
+                    deeplink,
+                    brcode,
                     checkoutUrl,
                 },
-                qrCode: null,
+                qrCode: brcode,
                 qrCodeBase64: null,
                 boletoUrl: null,
                 checkoutUrl,
@@ -151,6 +201,10 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                     message,
                 },
                 gatewayResponse: null,
+                qrCode: null,
+                qrCodeBase64: null,
+                boletoUrl: null,
+                checkoutUrl: null,
                 failedAt: this.nowAsSqlDateTime(),
                 expiresAt: dtoIn.paymentTransaction.expiresAt,
             });
@@ -213,6 +267,21 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
             .slice(0, 13)
             .toUpperCase();
         return `PP${hash}`;
+    }
+    extractPaymentLinkPublicId(responseBody) {
+        const link = this.toNullableString(responseBody.link) ??
+            this.toNullableString(responseBody.paymentUrl) ??
+            this.toNullableString(responseBody.payment_url) ??
+            this.toNullableString(responseBody.checkoutUrl) ??
+            this.toNullableString(responseBody.checkout_url);
+        if (link === null) {
+            return null;
+        }
+        const match = link.match(/\/p\/([^/?#]+)/);
+        if (!match || !match[1]) {
+            return null;
+        }
+        return match[1];
     }
     resolvePicPayPaymentMethods(paymentMethod) {
         const normalizedMethod = this.normalize(paymentMethod);

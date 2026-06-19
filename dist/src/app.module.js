@@ -97,6 +97,8 @@ const process_payment_webhook_event_module_1 = require("./use-cases/process-paym
 const receive_stripe_webhook_module_1 = require("./use-cases/receive-stripe-webhook/receive-stripe-webhook.module");
 const receive_mercado_pago_webhook_module_1 = require("./use-cases/receive-mercado-pago-webhook/receive-mercado-pago-webhook.module");
 const receive_picpay_webhook_module_1 = require("./use-cases/receive-picpay-webhook/receive-picpay-webhook.module");
+const capture_paypal_order_return_module_1 = require("./use-cases/capture-paypal-order-return/capture-paypal-order-return.module");
+const receive_paypal_webhook_module_1 = require("./use-cases/receive-paypal-webhook/receive-paypal-webhook.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -194,6 +196,8 @@ exports.AppModule = AppModule = __decorate([
             receive_mercado_pago_webhook_module_1.ReceiveMercadoPagoWebhookModule,
             receive_pagseguro_webhook_module_1.ReceivePagSeguroWebhookModule,
             receive_picpay_webhook_module_1.ReceivePicPayWebhookModule,
+            capture_paypal_order_return_module_1.CapturePayPalOrderReturnModule,
+            receive_paypal_webhook_module_1.ReceivePayPalWebhookModule,
         ],
     })
 ], AppModule);

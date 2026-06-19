@@ -10,7 +10,8 @@ import { NormalizePagSeguroWebhookService } from './pagseguro/services/normalize
 import { ValidatePagSeguroWebhookService } from './pagseguro/services/validate-pagseguro-webhook/validate-pagseguro-webhook.service';
 import { NormalizePicPayWebhookService } from './picpay/services/normalize-picpay-webhook/normalize-picpay-webhook.service';
 import { ValidatePicPayWebhookService } from './picpay/services/validate-picpay-webhook/validate-picpay-webhook.service';
-
+import { NormalizePayPalWebhookService } from './paypal/services/normalize-paypal-webhook/normalize-paypal-webhook.service';
+import { ValidatePayPalWebhookService } from './paypal/services/validate-paypal-webhook/validate-paypal-webhook.service';
 @Module({
   providers: [
     ValidateStripeWebhookService,
@@ -23,6 +24,8 @@ import { ValidatePicPayWebhookService } from './picpay/services/validate-picpay-
     ValidatePagSeguroWebhookService,
     NormalizePicPayWebhookService,
     ValidatePicPayWebhookService,
+    NormalizePayPalWebhookService,
+    ValidatePayPalWebhookService,
   ],
   exports: [
     ValidateStripeWebhookService,
@@ -35,6 +38,8 @@ import { ValidatePicPayWebhookService } from './picpay/services/validate-picpay-
     ValidatePagSeguroWebhookService,
     NormalizePicPayWebhookService,
     ValidatePicPayWebhookService,
+    NormalizePayPalWebhookService,
+    ValidatePayPalWebhookService,
   ],
 })
 export class PaymentWebhookGatewaysModule {}

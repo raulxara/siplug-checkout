@@ -7,6 +7,7 @@ export declare class PicPayGatewayPaymentProvider implements IGatewayPaymentProv
     processPayment(dtoIn: GatewayPaymentDtoIn): Promise<GatewayPaymentDtoOut>;
     private resolveAccessToken;
     private buildPicPayOrderNumber;
+    private extractPaymentLinkPublicId;
     private resolvePicPayPaymentMethods;
     private resolvePicPayExpirationDate;
     private buildPaymentLinkRequestPayload;

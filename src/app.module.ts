@@ -88,6 +88,8 @@ import { ProcessPaymentWebhookEventModule } from './use-cases/process-payment-we
 import { ReceiveStripeWebhookModule } from './use-cases/receive-stripe-webhook/receive-stripe-webhook.module';
 import { ReceiveMercadoPagoWebhookModule } from './use-cases/receive-mercado-pago-webhook/receive-mercado-pago-webhook.module';
 import { ReceivePicPayWebhookModule } from './use-cases/receive-picpay-webhook/receive-picpay-webhook.module';
+import { CapturePayPalOrderReturnModule } from './use-cases/capture-paypal-order-return/capture-paypal-order-return.module';
+import { ReceivePayPalWebhookModule } from './use-cases/receive-paypal-webhook/receive-paypal-webhook.module';
 
 @Module({
   imports: [
@@ -182,6 +184,8 @@ import { ReceivePicPayWebhookModule } from './use-cases/receive-picpay-webhook/r
     ReceiveMercadoPagoWebhookModule,
     ReceivePagSeguroWebhookModule,
     ReceivePicPayWebhookModule,
+    CapturePayPalOrderReturnModule,
+    ReceivePayPalWebhookModule,
   ],
 })
 export class AppModule {}
