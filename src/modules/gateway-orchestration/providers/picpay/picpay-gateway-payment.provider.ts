@@ -104,6 +104,43 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
           dtoIn.paymentTransaction.paymentMethod,
         )
       ) {
+        if (response.status >= 500) {
+          return new GatewayPaymentDtoOut({
+            success: false,
+            provider: this.getProviderName(),
+
+            gatewayTransactionId:
+              this.extractPaymentLinkId(responseBody) ??
+              requestPayload.charge.order_number,
+
+            gatewayStatus: String(response.status),
+
+            status: 'pending',
+            processStatus: 'gateway_unavailable_retryable',
+            processMessage:
+              this.extractPicPayErrorMessage(responseBody) ??
+              `PicPay gateway unavailable with status ${response.status}`,
+
+            providerRequest: requestPayload,
+            providerResponse: responseBody,
+            gatewayResponse: {
+              ok: false,
+              httpStatus: response.status,
+              endpoint: `${apiPath}/paymentlink/create`,
+              retryable: true,
+            },
+
+            failedAt: null,
+            expiresAt: dtoIn.paymentTransaction.expiresAt,
+          });
+        }
+        const paymentLinkPublicId =
+          this.extractPaymentLinkPublicId(responseBody);
+        const txid = this.toNullableString(responseBody.txid);
+        const brcode = this.toNullableString(responseBody.brcode);
+        const deeplink = this.toNullableString(responseBody.deeplink);
+        const publicLink = this.toNullableString(responseBody.link);
+
         return new GatewayPaymentDtoOut({
           success: false,
           provider: this.getProviderName(),
@@ -119,7 +156,23 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
           providerResponse: {
             message: 'payment method not implemented for PicPay adapter',
           },
-          gatewayResponse: null,
+          gatewayResponse: {
+            ok: true,
+            httpStatus: response.status,
+            endpoint: `${apiPath}/paymentlink/create`,
+            paymentLinkId: this.extractPaymentLinkId(responseBody),
+            paymentLinkPublicId,
+            txid,
+            link: publicLink,
+            deeplink,
+            brcode,
+            checkoutUrl,
+          },
+
+          qrCode: brcode,
+          qrCodeBase64: null,
+          boletoUrl: null,
+          checkoutUrl,
           failedAt: this.nowAsSqlDateTime(),
           expiresAt: dtoIn.paymentTransaction.expiresAt,
         });
@@ -350,6 +403,29 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
 
     return `PP${hash}`;
     }
+
+  private extractPaymentLinkPublicId(
+    responseBody: PicPayPaymentLinkResponse,
+  ): string | null {
+    const link =
+      this.toNullableString(responseBody.link) ??
+      this.toNullableString(responseBody.paymentUrl) ??
+      this.toNullableString(responseBody.payment_url) ??
+      this.toNullableString(responseBody.checkoutUrl) ??
+      this.toNullableString(responseBody.checkout_url);
+
+    if (link === null) {
+      return null;
+    }
+
+    const match = link.match(/\/p\/([^/?#]+)/);
+
+    if (!match || !match[1]) {
+      return null;
+    }
+
+    return match[1];
+  }
 
   private resolvePicPayPaymentMethods(paymentMethod: string): {
     methods: Array<'BRCODE' | 'CREDIT_CARD'>;

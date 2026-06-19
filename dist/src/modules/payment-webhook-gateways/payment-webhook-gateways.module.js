@@ -15,6 +15,8 @@ const normalize_mercado_pago_webhook_service_1 = require("./mercado-pago/service
 const validate_mercado_pago_webhook_service_1 = require("./mercado-pago/services/validate-mercado-pago-webhook/validate-mercado-pago-webhook.service");
 const normalize_pagseguro_webhook_service_1 = require("./pagseguro/services/normalize-pagseguro-webhook/normalize-pagseguro-webhook.service");
 const validate_pagseguro_webhook_service_1 = require("./pagseguro/services/validate-pagseguro-webhook/validate-pagseguro-webhook.service");
+const normalize_picpay_webhook_service_1 = require("./picpay/services/normalize-picpay-webhook/normalize-picpay-webhook.service");
+const validate_picpay_webhook_service_1 = require("./picpay/services/validate-picpay-webhook/validate-picpay-webhook.service");
 let PaymentWebhookGatewaysModule = class PaymentWebhookGatewaysModule {
 };
 exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule;
@@ -28,6 +30,8 @@ exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule = __decorate
             normalize_mercado_pago_webhook_service_1.NormalizeMercadoPagoWebhookService,
             normalize_pagseguro_webhook_service_1.NormalizePagSeguroWebhookService,
             validate_pagseguro_webhook_service_1.ValidatePagSeguroWebhookService,
+            normalize_picpay_webhook_service_1.NormalizePicPayWebhookService,
+            validate_picpay_webhook_service_1.ValidatePicPayWebhookService,
         ],
         exports: [
             validate_stripe_webhook_service_1.ValidateStripeWebhookService,
@@ -37,6 +41,8 @@ exports.PaymentWebhookGatewaysModule = PaymentWebhookGatewaysModule = __decorate
             normalize_mercado_pago_webhook_service_1.NormalizeMercadoPagoWebhookService,
             normalize_pagseguro_webhook_service_1.NormalizePagSeguroWebhookService,
             validate_pagseguro_webhook_service_1.ValidatePagSeguroWebhookService,
+            normalize_picpay_webhook_service_1.NormalizePicPayWebhookService,
+            validate_picpay_webhook_service_1.ValidatePicPayWebhookService,
         ],
     })
 ], PaymentWebhookGatewaysModule);

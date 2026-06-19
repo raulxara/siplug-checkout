@@ -87,6 +87,7 @@ import { UpdatePaymentSplitLifecycleModule } from './use-cases/update-payment-sp
 import { ProcessPaymentWebhookEventModule } from './use-cases/process-payment-webhook-event/process-payment-webhook-event.module';
 import { ReceiveStripeWebhookModule } from './use-cases/receive-stripe-webhook/receive-stripe-webhook.module';
 import { ReceiveMercadoPagoWebhookModule } from './use-cases/receive-mercado-pago-webhook/receive-mercado-pago-webhook.module';
+import { ReceivePicPayWebhookModule } from './use-cases/receive-picpay-webhook/receive-picpay-webhook.module';
 
 @Module({
   imports: [
@@ -180,6 +181,7 @@ import { ReceiveMercadoPagoWebhookModule } from './use-cases/receive-mercado-pag
     ReceiveStripeWebhookModule,
     ReceiveMercadoPagoWebhookModule,
     ReceivePagSeguroWebhookModule,
+    ReceivePicPayWebhookModule,
   ],
 })
 export class AppModule {}

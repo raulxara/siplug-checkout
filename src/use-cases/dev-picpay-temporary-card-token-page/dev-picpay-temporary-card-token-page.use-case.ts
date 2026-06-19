@@ -23,17 +23,19 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
       );
 
     const apiCredential = apiCredentialDtoOut.apiCredential;
-    const config = apiCredential.config;
+    const config = this.toRecordOrNull(apiCredential.config);
 
     const merchantCredential = this.resolveMerchantCredential(config);
     const transparentToken = this.resolveTransparentToken(config);
     const environment = this.resolveEnvironment(config);
+    const sdkUrls = this.resolveSdkUrls(config, environment);
 
     return new DevPicPayTemporaryCardTokenPageDtoOut(
       this.buildHtmlPage({
         merchantCredential,
         transparentToken,
         environment,
+        sdkUrls,
       }),
     );
   }
@@ -112,26 +114,49 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
     return environment.toLowerCase().trim();
   }
 
+  private resolveSdkUrls(
+    config: Record<string, unknown> | null,
+    environment: string,
+  ): string[] {
+    const sandboxSdkUrl =
+      'https://checkout-qa.picpay.com/cdn/pp-transparent-v1.0.0.js';
+
+    const productionSdkUrl =
+      'https://checkout.picpay.com/cdn/pp-transparent-v1.0.0.js';
+
+    const configuredSdkUrl =
+      this.toNullableString(config?.sdkUrl) ??
+      this.toNullableString(config?.picpaySdkUrl) ??
+      this.toNullableString(config?.transparentCheckoutSdkUrl) ??
+      this.toNullableString(config?.transparent_checkout_sdk_url);
+
+    if (configuredSdkUrl !== null) {
+      return [configuredSdkUrl];
+    }
+
+    if (environment === 'production' || environment === 'live') {
+      return [productionSdkUrl];
+    }
+
+    return [sandboxSdkUrl];
+  }
+
   private buildHtmlPage(params: {
     merchantCredential: string;
     transparentToken: string;
     environment: string;
+    sdkUrls: string[];
   }): string {
     const safeMerchantCredential = JSON.stringify(params.merchantCredential);
     const safeTransparentToken = JSON.stringify(params.transparentToken);
-
-    const sdkUrl =
-      params.environment === 'production' || params.environment === 'live'
-        ? 'https://checkout.picpay.com/cdn/pp-transparent-v1.0.0.js'
-        : 'https://checkout-qa.picpay.com/cdn/pp-transparent-v1.0.0.js';
-
-    const safeSdkUrl = JSON.stringify(sdkUrl);
+    const safeSdkUrls = JSON.stringify(params.sdkUrls);
+    const safeEnvironment = JSON.stringify(params.environment);
 
     return `<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>PicPay Temporary Card Token - Dev</title>
+  <title>PicPay Temporary Card Token - DEV</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
@@ -181,6 +206,11 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
       color: white;
       cursor: pointer;
       font-weight: 700;
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
     }
 
     button.secondary {
@@ -281,11 +311,11 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
     <label>Bandeira</label>
     <input id="brand" value="Visa" />
 
-    <button onclick="getCardBrand()" class="secondary">
+    <button id="brandButton" onclick="getCardBrand()" class="secondary" disabled>
       Obter bandeira pelo BIN
     </button>
 
-    <button onclick="createTemporaryCard()">
+    <button id="tokenButton" onclick="createTemporaryCard()" disabled>
       Gerar temporaryCardToken
     </button>
 
@@ -304,27 +334,31 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
   </div>
 
   <div class="card">
-    <h2>Body para /payments/process-recurring</h2>
+    <h2>Body para /payments/process</h2>
 
     <label>Checkout Session ID</label>
-    <input id="checkoutSessionId" placeholder="UUID_DA_CHECKOUT_SESSION_PICPAY" />
+    <input id="checkoutSessionId" value="db9c3cc9-6774-4460-a748-7dd7b6ac2ceb" />
 
     <label>Body gerado</label>
-    <textarea id="processRecurringBody" readonly></textarea>
+    <textarea id="processPaymentBody" readonly></textarea>
 
-    <button onclick="buildProcessRecurringBody()" class="secondary">
+    <button onclick="buildProcessPaymentBody()" class="secondary">
       Gerar body
     </button>
 
-    <button onclick="copyProcessRecurringBody()">
+    <button onclick="copyProcessPaymentBody()">
       Copiar body
     </button>
   </div>
 
   <script>
-    const sdkUrl = ${safeSdkUrl};
+    const sdkUrls = ${safeSdkUrls};
+    const environment = ${safeEnvironment};
     const merchantCredential = ${safeMerchantCredential};
     const transparentToken = ${safeTransparentToken};
+
+    let sdkReady = false;
+    let loadedSdkUrl = null;
 
     function setStatus(elementId, message, type) {
       const element = document.getElementById(elementId);
@@ -332,45 +366,125 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
       element.className = 'status ' + (type || '');
     }
 
+    function setSdkButtonsEnabled(enabled) {
+      document.getElementById('brandButton').disabled = !enabled;
+      document.getElementById('tokenButton').disabled = !enabled;
+    }
+
+    function formatError(error) {
+      if (error instanceof Error) {
+        return error.message;
+      }
+
+      try {
+        return JSON.stringify(error, null, 2);
+      } catch (_) {
+        return String(error);
+      }
+    }
+
     function loadScript(src) {
       return new Promise(function(resolve, reject) {
+        const currentScript = document.querySelector('script[data-picpay-sdk="true"]');
+
+        if (currentScript) {
+          currentScript.remove();
+        }
+
         const script = document.createElement('script');
+
         script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
+        script.async = true;
+        script.defer = true;
+        script.dataset.picpaySdk = 'true';
+
+        script.onload = function() {
+          resolve(src);
+        };
+
+        script.onerror = function() {
+          reject(
+            new Error(
+              'Falha ao carregar SDK PicPay pela URL: ' +
+              src +
+              '. Abra essa URL diretamente no navegador para confirmar se está acessível.'
+            )
+          );
+        };
+
         document.body.appendChild(script);
       });
     }
 
+    function getCheckoutTransparent() {
+      if (window.CheckoutTransparent) {
+        return window.CheckoutTransparent;
+      }
+
+      throw new Error(
+        'Objeto window.CheckoutTransparent não encontrado. O SDK PicPay não foi carregado.'
+      );
+    }
+
     async function bootstrap() {
-      try {
-        await loadScript(sdkUrl);
+      setSdkButtonsEnabled(false);
 
-        if (!window.CheckoutTransparent) {
-          throw new Error('Objeto CheckoutTransparent não encontrado após carregar SDK.');
+      const errors = [];
+
+      for (const sdkUrl of sdkUrls) {
+        try {
+          setStatus(
+            'sdkStatus',
+            'Tentando carregar SDK PicPay...\\nAmbiente: ' + environment + '\\nURL: ' + sdkUrl,
+            ''
+          );
+
+          await loadScript(sdkUrl);
+
+          const sdk = getCheckoutTransparent();
+
+          sdk.setCredentials({
+            merchantCredential,
+            transparentToken
+          });
+
+          sdkReady = true;
+          loadedSdkUrl = sdkUrl;
+          setSdkButtonsEnabled(true);
+
+          setStatus(
+            'sdkStatus',
+            'SDK carregado e credenciais registradas com sucesso.\\nURL carregada: ' + loadedSdkUrl,
+            'success'
+          );
+
+          return;
+        } catch (error) {
+          errors.push(formatError(error));
         }
+      }
 
-        CheckoutTransparent.setCredentials({
-          merchantCredential,
-          transparentToken
-        });
+      setStatus(
+        'sdkStatus',
+        'Erro ao inicializar SDK PicPay.\\n\\nTentativas:\\n' + errors.join('\\n\\n'),
+        'error'
+      );
+    }
 
-        setStatus(
-          'sdkStatus',
-          'SDK carregado e credenciais registradas com sucesso.',
-          'success'
-        );
-      } catch (error) {
-        setStatus(
-          'sdkStatus',
-          'Erro ao inicializar SDK PicPay: ' + String(error.message || error),
-          'error'
+    function ensureSdkReady() {
+      if (!sdkReady) {
+        throw new Error(
+          'SDK PicPay ainda não está carregado. Verifique o bloco "Carregando SDK PicPay".'
         );
       }
+
+      return getCheckoutTransparent();
     }
 
     function getCardBrand() {
       try {
+        const sdk = ensureSdkReady();
+
         const bin = document
           .getElementById('cardNumber')
           .value
@@ -381,7 +495,7 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
           throw new Error('Informe pelo menos os 6 primeiros dígitos do cartão.');
         }
 
-        CheckoutTransparent.getCardBrand({
+        sdk.getCardBrand({
           bin,
           success: function(body) {
             if (body && body.brand) {
@@ -390,14 +504,14 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
 
             setStatus(
               'tokenStatus',
-              'Bandeira retornada: ' + JSON.stringify(body, null, 2),
+              'Bandeira retornada:\\n' + JSON.stringify(body, null, 2),
               'success'
             );
           },
           error: function(body) {
             setStatus(
               'tokenStatus',
-              'Erro ao obter bandeira: ' + JSON.stringify(body, null, 2),
+              'Erro ao obter bandeira:\\n' + JSON.stringify(body, null, 2),
               'error'
             );
           }
@@ -405,7 +519,7 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
       } catch (error) {
         setStatus(
           'tokenStatus',
-          'Erro ao obter bandeira: ' + String(error.message || error),
+          'Erro ao obter bandeira: ' + formatError(error),
           'error'
         );
       }
@@ -413,9 +527,11 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
 
     function createTemporaryCard() {
       document.getElementById('temporaryCardToken').value = '';
-      document.getElementById('processRecurringBody').value = '';
+      document.getElementById('processPaymentBody').value = '';
 
       try {
+        const sdk = ensureSdkReady();
+
         const card = {
           brand: document.getElementById('brand').value.trim(),
           number: document.getElementById('cardNumber').value.replace(/\\D/g, ''),
@@ -435,7 +551,7 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
           cvv: document.getElementById('cvv').value.replace(/\\D/g, '')
         };
 
-        CheckoutTransparent.createTemporaryCard({
+        sdk.createTemporaryCard({
           card,
           success: function(body) {
             const token =
@@ -447,7 +563,7 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
             if (!token) {
               setStatus(
                 'tokenStatus',
-                'SDK retornou sucesso, mas sem token: ' + JSON.stringify(body, null, 2),
+                'SDK retornou sucesso, mas sem token:\\n' + JSON.stringify(body, null, 2),
                 'error'
               );
               return;
@@ -461,7 +577,7 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
               'success'
             );
 
-            buildProcessRecurringBody();
+            buildProcessPaymentBody();
           },
           error: function(body) {
             setStatus(
@@ -474,13 +590,13 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
       } catch (error) {
         setStatus(
           'tokenStatus',
-          'Erro ao gerar temporaryCardToken: ' + String(error.message || error),
+          'Erro ao gerar temporaryCardToken: ' + formatError(error),
           'error'
         );
       }
     }
 
-    function buildProcessRecurringBody() {
+    function buildProcessPaymentBody() {
       const checkoutSessionId = document
         .getElementById('checkoutSessionId')
         .value
@@ -521,15 +637,15 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
           brand: document.getElementById('brand').value.trim()
         },
         metadata: {
-          source: 'dev-picpay-temporary-card-token-page',
-          origin: 'picpay-recurring-credit-card-test'
+          source: 'postman',
+          origin: 'picpay-one-time-credit-card-test'
         },
         config: {
           capture: true
         }
       };
 
-      document.getElementById('processRecurringBody').value =
+      document.getElementById('processPaymentBody').value =
         JSON.stringify(body, null, 2);
     }
 
@@ -545,8 +661,8 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
       alert('temporaryCardToken copiado.');
     }
 
-    async function copyProcessRecurringBody() {
-      const body = document.getElementById('processRecurringBody').value;
+    async function copyProcessPaymentBody() {
+      const body = document.getElementById('processPaymentBody').value;
 
       if (!body) {
         alert('Nenhum body gerado.');
@@ -561,6 +677,14 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
   </script>
 </body>
 </html>`;
+  }
+
+  private toRecordOrNull(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
   }
 
   private toNullableString(value: unknown): string | null {
