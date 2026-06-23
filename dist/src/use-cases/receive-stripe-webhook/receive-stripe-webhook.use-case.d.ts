@@ -7,6 +7,7 @@ import { RegisterPaymentWebhookEventService } from '../../modules/payment-webhoo
 import { ProcessPaymentWebhookEventUseCase } from '../process-payment-webhook-event/process-payment-webhook-event.use-case';
 import { ReceiveStripeWebhookDtoIn } from './dtos/receive-stripe-webhook.dto-in';
 import { ReceiveStripeWebhookDtoOut } from './dtos/receive-stripe-webhook.dto-out';
+import { ProcessSubscriptionWebhookEventUseCase } from '../process-subscription-webhook-event/process-subscription-webhook-event.use-case';
 export declare class ReceiveStripeWebhookUseCase {
     private readonly findApiCredentialByUniqueIdService;
     private readonly decryptApiCredentialSecretService;
@@ -14,8 +15,9 @@ export declare class ReceiveStripeWebhookUseCase {
     private readonly normalizeStripeWebhookService;
     private readonly registerPaymentWebhookEventService;
     private readonly processPaymentWebhookEventUseCase;
+    private readonly processSubscriptionWebhookEventUseCase;
     private readonly handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validateStripeWebhookService: ValidateStripeWebhookService, normalizeStripeWebhookService: NormalizeStripeWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validateStripeWebhookService: ValidateStripeWebhookService, normalizeStripeWebhookService: NormalizeStripeWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ReceiveStripeWebhookDtoIn): Promise<ReceiveStripeWebhookDtoOut>;
     private resolveEndpointSecretFromApiCredential;
     private extractStringFromConfig;

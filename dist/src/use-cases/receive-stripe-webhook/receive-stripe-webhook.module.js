@@ -16,6 +16,7 @@ const payment_webhook_events_module_1 = require("../../modules/payment-webhook-e
 const process_payment_webhook_event_module_1 = require("../process-payment-webhook-event/process-payment-webhook-event.module");
 const receive_stripe_webhook_controller_1 = require("./receive-stripe-webhook.controller");
 const receive_stripe_webhook_use_case_1 = require("./receive-stripe-webhook.use-case");
+const process_subscription_webhook_event_module_1 = require("../process-subscription-webhook-event/process-subscription-webhook-event.module");
 let ReceiveStripeWebhookModule = class ReceiveStripeWebhookModule {
 };
 exports.ReceiveStripeWebhookModule = ReceiveStripeWebhookModule;
@@ -27,6 +28,7 @@ exports.ReceiveStripeWebhookModule = ReceiveStripeWebhookModule = __decorate([
             payment_webhook_gateways_module_1.PaymentWebhookGatewaysModule,
             payment_webhook_events_module_1.PaymentWebhookEventsModule,
             process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
+            process_subscription_webhook_event_module_1.ProcessSubscriptionWebhookEventModule,
         ],
         controllers: [receive_stripe_webhook_controller_1.ReceiveStripeWebhookController],
         providers: [

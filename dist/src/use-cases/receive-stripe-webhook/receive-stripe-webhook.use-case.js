@@ -26,6 +26,8 @@ const register_payment_webhook_event_service_1 = require("../../modules/payment-
 const process_payment_webhook_event_dto_in_1 = require("../process-payment-webhook-event/dtos/process-payment-webhook-event.dto-in");
 const process_payment_webhook_event_use_case_1 = require("../process-payment-webhook-event/process-payment-webhook-event.use-case");
 const receive_stripe_webhook_dto_out_1 = require("./dtos/receive-stripe-webhook.dto-out");
+const process_subscription_webhook_event_dto_in_1 = require("../process-subscription-webhook-event/dtos/process-subscription-webhook-event.dto-in");
+const process_subscription_webhook_event_use_case_1 = require("../process-subscription-webhook-event/process-subscription-webhook-event.use-case");
 let ReceiveStripeWebhookUseCase = class ReceiveStripeWebhookUseCase {
     findApiCredentialByUniqueIdService;
     decryptApiCredentialSecretService;
@@ -33,14 +35,16 @@ let ReceiveStripeWebhookUseCase = class ReceiveStripeWebhookUseCase {
     normalizeStripeWebhookService;
     registerPaymentWebhookEventService;
     processPaymentWebhookEventUseCase;
+    processSubscriptionWebhookEventUseCase;
     handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validateStripeWebhookService, normalizeStripeWebhookService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, handleUseCaseExceptionService) {
+    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validateStripeWebhookService, normalizeStripeWebhookService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase, handleUseCaseExceptionService) {
         this.findApiCredentialByUniqueIdService = findApiCredentialByUniqueIdService;
         this.decryptApiCredentialSecretService = decryptApiCredentialSecretService;
         this.validateStripeWebhookService = validateStripeWebhookService;
         this.normalizeStripeWebhookService = normalizeStripeWebhookService;
         this.registerPaymentWebhookEventService = registerPaymentWebhookEventService;
         this.processPaymentWebhookEventUseCase = processPaymentWebhookEventUseCase;
+        this.processSubscriptionWebhookEventUseCase = processSubscriptionWebhookEventUseCase;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
     }
     async exec(dtoIn) {
@@ -120,7 +124,16 @@ let ReceiveStripeWebhookUseCase = class ReceiveStripeWebhookUseCase {
                 paymentWebhookEventId,
                 normalizedEvent,
             }));
-            return new receive_stripe_webhook_dto_out_1.ReceiveStripeWebhookDtoOut(processedDtoOut.paymentWebhookEvent, processedDtoOut.paymentTransaction, processedDtoOut.processingResult, registeredDtoOut.wasAlreadyRegistered);
+            const subscriptionProcessedDtoOut = await this.processSubscriptionWebhookEventUseCase.exec(new process_subscription_webhook_event_dto_in_1.ProcessSubscriptionWebhookEventDtoIn({
+                paymentWebhookEventId,
+                normalizedEvent,
+                paymentTransaction: processedDtoOut.paymentTransaction,
+                paymentProcessingResult: processedDtoOut.processingResult,
+            }));
+            return new receive_stripe_webhook_dto_out_1.ReceiveStripeWebhookDtoOut(subscriptionProcessedDtoOut.paymentWebhookEvent, subscriptionProcessedDtoOut.paymentTransaction, {
+                paymentProcessingResult: processedDtoOut.processingResult,
+                subscriptionProcessingResult: subscriptionProcessedDtoOut.processingResult,
+            }, registeredDtoOut.wasAlreadyRegistered);
         }
         catch (error) {
             await this.handleUseCaseExceptionService.exec(new handle_use_case_exception_dto_in_1.HandleUseCaseExceptionDtoIn({
@@ -186,6 +199,7 @@ exports.ReceiveStripeWebhookUseCase = ReceiveStripeWebhookUseCase = __decorate([
         normalize_stripe_webhook_service_1.NormalizeStripeWebhookService,
         register_payment_webhook_event_service_1.RegisterPaymentWebhookEventService,
         process_payment_webhook_event_use_case_1.ProcessPaymentWebhookEventUseCase,
+        process_subscription_webhook_event_use_case_1.ProcessSubscriptionWebhookEventUseCase,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])
 ], ReceiveStripeWebhookUseCase);
 //# sourceMappingURL=receive-stripe-webhook.use-case.js.map

@@ -8,6 +8,7 @@ import { PaymentWebhookEventsModule } from '../../modules/payment-webhook-events
 import { ProcessPaymentWebhookEventModule } from '../process-payment-webhook-event/process-payment-webhook-event.module';
 import { ReceiveStripeWebhookController } from './receive-stripe-webhook.controller';
 import { ReceiveStripeWebhookUseCase } from './receive-stripe-webhook.use-case';
+import { ProcessSubscriptionWebhookEventModule } from '../process-subscription-webhook-event/process-subscription-webhook-event.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ReceiveStripeWebhookUseCase } from './receive-stripe-webhook.use-case';
     PaymentWebhookGatewaysModule,
     PaymentWebhookEventsModule,
     ProcessPaymentWebhookEventModule,
+    ProcessSubscriptionWebhookEventModule,
   ],
   controllers: [ReceiveStripeWebhookController],
   providers: [

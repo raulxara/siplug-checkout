@@ -22,6 +22,9 @@ import { ProcessPaymentWebhookEventUseCase } from '../process-payment-webhook-ev
 import { ReceiveStripeWebhookDtoIn } from './dtos/receive-stripe-webhook.dto-in';
 import { ReceiveStripeWebhookDtoOut } from './dtos/receive-stripe-webhook.dto-out';
 
+import { ProcessSubscriptionWebhookEventDtoIn } from '../process-subscription-webhook-event/dtos/process-subscription-webhook-event.dto-in';
+import { ProcessSubscriptionWebhookEventUseCase } from '../process-subscription-webhook-event/process-subscription-webhook-event.use-case';
+
 @Injectable()
 export class ReceiveStripeWebhookUseCase {
   constructor(
@@ -32,6 +35,7 @@ export class ReceiveStripeWebhookUseCase {
     private readonly normalizeStripeWebhookService: NormalizeStripeWebhookService,
     private readonly registerPaymentWebhookEventService: RegisterPaymentWebhookEventService,
     private readonly processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase,
+    private readonly processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase,
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
   ) {}
 
@@ -152,10 +156,24 @@ export class ReceiveStripeWebhookUseCase {
           }),
         );
 
+      const subscriptionProcessedDtoOut =
+        await this.processSubscriptionWebhookEventUseCase.exec(
+          new ProcessSubscriptionWebhookEventDtoIn({
+            paymentWebhookEventId,
+            normalizedEvent,
+            paymentTransaction: processedDtoOut.paymentTransaction,
+            paymentProcessingResult: processedDtoOut.processingResult,
+          }),
+        );
+
       return new ReceiveStripeWebhookDtoOut(
-        processedDtoOut.paymentWebhookEvent,
-        processedDtoOut.paymentTransaction,
-        processedDtoOut.processingResult,
+        subscriptionProcessedDtoOut.paymentWebhookEvent,
+        subscriptionProcessedDtoOut.paymentTransaction,
+        {
+          paymentProcessingResult: processedDtoOut.processingResult,
+          subscriptionProcessingResult:
+            subscriptionProcessedDtoOut.processingResult,
+        },
         registeredDtoOut.wasAlreadyRegistered,
       );
     } catch (error) {
