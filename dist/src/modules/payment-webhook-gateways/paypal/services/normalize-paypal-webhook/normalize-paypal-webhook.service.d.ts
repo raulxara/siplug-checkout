@@ -6,6 +6,7 @@ export declare class NormalizePayPalWebhookService {
     private resolveGatewayTransactionId;
     private resolveGatewayChargeId;
     private resolveGatewaySubscriptionId;
+    private resolveGatewayInvoiceId;
     private resolvePaymentTransactionId;
     private resolveAmount;
     private resolveCurrency;

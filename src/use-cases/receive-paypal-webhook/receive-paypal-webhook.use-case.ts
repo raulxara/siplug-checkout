@@ -32,6 +32,9 @@ import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-t
 import { CapturePayPalOrderReturnDtoIn } from '../capture-paypal-order-return/dtos/capture-paypal-order-return.dto-in';
 import { CapturePayPalOrderReturnUseCase } from '../capture-paypal-order-return/capture-paypal-order-return.use-case';
 
+import { ProcessSubscriptionWebhookEventDtoIn } from '../process-subscription-webhook-event/dtos/process-subscription-webhook-event.dto-in';
+import { ProcessSubscriptionWebhookEventUseCase } from '../process-subscription-webhook-event/process-subscription-webhook-event.use-case';
+
 type PayPalCredentialData = {
   clientId: string;
   clientSecret: string;
@@ -58,6 +61,7 @@ export class ReceivePayPalWebhookUseCase {
     private readonly normalizePayPalWebhookService: NormalizePayPalWebhookService,
     private readonly registerPaymentWebhookEventService: RegisterPaymentWebhookEventService,
     private readonly processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase,
+    private readonly processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase,
 
     private readonly findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService,
     private readonly findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService,
@@ -196,6 +200,16 @@ export class ReceivePayPalWebhookUseCase {
           }),
         );
 
+      const subscriptionProcessedDtoOut =
+        await this.processSubscriptionWebhookEventUseCase.exec(
+          new ProcessSubscriptionWebhookEventDtoIn({
+            paymentWebhookEventId,
+            normalizedEvent,
+            paymentTransaction: processedDtoOut.paymentTransaction,
+            paymentProcessingResult: processedDtoOut.processingResult,
+          }),
+        );
+
       const autoCaptureDtoOut = await this.autoCaptureApprovedPayPalOrderIfNeeded({
         apiCredentialId: dtoIn.apiCredentialId,
         normalizedEvent,
@@ -206,7 +220,11 @@ export class ReceivePayPalWebhookUseCase {
           autoCaptureDtoOut.paymentWebhookEvent,
           autoCaptureDtoOut.paymentTransaction,
           {
-            sourceWebhook: processedDtoOut.processingResult,
+            sourceWebhook: {
+              paymentProcessingResult: processedDtoOut.processingResult,
+              subscriptionProcessingResult:
+                subscriptionProcessedDtoOut.processingResult,
+            },
             autoCapture: autoCaptureDtoOut.processingResult,
           },
           registeredDtoOut.wasAlreadyRegistered,
@@ -214,9 +232,14 @@ export class ReceivePayPalWebhookUseCase {
       }
 
       return new ReceivePayPalWebhookDtoOut(
-        processedDtoOut.paymentWebhookEvent,
-        processedDtoOut.paymentTransaction,
-        processedDtoOut.processingResult,
+        subscriptionProcessedDtoOut.paymentWebhookEvent,
+        subscriptionProcessedDtoOut.paymentTransaction ??
+          processedDtoOut.paymentTransaction,
+        {
+          paymentProcessingResult: processedDtoOut.processingResult,
+          subscriptionProcessingResult:
+            subscriptionProcessedDtoOut.processingResult,
+        },
         registeredDtoOut.wasAlreadyRegistered,
       );
     } catch (error) {
@@ -383,85 +406,138 @@ export class ReceivePayPalWebhookUseCase {
 
   private async enrichNormalizedEventWithPaymentTransactionData(
     event: NormalizedPaymentWebhookEventDto,
-    ): Promise<NormalizedPaymentWebhookEventDto> {
+  ): Promise<NormalizedPaymentWebhookEventDto> {
     const paymentTransaction = await this.resolvePaymentTransactionFromEvent(event);
 
     if (paymentTransaction === null) {
-        return event;
+      return event;
     }
 
+    const paymentTransactionRecord =
+      paymentTransaction as unknown as Record<string, unknown>;
+
+    const metadata = this.toRecordOrNull(paymentTransactionRecord.metadata);
+    const config = this.toRecordOrNull(paymentTransactionRecord.config);
+
     const paymentTransactionId =
-        event.paymentTransactionId ?? this.toNullableString(paymentTransaction._id);
+      event.paymentTransactionId ?? this.toNullableString(paymentTransaction._id);
 
     const checkoutSessionId =
-        event.checkoutSessionId ??
-        this.toNullableString(paymentTransaction.checkoutSessionId);
+      event.checkoutSessionId ??
+      this.toNullableString(paymentTransaction.checkoutSessionId);
+
+    const subscriptionId =
+      event.subscriptionId ??
+      this.extractString(metadata, 'subscriptionId') ??
+      this.extractString(metadata, 'subscription_id') ??
+      this.extractString(config, 'subscriptionId') ??
+      this.extractString(config, 'subscription_id');
+
+    const subscriptionInvoiceId =
+      event.subscriptionInvoiceId ??
+      this.extractString(metadata, 'subscriptionInvoiceId') ??
+      this.extractString(metadata, 'subscription_invoice_id') ??
+      this.extractString(config, 'subscriptionInvoiceId') ??
+      this.extractString(config, 'subscription_invoice_id');
+
+    const gatewaySubscriptionId =
+      event.gatewaySubscriptionId ??
+      this.extractString(metadata, 'gatewaySubscriptionId') ??
+      this.extractString(metadata, 'gateway_subscription_id') ??
+      this.extractString(config, 'gatewaySubscriptionId') ??
+      this.extractString(config, 'gateway_subscription_id') ??
+      this.resolveGatewaySubscriptionIdFromPayPalEvent(event);
+
+    const gatewayInvoiceId =
+      event.gatewayInvoiceId ??
+      this.extractString(metadata, 'gatewayInvoiceId') ??
+      this.extractString(metadata, 'gateway_invoice_id') ??
+      this.extractString(config, 'gatewayInvoiceId') ??
+      this.extractString(config, 'gateway_invoice_id');
 
     if (
-        paymentTransactionId === event.paymentTransactionId &&
-        checkoutSessionId === event.checkoutSessionId
+      paymentTransactionId === event.paymentTransactionId &&
+      checkoutSessionId === event.checkoutSessionId &&
+      subscriptionId === event.subscriptionId &&
+      subscriptionInvoiceId === event.subscriptionInvoiceId &&
+      gatewaySubscriptionId === event.gatewaySubscriptionId &&
+      gatewayInvoiceId === event.gatewayInvoiceId
     ) {
-        return event;
+      return event;
     }
 
     return new NormalizedPaymentWebhookEventDto({
-        provider: event.provider,
-        eventId: event.eventId,
-        eventType: event.eventType,
-        eventAction: event.eventAction,
-        canonicalStatus: event.canonicalStatus,
+      provider: event.provider,
+      eventId: event.eventId,
+      eventType: event.eventType,
+      eventAction: event.eventAction,
+      canonicalStatus: event.canonicalStatus,
 
-        gatewayTransactionId: event.gatewayTransactionId,
-        gatewayPaymentIntentId: event.gatewayPaymentIntentId,
-        gatewayChargeId: event.gatewayChargeId,
-        gatewaySubscriptionId: event.gatewaySubscriptionId,
-        gatewayInvoiceId: event.gatewayInvoiceId,
+      gatewayTransactionId: event.gatewayTransactionId,
+      gatewayPaymentIntentId: event.gatewayPaymentIntentId,
+      gatewayChargeId: event.gatewayChargeId,
+      gatewaySubscriptionId,
+      gatewayInvoiceId,
 
-        paymentTransactionId,
-        checkoutSessionId,
-        subscriptionId: event.subscriptionId,
-        subscriptionInvoiceId: event.subscriptionInvoiceId,
-        externalReference: event.externalReference,
+      paymentTransactionId,
+      checkoutSessionId,
+      subscriptionId,
+      subscriptionInvoiceId,
+      externalReference: event.externalReference,
 
-        amount: event.amount,
-        currency: event.currency,
+      amount: event.amount,
+      currency: event.currency,
 
-        rawPayload: event.rawPayload,
-        headers: event.headers,
+      rawPayload: event.rawPayload,
+      headers: event.headers,
     });
-    }
+  }
 
     private async resolvePaymentTransactionFromEvent(
     event: NormalizedPaymentWebhookEventDto,
-    ): Promise<PaymentTransactionRow | null> {
+  ): Promise<PaymentTransactionRow | null> {
     if (event.paymentTransactionId !== null) {
-        const found = await this.findPaymentTransactionByUniqueIdSafe(
+      const found = await this.findPaymentTransactionByUniqueIdSafe(
         event.paymentTransactionId,
-        );
+      );
 
-        if (found !== null) {
+      if (found !== null) {
         return found;
-        }
+      }
     }
 
     const gatewayTransactionIds = [
-        event.gatewayTransactionId,
-        event.gatewayPaymentIntentId,
-        event.gatewayChargeId,
+      event.gatewayTransactionId,
+      event.gatewayPaymentIntentId,
+      event.gatewayChargeId,
+      event.gatewaySubscriptionId,
+      event.gatewayInvoiceId,
     ].filter((value): value is string => value !== null);
 
     for (const gatewayTransactionId of gatewayTransactionIds) {
-        const found = await this.findPaymentTransactionByGatewayTransactionIdSafe(
+      const found = await this.findPaymentTransactionByGatewayTransactionIdSafe(
         gatewayTransactionId,
-        );
+      );
 
-        if (found !== null) {
+      if (found !== null) {
         return found;
-        }
+      }
     }
 
     return null;
+  }
+
+  private resolveGatewaySubscriptionIdFromPayPalEvent(
+    event: NormalizedPaymentWebhookEventDto,
+  ): string | null {
+    const eventType = String(event.eventType ?? '').trim().toUpperCase();
+
+    if (eventType.includes('BILLING.SUBSCRIPTION')) {
+      return event.gatewayTransactionId;
     }
+
+    return null;
+  }
 
     private async findPaymentTransactionByUniqueIdSafe(
     paymentTransactionId: string,

@@ -33,6 +33,8 @@ const find_payment_transaction_by_unique_id_dto_in_1 = require("../../modules/pa
 const find_payment_transaction_by_unique_id_service_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service");
 const capture_paypal_order_return_dto_in_1 = require("../capture-paypal-order-return/dtos/capture-paypal-order-return.dto-in");
 const capture_paypal_order_return_use_case_1 = require("../capture-paypal-order-return/capture-paypal-order-return.use-case");
+const process_subscription_webhook_event_dto_in_1 = require("../process-subscription-webhook-event/dtos/process-subscription-webhook-event.dto-in");
+const process_subscription_webhook_event_use_case_1 = require("../process-subscription-webhook-event/process-subscription-webhook-event.use-case");
 let ReceivePayPalWebhookUseCase = class ReceivePayPalWebhookUseCase {
     findApiCredentialByUniqueIdService;
     decryptApiCredentialSecretService;
@@ -40,17 +42,19 @@ let ReceivePayPalWebhookUseCase = class ReceivePayPalWebhookUseCase {
     normalizePayPalWebhookService;
     registerPaymentWebhookEventService;
     processPaymentWebhookEventUseCase;
+    processSubscriptionWebhookEventUseCase;
     findPaymentTransactionByUniqueIdService;
     findPaymentTransactionByGatewayTransactionIdService;
     capturePayPalOrderReturnUseCase;
     handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePayPalWebhookService, normalizePayPalWebhookService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, capturePayPalOrderReturnUseCase, handleUseCaseExceptionService) {
+    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePayPalWebhookService, normalizePayPalWebhookService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, capturePayPalOrderReturnUseCase, handleUseCaseExceptionService) {
         this.findApiCredentialByUniqueIdService = findApiCredentialByUniqueIdService;
         this.decryptApiCredentialSecretService = decryptApiCredentialSecretService;
         this.validatePayPalWebhookService = validatePayPalWebhookService;
         this.normalizePayPalWebhookService = normalizePayPalWebhookService;
         this.registerPaymentWebhookEventService = registerPaymentWebhookEventService;
         this.processPaymentWebhookEventUseCase = processPaymentWebhookEventUseCase;
+        this.processSubscriptionWebhookEventUseCase = processSubscriptionWebhookEventUseCase;
         this.findPaymentTransactionByUniqueIdService = findPaymentTransactionByUniqueIdService;
         this.findPaymentTransactionByGatewayTransactionIdService = findPaymentTransactionByGatewayTransactionIdService;
         this.capturePayPalOrderReturnUseCase = capturePayPalOrderReturnUseCase;
@@ -141,17 +145,30 @@ let ReceivePayPalWebhookUseCase = class ReceivePayPalWebhookUseCase {
                 paymentWebhookEventId,
                 normalizedEvent,
             }));
+            const subscriptionProcessedDtoOut = await this.processSubscriptionWebhookEventUseCase.exec(new process_subscription_webhook_event_dto_in_1.ProcessSubscriptionWebhookEventDtoIn({
+                paymentWebhookEventId,
+                normalizedEvent,
+                paymentTransaction: processedDtoOut.paymentTransaction,
+                paymentProcessingResult: processedDtoOut.processingResult,
+            }));
             const autoCaptureDtoOut = await this.autoCaptureApprovedPayPalOrderIfNeeded({
                 apiCredentialId: dtoIn.apiCredentialId,
                 normalizedEvent,
             });
             if (autoCaptureDtoOut !== null) {
                 return new receive_paypal_webhook_dto_out_1.ReceivePayPalWebhookDtoOut(autoCaptureDtoOut.paymentWebhookEvent, autoCaptureDtoOut.paymentTransaction, {
-                    sourceWebhook: processedDtoOut.processingResult,
+                    sourceWebhook: {
+                        paymentProcessingResult: processedDtoOut.processingResult,
+                        subscriptionProcessingResult: subscriptionProcessedDtoOut.processingResult,
+                    },
                     autoCapture: autoCaptureDtoOut.processingResult,
                 }, registeredDtoOut.wasAlreadyRegistered);
             }
-            return new receive_paypal_webhook_dto_out_1.ReceivePayPalWebhookDtoOut(processedDtoOut.paymentWebhookEvent, processedDtoOut.paymentTransaction, processedDtoOut.processingResult, registeredDtoOut.wasAlreadyRegistered);
+            return new receive_paypal_webhook_dto_out_1.ReceivePayPalWebhookDtoOut(subscriptionProcessedDtoOut.paymentWebhookEvent, subscriptionProcessedDtoOut.paymentTransaction ??
+                processedDtoOut.paymentTransaction, {
+                paymentProcessingResult: processedDtoOut.processingResult,
+                subscriptionProcessingResult: subscriptionProcessedDtoOut.processingResult,
+            }, registeredDtoOut.wasAlreadyRegistered);
         }
         catch (error) {
             await this.handleUseCaseExceptionService.exec(new handle_use_case_exception_dto_in_1.HandleUseCaseExceptionDtoIn({
@@ -265,11 +282,39 @@ let ReceivePayPalWebhookUseCase = class ReceivePayPalWebhookUseCase {
         if (paymentTransaction === null) {
             return event;
         }
+        const paymentTransactionRecord = paymentTransaction;
+        const metadata = this.toRecordOrNull(paymentTransactionRecord.metadata);
+        const config = this.toRecordOrNull(paymentTransactionRecord.config);
         const paymentTransactionId = event.paymentTransactionId ?? this.toNullableString(paymentTransaction._id);
         const checkoutSessionId = event.checkoutSessionId ??
             this.toNullableString(paymentTransaction.checkoutSessionId);
+        const subscriptionId = event.subscriptionId ??
+            this.extractString(metadata, 'subscriptionId') ??
+            this.extractString(metadata, 'subscription_id') ??
+            this.extractString(config, 'subscriptionId') ??
+            this.extractString(config, 'subscription_id');
+        const subscriptionInvoiceId = event.subscriptionInvoiceId ??
+            this.extractString(metadata, 'subscriptionInvoiceId') ??
+            this.extractString(metadata, 'subscription_invoice_id') ??
+            this.extractString(config, 'subscriptionInvoiceId') ??
+            this.extractString(config, 'subscription_invoice_id');
+        const gatewaySubscriptionId = event.gatewaySubscriptionId ??
+            this.extractString(metadata, 'gatewaySubscriptionId') ??
+            this.extractString(metadata, 'gateway_subscription_id') ??
+            this.extractString(config, 'gatewaySubscriptionId') ??
+            this.extractString(config, 'gateway_subscription_id') ??
+            this.resolveGatewaySubscriptionIdFromPayPalEvent(event);
+        const gatewayInvoiceId = event.gatewayInvoiceId ??
+            this.extractString(metadata, 'gatewayInvoiceId') ??
+            this.extractString(metadata, 'gateway_invoice_id') ??
+            this.extractString(config, 'gatewayInvoiceId') ??
+            this.extractString(config, 'gateway_invoice_id');
         if (paymentTransactionId === event.paymentTransactionId &&
-            checkoutSessionId === event.checkoutSessionId) {
+            checkoutSessionId === event.checkoutSessionId &&
+            subscriptionId === event.subscriptionId &&
+            subscriptionInvoiceId === event.subscriptionInvoiceId &&
+            gatewaySubscriptionId === event.gatewaySubscriptionId &&
+            gatewayInvoiceId === event.gatewayInvoiceId) {
             return event;
         }
         return new normalized_payment_webhook_event_dto_1.NormalizedPaymentWebhookEventDto({
@@ -281,12 +326,12 @@ let ReceivePayPalWebhookUseCase = class ReceivePayPalWebhookUseCase {
             gatewayTransactionId: event.gatewayTransactionId,
             gatewayPaymentIntentId: event.gatewayPaymentIntentId,
             gatewayChargeId: event.gatewayChargeId,
-            gatewaySubscriptionId: event.gatewaySubscriptionId,
-            gatewayInvoiceId: event.gatewayInvoiceId,
+            gatewaySubscriptionId,
+            gatewayInvoiceId,
             paymentTransactionId,
             checkoutSessionId,
-            subscriptionId: event.subscriptionId,
-            subscriptionInvoiceId: event.subscriptionInvoiceId,
+            subscriptionId,
+            subscriptionInvoiceId,
             externalReference: event.externalReference,
             amount: event.amount,
             currency: event.currency,
@@ -305,12 +350,21 @@ let ReceivePayPalWebhookUseCase = class ReceivePayPalWebhookUseCase {
             event.gatewayTransactionId,
             event.gatewayPaymentIntentId,
             event.gatewayChargeId,
+            event.gatewaySubscriptionId,
+            event.gatewayInvoiceId,
         ].filter((value) => value !== null);
         for (const gatewayTransactionId of gatewayTransactionIds) {
             const found = await this.findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId);
             if (found !== null) {
                 return found;
             }
+        }
+        return null;
+    }
+    resolveGatewaySubscriptionIdFromPayPalEvent(event) {
+        const eventType = String(event.eventType ?? '').trim().toUpperCase();
+        if (eventType.includes('BILLING.SUBSCRIPTION')) {
+            return event.gatewayTransactionId;
         }
         return null;
     }
@@ -392,6 +446,7 @@ exports.ReceivePayPalWebhookUseCase = ReceivePayPalWebhookUseCase = __decorate([
         normalize_paypal_webhook_service_1.NormalizePayPalWebhookService,
         register_payment_webhook_event_service_1.RegisterPaymentWebhookEventService,
         process_payment_webhook_event_use_case_1.ProcessPaymentWebhookEventUseCase,
+        process_subscription_webhook_event_use_case_1.ProcessSubscriptionWebhookEventUseCase,
         find_payment_transaction_by_unique_id_service_1.FindPaymentTransactionByUniqueIdService,
         find_payment_transaction_by_gateway_transaction_id_service_1.FindPaymentTransactionByGatewayTransactionIdService,
         capture_paypal_order_return_use_case_1.CapturePayPalOrderReturnUseCase,

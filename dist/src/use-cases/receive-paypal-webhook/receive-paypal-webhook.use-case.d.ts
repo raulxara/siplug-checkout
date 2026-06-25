@@ -10,6 +10,7 @@ import { ReceivePayPalWebhookDtoOut } from './dtos/receive-paypal-webhook.dto-ou
 import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service';
 import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
 import { CapturePayPalOrderReturnUseCase } from '../capture-paypal-order-return/capture-paypal-order-return.use-case';
+import { ProcessSubscriptionWebhookEventUseCase } from '../process-subscription-webhook-event/process-subscription-webhook-event.use-case';
 export declare class ReceivePayPalWebhookUseCase {
     private readonly findApiCredentialByUniqueIdService;
     private readonly decryptApiCredentialSecretService;
@@ -17,11 +18,12 @@ export declare class ReceivePayPalWebhookUseCase {
     private readonly normalizePayPalWebhookService;
     private readonly registerPaymentWebhookEventService;
     private readonly processPaymentWebhookEventUseCase;
+    private readonly processSubscriptionWebhookEventUseCase;
     private readonly findPaymentTransactionByUniqueIdService;
     private readonly findPaymentTransactionByGatewayTransactionIdService;
     private readonly capturePayPalOrderReturnUseCase;
     private readonly handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validatePayPalWebhookService: ValidatePayPalWebhookService, normalizePayPalWebhookService: NormalizePayPalWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, capturePayPalOrderReturnUseCase: CapturePayPalOrderReturnUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validatePayPalWebhookService: ValidatePayPalWebhookService, normalizePayPalWebhookService: NormalizePayPalWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, capturePayPalOrderReturnUseCase: CapturePayPalOrderReturnUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ReceivePayPalWebhookDtoIn): Promise<ReceivePayPalWebhookDtoOut>;
     private resolveCredentialData;
     private createAccessToken;
@@ -29,6 +31,7 @@ export declare class ReceivePayPalWebhookUseCase {
     private toRecordOrNull;
     private enrichNormalizedEventWithPaymentTransactionData;
     private resolvePaymentTransactionFromEvent;
+    private resolveGatewaySubscriptionIdFromPayPalEvent;
     private findPaymentTransactionByUniqueIdSafe;
     private findPaymentTransactionByGatewayTransactionIdSafe;
     private toNullableString;

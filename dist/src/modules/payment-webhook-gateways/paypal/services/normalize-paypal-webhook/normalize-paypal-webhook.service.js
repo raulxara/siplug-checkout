@@ -32,6 +32,14 @@ let NormalizePayPalWebhookService = class NormalizePayPalWebhookService {
             eventType,
             resource,
         });
+        const gatewaySubscriptionId = this.resolveGatewaySubscriptionId({
+            eventType,
+            resource,
+        });
+        const gatewayInvoiceId = this.resolveGatewayInvoiceId({
+            eventType,
+            resource,
+        });
         const amount = this.resolveAmount(resource);
         const currency = this.resolveCurrency(resource);
         const normalizedEvent = new normalized_payment_webhook_event_dto_1.NormalizedPaymentWebhookEventDto({
@@ -46,17 +54,15 @@ let NormalizePayPalWebhookService = class NormalizePayPalWebhookService {
             gatewayTransactionId,
             gatewayPaymentIntentId: gatewayTransactionId,
             gatewayChargeId,
-            gatewaySubscriptionId: this.resolveGatewaySubscriptionId({
-                eventType,
-                resource,
-            }),
-            gatewayInvoiceId: null,
+            gatewaySubscriptionId,
+            gatewayInvoiceId,
             paymentTransactionId: this.resolvePaymentTransactionId(resource),
             checkoutSessionId: null,
             subscriptionId: null,
             subscriptionInvoiceId: null,
             externalReference: this.getString(resource, 'invoice_id') ??
                 this.getString(resource, 'custom_id') ??
+                this.getString(resource, 'custom') ??
                 gatewayTransactionId,
             amount,
             currency,
@@ -88,12 +94,41 @@ let NormalizePayPalWebhookService = class NormalizePayPalWebhookService {
                 return 'refunded';
             case 'PAYMENT.CAPTURE.REVERSED':
                 return 'chargeback';
+            case 'BILLING.SUBSCRIPTION.CREATED':
+            case 'BILLING.SUBSCRIPTION.APPROVAL_PENDING':
+                return 'pending';
+            case 'BILLING.SUBSCRIPTION.ACTIVATED':
+                return 'subscription_active';
+            case 'BILLING.SUBSCRIPTION.CANCELLED':
+            case 'BILLING.SUBSCRIPTION.CANCELED':
+            case 'BILLING.SUBSCRIPTION.EXPIRED':
+                return 'subscription_canceled';
+            case 'BILLING.SUBSCRIPTION.SUSPENDED':
+                return 'subscription_canceled';
+            case 'BILLING.SUBSCRIPTION.PAYMENT.FAILED':
+                return 'invoice_payment_failed';
+            case 'PAYMENT.SALE.COMPLETED':
+                return 'invoice_paid';
+            case 'PAYMENT.SALE.PENDING':
+                return 'pending';
+            case 'PAYMENT.SALE.DENIED':
+            case 'PAYMENT.SALE.FAILED':
+                return 'invoice_payment_failed';
+            case 'PAYMENT.SALE.REFUNDED':
+            case 'PAYMENT.SALE.REVERSED':
+                return 'refunded';
             default:
                 if (status === 'COMPLETED') {
                     return 'paid';
                 }
-                if (status === 'PENDING') {
+                if (status === 'ACTIVE') {
+                    return 'subscription_active';
+                }
+                if (status === 'PENDING' || status === 'APPROVAL_PENDING') {
                     return 'pending';
+                }
+                if (status === 'CANCELLED' || status === 'CANCELED') {
+                    return 'subscription_canceled';
                 }
                 if (status === 'DENIED' || status === 'FAILED') {
                     return 'failed';
@@ -106,17 +141,26 @@ let NormalizePayPalWebhookService = class NormalizePayPalWebhookService {
         if (eventType.startsWith('CHECKOUT.ORDER.')) {
             return this.getString(params.resource, 'id');
         }
+        if (eventType.includes('BILLING.SUBSCRIPTION')) {
+            return this.getString(params.resource, 'id');
+        }
         const supplementaryData = this.getObject(params.resource, 'supplementary_data');
         const relatedIds = supplementaryData
             ? this.getObject(supplementaryData, 'related_ids')
             : null;
         return (this.getString(relatedIds, 'order_id') ??
+            this.getString(relatedIds, 'authorization_id') ??
+            this.getString(relatedIds, 'sale_id') ??
             this.getString(params.resource, 'order_id') ??
+            this.getString(params.resource, 'parent_payment') ??
+            this.getString(params.resource, 'billing_agreement_id') ??
+            this.getString(params.resource, 'subscription_id') ??
             this.getString(params.resource, 'id'));
     }
     resolveGatewayChargeId(params) {
         const eventType = params.eventType.toUpperCase().trim();
-        if (eventType.startsWith('PAYMENT.CAPTURE.')) {
+        if (eventType.startsWith('PAYMENT.CAPTURE.') ||
+            eventType.startsWith('PAYMENT.SALE.')) {
             return this.getString(params.resource, 'id');
         }
         return null;
@@ -126,7 +170,19 @@ let NormalizePayPalWebhookService = class NormalizePayPalWebhookService {
         if (eventType.includes('BILLING.SUBSCRIPTION')) {
             return this.getString(params.resource, 'id');
         }
-        return null;
+        return (this.getString(params.resource, 'billing_agreement_id') ??
+            this.getString(params.resource, 'subscription_id'));
+    }
+    resolveGatewayInvoiceId(params) {
+        const eventType = params.eventType.toUpperCase().trim();
+        if (eventType.startsWith('PAYMENT.SALE.') ||
+            eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
+            return (this.getString(params.resource, 'invoice_id') ??
+                this.getString(params.resource, 'invoice_number') ??
+                this.getString(params.resource, 'id'));
+        }
+        return (this.getString(params.resource, 'invoice_id') ??
+            this.getString(params.resource, 'invoice_number'));
     }
     resolvePaymentTransactionId(resource) {
         return (this.getString(resource, 'custom_id') ??
@@ -134,7 +190,8 @@ let NormalizePayPalWebhookService = class NormalizePayPalWebhookService {
     }
     resolveAmount(resource) {
         const amount = this.getObject(resource, 'amount');
-        const value = this.getString(amount, 'value');
+        const value = this.getString(amount, 'value') ??
+            this.getString(amount, 'total');
         if (value === null) {
             return null;
         }
@@ -146,7 +203,8 @@ let NormalizePayPalWebhookService = class NormalizePayPalWebhookService {
     }
     resolveCurrency(resource) {
         const amount = this.getObject(resource, 'amount');
-        return this.getString(amount, 'currency_code');
+        return (this.getString(amount, 'currency_code') ??
+            this.getString(amount, 'currency'));
     }
     getObject(object, key) {
         if (object === null) {

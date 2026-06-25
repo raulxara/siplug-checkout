@@ -11,13 +11,14 @@ const common_1 = require("@nestjs/common");
 const decrypt_api_credential_secret_service_1 = require("../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
 const api_credentials_module_1 = require("../../modules/api-credentials/api-credentials.module");
+const payment_transactions_module_1 = require("../../modules/payment-transactions/payment-transactions.module");
 const payment_webhook_gateways_module_1 = require("../../modules/payment-webhook-gateways/payment-webhook-gateways.module");
 const payment_webhook_events_module_1 = require("../../modules/payment-webhook-events/payment-webhook-events.module");
+const capture_paypal_order_return_module_1 = require("../capture-paypal-order-return/capture-paypal-order-return.module");
 const process_payment_webhook_event_module_1 = require("../process-payment-webhook-event/process-payment-webhook-event.module");
+const process_subscription_webhook_event_module_1 = require("../process-subscription-webhook-event/process-subscription-webhook-event.module");
 const receive_paypal_webhook_controller_1 = require("./receive-paypal-webhook.controller");
 const receive_paypal_webhook_use_case_1 = require("./receive-paypal-webhook.use-case");
-const payment_transactions_module_1 = require("../../modules/payment-transactions/payment-transactions.module");
-const capture_paypal_order_return_module_1 = require("../capture-paypal-order-return/capture-paypal-order-return.module");
 let ReceivePayPalWebhookModule = class ReceivePayPalWebhookModule {
 };
 exports.ReceivePayPalWebhookModule = ReceivePayPalWebhookModule;
@@ -29,6 +30,7 @@ exports.ReceivePayPalWebhookModule = ReceivePayPalWebhookModule = __decorate([
             payment_webhook_gateways_module_1.PaymentWebhookGatewaysModule,
             payment_webhook_events_module_1.PaymentWebhookEventsModule,
             process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
+            process_subscription_webhook_event_module_1.ProcessSubscriptionWebhookEventModule,
             payment_transactions_module_1.PaymentTransactionsModule,
             capture_paypal_order_return_module_1.CapturePayPalOrderReturnModule,
         ],
