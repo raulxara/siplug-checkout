@@ -29,21 +29,25 @@ const receive_pagseguro_webhook_dto_out_1 = require("./dtos/receive-pagseguro-we
 const normalized_payment_webhook_event_dto_1 = require("../../modules/payment-webhook-events/dtos/normalized-payment-webhook-event.dto");
 const find_payment_transaction_by_gateway_transaction_id_dto_in_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/dtos/find-payment-transaction-by-gateway-transaction-id.dto-in");
 const find_payment_transaction_by_gateway_transaction_id_service_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service");
+const find_payment_transaction_by_unique_id_dto_in_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/dtos/find-payment-transaction-by-unique-id.dto-in");
+const find_payment_transaction_by_unique_id_service_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service");
 let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
     findApiCredentialByUniqueIdService;
     decryptApiCredentialSecretService;
     validatePagSeguroWebhookService;
     normalizePagSeguroWebhookService;
     findPaymentTransactionByGatewayTransactionIdService;
+    findPaymentTransactionByUniqueIdService;
     registerPaymentWebhookEventService;
     processPaymentWebhookEventUseCase;
     handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePagSeguroWebhookService, normalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, handleUseCaseExceptionService) {
+    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePagSeguroWebhookService, normalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, handleUseCaseExceptionService) {
         this.findApiCredentialByUniqueIdService = findApiCredentialByUniqueIdService;
         this.decryptApiCredentialSecretService = decryptApiCredentialSecretService;
         this.validatePagSeguroWebhookService = validatePagSeguroWebhookService;
         this.normalizePagSeguroWebhookService = normalizePagSeguroWebhookService;
         this.findPaymentTransactionByGatewayTransactionIdService = findPaymentTransactionByGatewayTransactionIdService;
+        this.findPaymentTransactionByUniqueIdService = findPaymentTransactionByUniqueIdService;
         this.registerPaymentWebhookEventService = registerPaymentWebhookEventService;
         this.processPaymentWebhookEventUseCase = processPaymentWebhookEventUseCase;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
@@ -197,11 +201,36 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
         });
     }
     async resolvePaymentTransactionFromPagSeguroEvent(normalizedEvent) {
+        const attempts = 3;
+        for (let attempt = 1; attempt <= attempts; attempt += 1) {
+            const paymentTransaction = await this.resolvePaymentTransactionFromPagSeguroEventOnce(normalizedEvent);
+            if (paymentTransaction !== null) {
+                return paymentTransaction;
+            }
+            if (attempt < attempts) {
+                await this.delay(800);
+            }
+        }
+        return null;
+    }
+    async resolvePaymentTransactionFromPagSeguroEventOnce(normalizedEvent) {
+        const paymentTransactionIds = [
+            normalizedEvent.paymentTransactionId,
+            normalizedEvent.externalReference,
+            this.restoreUuidFromCompactString(normalizedEvent.externalReference),
+        ].filter((value) => value !== null);
+        for (const paymentTransactionId of paymentTransactionIds) {
+            const paymentTransaction = await this.findPaymentTransactionByUniqueIdSafe(paymentTransactionId);
+            if (paymentTransaction !== null) {
+                return paymentTransaction;
+            }
+        }
         const gatewayTransactionIds = [
             normalizedEvent.gatewayTransactionId,
             normalizedEvent.gatewayChargeId,
             normalizedEvent.gatewayPaymentIntentId,
             normalizedEvent.gatewayInvoiceId,
+            normalizedEvent.gatewaySubscriptionId,
         ].filter((value) => value !== null);
         for (const gatewayTransactionId of gatewayTransactionIds) {
             const paymentTransaction = await this.findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId);
@@ -210,6 +239,34 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
             }
         }
         return null;
+    }
+    async findPaymentTransactionByUniqueIdSafe(paymentTransactionId) {
+        try {
+            const dtoOut = await this.findPaymentTransactionByUniqueIdService.exec(new find_payment_transaction_by_unique_id_dto_in_1.FindPaymentTransactionByUniqueIdDtoIn(paymentTransactionId));
+            return dtoOut.paymentTransaction;
+        }
+        catch {
+            return null;
+        }
+    }
+    restoreUuidFromCompactString(value) {
+        if (value === null) {
+            return null;
+        }
+        const normalized = value.trim().toLowerCase();
+        if (!/^[a-f0-9]{32}$/.test(normalized)) {
+            return null;
+        }
+        return [
+            normalized.slice(0, 8),
+            normalized.slice(8, 12),
+            normalized.slice(12, 16),
+            normalized.slice(16, 20),
+            normalized.slice(20),
+        ].join('-');
+    }
+    async delay(milliseconds) {
+        await new Promise((resolve) => setTimeout(resolve, milliseconds));
     }
     async findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId) {
         try {
@@ -316,6 +373,7 @@ exports.ReceivePagSeguroWebhookUseCase = ReceivePagSeguroWebhookUseCase = __deco
         validate_pagseguro_webhook_service_1.ValidatePagSeguroWebhookService,
         normalize_pagseguro_webhook_service_1.NormalizePagSeguroWebhookService,
         find_payment_transaction_by_gateway_transaction_id_service_1.FindPaymentTransactionByGatewayTransactionIdService,
+        find_payment_transaction_by_unique_id_service_1.FindPaymentTransactionByUniqueIdService,
         register_payment_webhook_event_service_1.RegisterPaymentWebhookEventService,
         process_payment_webhook_event_use_case_1.ProcessPaymentWebhookEventUseCase,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])

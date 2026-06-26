@@ -27,6 +27,25 @@ let PagSeguroRecurringPaymentProvider = class PagSeguroRecurringPaymentProvider 
             });
         }
         const token = this.resolveProviderToken(dtoIn);
+        const notificationPreferencesDtoOut = await this.ensureRecurringNotificationPreferences({
+            dtoIn,
+            token,
+        });
+        if (!notificationPreferencesDtoOut.ok) {
+            return this.buildFailedResponse({
+                dtoIn,
+                gatewayStatus: String(notificationPreferencesDtoOut.status),
+                processMessage: notificationPreferencesDtoOut.processMessage ??
+                    'PagSeguro recurring notification preferences configuration failed',
+                providerRequest: notificationPreferencesDtoOut.requestPayload ?? {
+                    notificationUrl: notificationPreferencesDtoOut.notificationUrl,
+                },
+                providerResponse: notificationPreferencesDtoOut.responseBody ?? {
+                    reason: 'pagseguro_recurring_notification_url_not_configured',
+                },
+                httpStatus: notificationPreferencesDtoOut.status,
+            });
+        }
         const planDtoOut = await this.resolveOrCreatePlan({
             dtoIn,
             token,
@@ -88,6 +107,8 @@ let PagSeguroRecurringPaymentProvider = class PagSeguroRecurringPaymentProvider 
         const gatewayStatus = this.toNullableString(subscriptionResponse.body.status) ?? 'PENDING';
         const mappedStatus = this.mapPagSeguroSubscriptionStatus(gatewayStatus);
         return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(true, 'pagseguro', gatewaySubscriptionId, planDtoOut.planId, gatewaySubscriptionId, gatewaySubscriptionId, gatewayStatus, mappedStatus.status, mappedStatus.processStatus, mappedStatus.processMessage, this.sanitizePayload({
+            notificationPreferencesRequest: notificationPreferencesDtoOut.requestPayload,
+            notificationPreferencesResponse: notificationPreferencesDtoOut.responseBody,
             planRequest: planDtoOut.planRequestPayload,
             customerId: resolvedCustomerDtoOut.customerId,
             customerReused: resolvedCustomerDtoOut.customerId !== null,
@@ -714,6 +735,69 @@ let PagSeguroRecurringPaymentProvider = class PagSeguroRecurringPaymentProvider 
             return {};
         }
         return value;
+    }
+    async ensureRecurringNotificationPreferences(params) {
+        const notificationUrl = this.resolveRecurringNotificationUrl(params.dtoIn);
+        if (notificationUrl === null) {
+            return {
+                ok: false,
+                status: 0,
+                skipped: true,
+                notificationUrl: null,
+                requestPayload: null,
+                responseBody: {
+                    reason: 'notification_url_not_configured',
+                    message: 'PagSeguro recurring webhook requires notification preferences URL',
+                },
+                processMessage: 'PagSeguro recurring notificationUrl is required to receive subscription webhooks',
+            };
+        }
+        const requestPayload = {
+            urls: [notificationUrl],
+        };
+        const response = await this.executePagSeguroJsonRequest({
+            dtoIn: params.dtoIn,
+            token: params.token,
+            path: '/preferences/notifications',
+            method: 'PUT',
+            requestPayload,
+            requestIdSuffix: 'notification-preferences',
+        });
+        return {
+            ok: response.ok,
+            status: response.status,
+            skipped: false,
+            notificationUrl,
+            requestPayload,
+            responseBody: response.body,
+            processMessage: response.ok
+                ? null
+                : this.resolvePagSeguroErrorMessage(response.body, response.status),
+        };
+    }
+    resolveRecurringNotificationUrl(dtoIn) {
+        const config = dtoIn.config ?? {};
+        const transactionConfig = this.asObject(config.transactionConfig);
+        const gatewayConfig = this.asObject(config.gatewayConfig);
+        const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+        return (this.toNullableString(transactionConfig.recurringNotificationUrl) ??
+            this.toNullableString(transactionConfig.recurring_notification_url) ??
+            this.toNullableString(transactionConfig.subscriptionNotificationUrl) ??
+            this.toNullableString(transactionConfig.subscription_notification_url) ??
+            this.toNullableString(transactionConfig.notificationUrl) ??
+            this.toNullableString(transactionConfig.notification_url) ??
+            this.toNullableString(gatewayConfig.recurringNotificationUrl) ??
+            this.toNullableString(gatewayConfig.recurring_notification_url) ??
+            this.toNullableString(gatewayConfig.subscriptionNotificationUrl) ??
+            this.toNullableString(gatewayConfig.subscription_notification_url) ??
+            this.toNullableString(gatewayConfig.notificationUrl) ??
+            this.toNullableString(gatewayConfig.notification_url) ??
+            this.toNullableString(apiCredentialConfig.recurringNotificationUrl) ??
+            this.toNullableString(apiCredentialConfig.recurring_notification_url) ??
+            this.toNullableString(apiCredentialConfig.subscriptionNotificationUrl) ??
+            this.toNullableString(apiCredentialConfig.subscription_notification_url) ??
+            this.toNullableString(apiCredentialConfig.notificationUrl) ??
+            this.toNullableString(apiCredentialConfig.notification_url));
     }
     toNullableString(value) {
         if (value === undefined || value === null) {

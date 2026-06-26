@@ -26,6 +26,9 @@ import { NormalizedPaymentWebhookEventDto } from '../../modules/payment-webhook-
 import { FindPaymentTransactionByGatewayTransactionIdDtoIn } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/dtos/find-payment-transaction-by-gateway-transaction-id.dto-in';
 import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service';
 
+import { FindPaymentTransactionByUniqueIdDtoIn } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/dtos/find-payment-transaction-by-unique-id.dto-in';
+import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
+
 @Injectable()
 export class ReceivePagSeguroWebhookUseCase {
   constructor(
@@ -36,6 +39,8 @@ export class ReceivePagSeguroWebhookUseCase {
     private readonly normalizePagSeguroWebhookService: NormalizePagSeguroWebhookService,
 
     private readonly findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService,
+
+    private readonly findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService,
 
     private readonly registerPaymentWebhookEventService: RegisterPaymentWebhookEventService,
     private readonly processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase,
@@ -272,11 +277,50 @@ export class ReceivePagSeguroWebhookUseCase {
   private async resolvePaymentTransactionFromPagSeguroEvent(
     normalizedEvent: NormalizedPaymentWebhookEventDto,
   ): Promise<Record<string, unknown> | null> {
+    const attempts = 3;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const paymentTransaction =
+        await this.resolvePaymentTransactionFromPagSeguroEventOnce(
+          normalizedEvent,
+        );
+
+      if (paymentTransaction !== null) {
+        return paymentTransaction;
+      }
+
+      if (attempt < attempts) {
+        await this.delay(800);
+      }
+    }
+
+    return null;
+  }
+
+  private async resolvePaymentTransactionFromPagSeguroEventOnce(
+    normalizedEvent: NormalizedPaymentWebhookEventDto,
+  ): Promise<Record<string, unknown> | null> {
+    const paymentTransactionIds = [
+      normalizedEvent.paymentTransactionId,
+      normalizedEvent.externalReference,
+      this.restoreUuidFromCompactString(normalizedEvent.externalReference),
+    ].filter((value): value is string => value !== null);
+
+    for (const paymentTransactionId of paymentTransactionIds) {
+      const paymentTransaction =
+        await this.findPaymentTransactionByUniqueIdSafe(paymentTransactionId);
+
+      if (paymentTransaction !== null) {
+        return paymentTransaction;
+      }
+    }
+
     const gatewayTransactionIds = [
       normalizedEvent.gatewayTransactionId,
       normalizedEvent.gatewayChargeId,
       normalizedEvent.gatewayPaymentIntentId,
       normalizedEvent.gatewayInvoiceId,
+      normalizedEvent.gatewaySubscriptionId,
     ].filter((value): value is string => value !== null);
 
     for (const gatewayTransactionId of gatewayTransactionIds) {
@@ -291,6 +335,44 @@ export class ReceivePagSeguroWebhookUseCase {
     }
 
     return null;
+  }
+
+  private async findPaymentTransactionByUniqueIdSafe(
+    paymentTransactionId: string,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const dtoOut = await this.findPaymentTransactionByUniqueIdService.exec(
+        new FindPaymentTransactionByUniqueIdDtoIn(paymentTransactionId),
+      );
+
+      return dtoOut.paymentTransaction as unknown as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  private restoreUuidFromCompactString(value: string | null): string | null {
+    if (value === null) {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    if (!/^[a-f0-9]{32}$/.test(normalized)) {
+      return null;
+    }
+
+    return [
+      normalized.slice(0, 8),
+      normalized.slice(8, 12),
+      normalized.slice(12, 16),
+      normalized.slice(16, 20),
+      normalized.slice(20),
+    ].join('-');
+  }
+
+  private async delay(milliseconds: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, milliseconds));
   }
 
   private async findPaymentTransactionByGatewayTransactionIdSafe(

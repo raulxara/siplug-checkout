@@ -325,6 +325,8 @@ export class ProcessPaymentWebhookEventUseCase {
       event.gatewayTransactionId,
       event.gatewayPaymentIntentId,
       event.gatewayChargeId,
+      event.gatewayInvoiceId,
+      event.gatewaySubscriptionId,
     ].filter((value): value is string => value !== null);
 
     for (const gatewayTransactionId of gatewayTransactionIds) {

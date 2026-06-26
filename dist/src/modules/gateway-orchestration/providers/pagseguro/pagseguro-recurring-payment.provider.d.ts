@@ -30,6 +30,8 @@ export declare class PagSeguroRecurringPaymentProvider {
     private sanitizeUnknownValue;
     private isSensitiveKey;
     private asObject;
+    private ensureRecurringNotificationPreferences;
+    private resolveRecurringNotificationUrl;
     private toNullableString;
     private toRequiredString;
     private limitText;
