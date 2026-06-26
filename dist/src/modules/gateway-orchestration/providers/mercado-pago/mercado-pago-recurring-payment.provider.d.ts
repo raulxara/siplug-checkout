@@ -3,7 +3,6 @@ import { GatewayRecurringPaymentDtoOut } from '../../dtos/gateway-recurring-paym
 export declare class MercadoPagoRecurringPaymentProvider {
     createSubscription(dtoIn: GatewayRecurringPaymentDtoIn): Promise<GatewayRecurringPaymentDtoOut>;
     private buildHeaders;
-    private shouldUseStageScope;
     private buildPreapprovalRequest;
     private resolveGatewayPlanId;
     private shouldAuthorizeCreditCard;

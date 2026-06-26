@@ -8,6 +8,9 @@ import { RegisterPaymentWebhookEventService } from '../../modules/payment-webhoo
 import { ProcessPaymentWebhookEventUseCase } from '../process-payment-webhook-event/process-payment-webhook-event.use-case';
 import { ReceiveMercadoPagoWebhookDtoIn } from './dtos/receive-mercado-pago-webhook.dto-in';
 import { ReceiveMercadoPagoWebhookDtoOut } from './dtos/receive-mercado-pago-webhook.dto-out';
+import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service';
+import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
+import { ProcessSubscriptionWebhookEventUseCase } from '../process-subscription-webhook-event/process-subscription-webhook-event.use-case';
 export declare class ReceiveMercadoPagoWebhookUseCase {
     private readonly findApiCredentialByUniqueIdService;
     private readonly decryptApiCredentialSecretService;
@@ -16,9 +19,21 @@ export declare class ReceiveMercadoPagoWebhookUseCase {
     private readonly normalizeMercadoPagoWebhookService;
     private readonly registerPaymentWebhookEventService;
     private readonly processPaymentWebhookEventUseCase;
+    private readonly processSubscriptionWebhookEventUseCase;
+    private readonly findPaymentTransactionByUniqueIdService;
+    private readonly findPaymentTransactionByGatewayTransactionIdService;
     private readonly handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validateMercadoPagoWebhookService: ValidateMercadoPagoWebhookService, getMercadoPagoPaymentService: GetMercadoPagoPaymentService, normalizeMercadoPagoWebhookService: NormalizeMercadoPagoWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validateMercadoPagoWebhookService: ValidateMercadoPagoWebhookService, getMercadoPagoPaymentService: GetMercadoPagoPaymentService, normalizeMercadoPagoWebhookService: NormalizeMercadoPagoWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ReceiveMercadoPagoWebhookDtoIn): Promise<ReceiveMercadoPagoWebhookDtoOut>;
+    private resolveResourceType;
+    private resolveResourceId;
+    private resolveMercadoPagoResource;
+    private enrichNormalizedEventWithPaymentTransactionData;
+    private resolvePaymentTransactionFromEvent;
+    private findPaymentTransactionByUniqueIdSafe;
+    private findPaymentTransactionByGatewayTransactionIdSafe;
+    private parseJson;
+    private toNullableString;
     private resolveCredentialData;
     private resolvePaymentId;
     private extractObject;

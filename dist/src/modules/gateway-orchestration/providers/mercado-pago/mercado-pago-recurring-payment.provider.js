@@ -53,23 +53,7 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
         if (params.idempotencyKey !== null && params.idempotencyKey.trim() !== '') {
             headers['X-Idempotency-Key'] = params.idempotencyKey;
         }
-        if (this.shouldUseStageScope(params.dtoIn, params.token)) {
-            headers['X-scope'] = 'stage';
-        }
         return headers;
-    }
-    shouldUseStageScope(dtoIn, token) {
-        const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
-        const gatewayConfig = this.asObject(dtoIn.config.gatewayConfig);
-        const environment = this.toNullableString(apiCredentialConfig.environment) ??
-            this.toNullableString(gatewayConfig.environment);
-        if (environment === 'sandbox' || environment === 'test') {
-            return true;
-        }
-        if (token.startsWith('TEST-')) {
-            return true;
-        }
-        return false;
     }
     buildPreapprovalRequest(dtoIn) {
         const payer = this.asObject(dtoIn.providerPayload.payer);
@@ -78,6 +62,8 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
         const paymentMethod = dtoIn.paymentTransaction.paymentMethod;
         const cardTokenId = this.toNullableString(paymentData.cardTokenId) ??
             this.toNullableString(paymentData.card_token_id) ??
+            this.toNullableString(paymentData.cardToken) ??
+            this.toNullableString(paymentData.card_token) ??
             this.toNullableString(paymentData.token);
         const shouldAuthorizeCreditCard = this.shouldAuthorizeCreditCard(dtoIn, cardTokenId);
         if (paymentMethod === 'credit_card' &&
@@ -149,10 +135,15 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
         const transactionConfig = this.asObject(dtoIn.paymentTransaction.config);
         const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
         const subscriptionPlanConfig = this.asObject(dtoIn.subscriptionPlan.config);
-        const allowTransparentCard = transactionConfig.allowTransparentCard === true ||
-            apiCredentialConfig.allowTransparentCard === true ||
-            subscriptionPlanConfig.allowTransparentCard === true;
-        return allowTransparentCard;
+        const gatewayConfig = this.asObject(dtoIn.config.gatewayConfig);
+        const explicitlyDisabled = transactionConfig.allowTransparentCard === false ||
+            apiCredentialConfig.allowTransparentCard === false ||
+            subscriptionPlanConfig.allowTransparentCard === false ||
+            gatewayConfig.allowTransparentCard === false;
+        if (explicitlyDisabled) {
+            return false;
+        }
+        return true;
     }
     resolveStartDate(dtoIn) {
         if (dtoIn.subscriptionPlan.trialDays !== null &&
@@ -161,10 +152,20 @@ let MercadoPagoRecurringPaymentProvider = class MercadoPagoRecurringPaymentProvi
             date.setDate(date.getDate() + dtoIn.subscriptionPlan.trialDays);
             return date.toISOString();
         }
-        if (dtoIn.subscription.nextBillingAt !== null) {
-            return new Date(dtoIn.subscription.nextBillingAt).toISOString();
+        const nextBillingAt = this.toNullableString(dtoIn.subscription.nextBillingAt);
+        if (nextBillingAt === null) {
+            return null;
         }
-        return null;
+        const parsedNextBillingAt = new Date(nextBillingAt);
+        if (Number.isNaN(parsedNextBillingAt.getTime())) {
+            return null;
+        }
+        const minimumFutureDate = new Date();
+        minimumFutureDate.setMinutes(minimumFutureDate.getMinutes() + 5);
+        if (parsedNextBillingAt <= minimumFutureDate) {
+            return null;
+        }
+        return parsedNextBillingAt.toISOString();
     }
     resolveEndDate(dtoIn) {
         if (dtoIn.subscriptionPlan.maxBillingCycles === null) {

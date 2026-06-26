@@ -5,12 +5,16 @@ export declare class MercadoPagoGatewayPaymentProvider implements IGatewayPaymen
     getProviderName(): string;
     supports(gatewayProvider: string): boolean;
     processPayment(dtoIn: GatewayPaymentDtoIn): Promise<GatewayPaymentDtoOut>;
+    private processPaymentLink;
     private buildPixPaymentRequestPayload;
     private buildCreditCardPaymentRequestPayload;
     private buildBoletoPaymentRequestPayload;
+    private buildPaymentLinkPreferenceRequestPayload;
     private buildPayer;
+    private buildPreferencePayer;
     private buildAddress;
     private mapSuccessfulPixPaymentResponse;
+    private mapSuccessfulPaymentLinkPreferenceResponse;
     private resolveAccessToken;
     private resolveIdempotencyKey;
     private resolveNotificationUrl;
@@ -19,6 +23,7 @@ export declare class MercadoPagoGatewayPaymentProvider implements IGatewayPaymen
     private mapMercadoPagoStatusToProcessStatus;
     private extractMercadoPagoErrorMessage;
     private convertCentsToAmount;
+    private resolvePositiveNumber;
     private asObject;
     private toNullableString;
     private formatExternalDate;
