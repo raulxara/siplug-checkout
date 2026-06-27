@@ -29,21 +29,25 @@ const find_payment_transaction_by_gateway_transaction_id_service_1 = require("..
 const process_payment_webhook_event_dto_in_1 = require("../process-payment-webhook-event/dtos/process-payment-webhook-event.dto-in");
 const process_payment_webhook_event_use_case_1 = require("../process-payment-webhook-event/process-payment-webhook-event.use-case");
 const receive_picpay_webhook_dto_out_1 = require("./dtos/receive-picpay-webhook.dto-out");
+const find_payment_transaction_by_unique_id_dto_in_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/dtos/find-payment-transaction-by-unique-id.dto-in");
+const find_payment_transaction_by_unique_id_service_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service");
 let ReceivePicPayWebhookUseCase = class ReceivePicPayWebhookUseCase {
     findApiCredentialByUniqueIdService;
     decryptApiCredentialSecretService;
     validatePicPayWebhookService;
     normalizePicPayWebhookService;
     findPaymentTransactionByGatewayTransactionIdService;
+    findPaymentTransactionByUniqueIdService;
     registerPaymentWebhookEventService;
     processPaymentWebhookEventUseCase;
     handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePicPayWebhookService, normalizePicPayWebhookService, findPaymentTransactionByGatewayTransactionIdService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, handleUseCaseExceptionService) {
+    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePicPayWebhookService, normalizePicPayWebhookService, findPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, handleUseCaseExceptionService) {
         this.findApiCredentialByUniqueIdService = findApiCredentialByUniqueIdService;
         this.decryptApiCredentialSecretService = decryptApiCredentialSecretService;
         this.validatePicPayWebhookService = validatePicPayWebhookService;
         this.normalizePicPayWebhookService = normalizePicPayWebhookService;
         this.findPaymentTransactionByGatewayTransactionIdService = findPaymentTransactionByGatewayTransactionIdService;
+        this.findPaymentTransactionByUniqueIdService = findPaymentTransactionByUniqueIdService;
         this.registerPaymentWebhookEventService = registerPaymentWebhookEventService;
         this.processPaymentWebhookEventUseCase = processPaymentWebhookEventUseCase;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
@@ -76,8 +80,8 @@ let ReceivePicPayWebhookUseCase = class ReceivePicPayWebhookUseCase {
                 gatewayInvoiceId: normalizedEvent.gatewayInvoiceId,
                 paymentTransactionId: normalizedEvent.paymentTransactionId,
                 checkoutSessionId: normalizedEvent.checkoutSessionId,
-                subscriptionId: null,
-                subscriptionInvoiceId: null,
+                subscriptionId: normalizedEvent.subscriptionId,
+                subscriptionInvoiceId: normalizedEvent.subscriptionInvoiceId,
                 externalReference: normalizedEvent.externalReference,
                 amount: normalizedEvent.amount,
                 currency: normalizedEvent.currency,
@@ -92,12 +96,12 @@ let ReceivePicPayWebhookUseCase = class ReceivePicPayWebhookUseCase {
                     gatewayTransactionId: normalizedEvent.gatewayTransactionId,
                     gatewayPaymentIntentId: normalizedEvent.gatewayPaymentIntentId,
                     gatewayChargeId: normalizedEvent.gatewayChargeId,
-                    gatewaySubscriptionId: null,
-                    gatewayInvoiceId: null,
                     paymentTransactionId: normalizedEvent.paymentTransactionId,
                     checkoutSessionId: normalizedEvent.checkoutSessionId,
-                    subscriptionId: null,
-                    subscriptionInvoiceId: null,
+                    gatewaySubscriptionId: normalizedEvent.gatewaySubscriptionId,
+                    gatewayInvoiceId: normalizedEvent.gatewayInvoiceId,
+                    subscriptionId: normalizedEvent.subscriptionId,
+                    subscriptionInvoiceId: normalizedEvent.subscriptionInvoiceId,
                     externalReference: normalizedEvent.externalReference,
                     amount: normalizedEvent.amount,
                     currency: normalizedEvent.currency,
@@ -219,10 +223,23 @@ let ReceivePicPayWebhookUseCase = class ReceivePicPayWebhookUseCase {
         });
     }
     async resolvePaymentTransactionFromPicPayEvent(normalizedEvent) {
+        const paymentTransactionIds = [
+            normalizedEvent.paymentTransactionId,
+            normalizedEvent.externalReference,
+            this.restoreUuidFromCompactString(normalizedEvent.externalReference),
+        ].filter((value) => value !== null);
+        for (const paymentTransactionId of paymentTransactionIds) {
+            const paymentTransaction = await this.findPaymentTransactionByUniqueIdSafe(paymentTransactionId);
+            if (paymentTransaction !== null) {
+                return paymentTransaction;
+            }
+        }
         const gatewayTransactionIds = [
             normalizedEvent.gatewayTransactionId,
             normalizedEvent.gatewayChargeId,
             normalizedEvent.gatewayPaymentIntentId,
+            normalizedEvent.gatewayInvoiceId,
+            normalizedEvent.gatewaySubscriptionId,
             normalizedEvent.externalReference,
         ].filter((value) => value !== null);
         for (const gatewayTransactionId of gatewayTransactionIds) {
@@ -232,6 +249,31 @@ let ReceivePicPayWebhookUseCase = class ReceivePicPayWebhookUseCase {
             }
         }
         return null;
+    }
+    async findPaymentTransactionByUniqueIdSafe(paymentTransactionId) {
+        try {
+            const dtoOut = await this.findPaymentTransactionByUniqueIdService.exec(new find_payment_transaction_by_unique_id_dto_in_1.FindPaymentTransactionByUniqueIdDtoIn(paymentTransactionId));
+            return dtoOut.paymentTransaction;
+        }
+        catch {
+            return null;
+        }
+    }
+    restoreUuidFromCompactString(value) {
+        if (value === null) {
+            return null;
+        }
+        const normalized = value.trim().toLowerCase();
+        if (!/^[a-f0-9]{32}$/.test(normalized)) {
+            return null;
+        }
+        return [
+            normalized.slice(0, 8),
+            normalized.slice(8, 12),
+            normalized.slice(12, 16),
+            normalized.slice(16, 20),
+            normalized.slice(20),
+        ].join('-');
     }
     async findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId) {
         try {
@@ -305,6 +347,7 @@ exports.ReceivePicPayWebhookUseCase = ReceivePicPayWebhookUseCase = __decorate([
         validate_picpay_webhook_service_1.ValidatePicPayWebhookService,
         normalize_picpay_webhook_service_1.NormalizePicPayWebhookService,
         find_payment_transaction_by_gateway_transaction_id_service_1.FindPaymentTransactionByGatewayTransactionIdService,
+        find_payment_transaction_by_unique_id_service_1.FindPaymentTransactionByUniqueIdService,
         register_payment_webhook_event_service_1.RegisterPaymentWebhookEventService,
         process_payment_webhook_event_use_case_1.ProcessPaymentWebhookEventUseCase,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])

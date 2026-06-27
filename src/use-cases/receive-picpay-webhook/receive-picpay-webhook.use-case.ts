@@ -26,6 +26,9 @@ import { ProcessPaymentWebhookEventUseCase } from '../process-payment-webhook-ev
 import { ReceivePicPayWebhookDtoIn } from './dtos/receive-picpay-webhook.dto-in';
 import { ReceivePicPayWebhookDtoOut } from './dtos/receive-picpay-webhook.dto-out';
 
+import { FindPaymentTransactionByUniqueIdDtoIn } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/dtos/find-payment-transaction-by-unique-id.dto-in';
+import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
+
 @Injectable()
 export class ReceivePicPayWebhookUseCase {
   constructor(
@@ -36,7 +39,7 @@ export class ReceivePicPayWebhookUseCase {
     private readonly normalizePicPayWebhookService: NormalizePicPayWebhookService,
 
     private readonly findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService,
-
+    private readonly findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService,
     private readonly registerPaymentWebhookEventService: RegisterPaymentWebhookEventService,
     private readonly processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase,
 
@@ -91,8 +94,8 @@ export class ReceivePicPayWebhookUseCase {
 
             paymentTransactionId: normalizedEvent.paymentTransactionId,
             checkoutSessionId: normalizedEvent.checkoutSessionId,
-            subscriptionId: null,
-            subscriptionInvoiceId: null,
+            subscriptionId: normalizedEvent.subscriptionId,
+            subscriptionInvoiceId: normalizedEvent.subscriptionInvoiceId,
             externalReference: normalizedEvent.externalReference,
 
             amount: normalizedEvent.amount,
@@ -110,13 +113,14 @@ export class ReceivePicPayWebhookUseCase {
               gatewayTransactionId: normalizedEvent.gatewayTransactionId,
               gatewayPaymentIntentId: normalizedEvent.gatewayPaymentIntentId,
               gatewayChargeId: normalizedEvent.gatewayChargeId,
-              gatewaySubscriptionId: null,
-              gatewayInvoiceId: null,
 
               paymentTransactionId: normalizedEvent.paymentTransactionId,
               checkoutSessionId: normalizedEvent.checkoutSessionId,
-              subscriptionId: null,
-              subscriptionInvoiceId: null,
+              gatewaySubscriptionId: normalizedEvent.gatewaySubscriptionId,
+              gatewayInvoiceId: normalizedEvent.gatewayInvoiceId,
+
+              subscriptionId: normalizedEvent.subscriptionId,
+              subscriptionInvoiceId: normalizedEvent.subscriptionInvoiceId,
               externalReference: normalizedEvent.externalReference,
 
               amount: normalizedEvent.amount,
@@ -319,10 +323,27 @@ export class ReceivePicPayWebhookUseCase {
   private async resolvePaymentTransactionFromPicPayEvent(
     normalizedEvent: NormalizedPaymentWebhookEventDto,
   ): Promise<Record<string, unknown> | null> {
+    const paymentTransactionIds = [
+      normalizedEvent.paymentTransactionId,
+      normalizedEvent.externalReference,
+      this.restoreUuidFromCompactString(normalizedEvent.externalReference),
+    ].filter((value): value is string => value !== null);
+
+    for (const paymentTransactionId of paymentTransactionIds) {
+      const paymentTransaction =
+        await this.findPaymentTransactionByUniqueIdSafe(paymentTransactionId);
+
+      if (paymentTransaction !== null) {
+        return paymentTransaction;
+      }
+    }
+
     const gatewayTransactionIds = [
       normalizedEvent.gatewayTransactionId,
       normalizedEvent.gatewayChargeId,
       normalizedEvent.gatewayPaymentIntentId,
+      normalizedEvent.gatewayInvoiceId,
+      normalizedEvent.gatewaySubscriptionId,
       normalizedEvent.externalReference,
     ].filter((value): value is string => value !== null);
 
@@ -338,6 +359,40 @@ export class ReceivePicPayWebhookUseCase {
     }
 
     return null;
+  }
+
+  private async findPaymentTransactionByUniqueIdSafe(
+    paymentTransactionId: string,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const dtoOut = await this.findPaymentTransactionByUniqueIdService.exec(
+        new FindPaymentTransactionByUniqueIdDtoIn(paymentTransactionId),
+      );
+
+      return dtoOut.paymentTransaction as unknown as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  private restoreUuidFromCompactString(value: string | null): string | null {
+    if (value === null) {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    if (!/^[a-f0-9]{32}$/.test(normalized)) {
+      return null;
+    }
+
+    return [
+      normalized.slice(0, 8),
+      normalized.slice(8, 12),
+      normalized.slice(12, 16),
+      normalized.slice(16, 20),
+      normalized.slice(20),
+    ].join('-');
   }
 
   private async findPaymentTransactionByGatewayTransactionIdSafe(

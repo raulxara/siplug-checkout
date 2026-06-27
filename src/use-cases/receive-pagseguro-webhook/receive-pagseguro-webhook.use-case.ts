@@ -29,6 +29,9 @@ import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modul
 import { FindPaymentTransactionByUniqueIdDtoIn } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/dtos/find-payment-transaction-by-unique-id.dto-in';
 import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
 
+import { ProcessSubscriptionWebhookEventDtoIn } from '../process-subscription-webhook-event/dtos/process-subscription-webhook-event.dto-in';
+import { ProcessSubscriptionWebhookEventUseCase } from '../process-subscription-webhook-event/process-subscription-webhook-event.use-case';
+
 @Injectable()
 export class ReceivePagSeguroWebhookUseCase {
   constructor(
@@ -39,12 +42,12 @@ export class ReceivePagSeguroWebhookUseCase {
     private readonly normalizePagSeguroWebhookService: NormalizePagSeguroWebhookService,
 
     private readonly findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService,
-
+    
     private readonly findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService,
 
     private readonly registerPaymentWebhookEventService: RegisterPaymentWebhookEventService,
     private readonly processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase,
-
+    private readonly processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase,
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
   ) {}
 
@@ -72,102 +75,177 @@ export class ReceivePagSeguroWebhookUseCase {
         }),
       );
 
-      const normalizedEvent = await this.enrichPagSeguroNormalizedEventWithInternalReferences(
-        normalizedDtoOut.normalizedEvent,
-      );
+      const enrichedNormalizedEvent =
+        await this.enrichPagSeguroNormalizedEventWithInternalReferences(
+          normalizedDtoOut.normalizedEvent,
+        );
+
+      const normalizedEvents = this.buildPagSeguroWebhookEffects({
+        originalEvent: enrichedNormalizedEvent,
+        payload: dtoIn.payload,
+      });
 
       const sanitizedPayload = this.sanitizeSensitiveGatewayData(dtoIn.payload);
 
-      const registeredDtoOut =
-        await this.registerPaymentWebhookEventService.exec(
-          new RegisterPaymentWebhookEventDtoIn({
-            provider: normalizedEvent.provider,
-            eventId: normalizedEvent.eventId,
-            eventType: normalizedEvent.eventType,
-            eventAction: normalizedEvent.eventAction,
-            canonicalStatus: normalizedEvent.canonicalStatus,
+      const processedEffects: Record<string, unknown>[] = [];
 
-            gatewayTransactionId: normalizedEvent.gatewayTransactionId,
-            gatewayPaymentIntentId: normalizedEvent.gatewayPaymentIntentId,
-            gatewayChargeId: normalizedEvent.gatewayChargeId,
-            gatewaySubscriptionId: normalizedEvent.gatewaySubscriptionId,
-            gatewayInvoiceId: normalizedEvent.gatewayInvoiceId,
+      let primaryPaymentWebhookEvent: Record<string, unknown> | null = null;
+      let primaryPaymentTransaction: Record<string, unknown> | null = null;
+      let wasAlreadyRegistered = false;
 
-            paymentTransactionId: normalizedEvent.paymentTransactionId,
-            checkoutSessionId: normalizedEvent.checkoutSessionId,
-            subscriptionId: normalizedEvent.subscriptionId,
-            subscriptionInvoiceId: normalizedEvent.subscriptionInvoiceId,
-            externalReference: normalizedEvent.externalReference,
+      for (const eventToProcess of normalizedEvents) {
+        const registeredDtoOut =
+          await this.registerPaymentWebhookEventService.exec(
+            new RegisterPaymentWebhookEventDtoIn({
+              provider: eventToProcess.provider,
+              eventId: eventToProcess.eventId,
+              eventType: eventToProcess.eventType,
+              eventAction: eventToProcess.eventAction,
+              canonicalStatus: eventToProcess.canonicalStatus,
 
-            amount: normalizedEvent.amount,
-            currency: normalizedEvent.currency,
+              gatewayTransactionId: eventToProcess.gatewayTransactionId,
+              gatewayPaymentIntentId: eventToProcess.gatewayPaymentIntentId,
+              gatewayChargeId: eventToProcess.gatewayChargeId,
+              gatewaySubscriptionId: eventToProcess.gatewaySubscriptionId,
+              gatewayInvoiceId: eventToProcess.gatewayInvoiceId,
 
-            headers: normalizedEvent.headers,
-            payload: sanitizedPayload,
-            normalizedPayload: {
-              provider: normalizedEvent.provider,
-              eventId: normalizedEvent.eventId,
-              eventType: normalizedEvent.eventType,
-              eventAction: normalizedEvent.eventAction,
-              canonicalStatus: normalizedEvent.canonicalStatus,
+              paymentTransactionId: eventToProcess.paymentTransactionId,
+              checkoutSessionId: eventToProcess.checkoutSessionId,
+              subscriptionId: eventToProcess.subscriptionId,
+              subscriptionInvoiceId: eventToProcess.subscriptionInvoiceId,
+              externalReference: eventToProcess.externalReference,
 
-              gatewayTransactionId: normalizedEvent.gatewayTransactionId,
-              gatewayPaymentIntentId: normalizedEvent.gatewayPaymentIntentId,
-              gatewayChargeId: normalizedEvent.gatewayChargeId,
-              gatewaySubscriptionId: normalizedEvent.gatewaySubscriptionId,
-              gatewayInvoiceId: normalizedEvent.gatewayInvoiceId,
+              amount: eventToProcess.amount,
+              currency: eventToProcess.currency,
 
-              paymentTransactionId: normalizedEvent.paymentTransactionId,
-              checkoutSessionId: normalizedEvent.checkoutSessionId,
-              subscriptionId: normalizedEvent.subscriptionId,
-              subscriptionInvoiceId: normalizedEvent.subscriptionInvoiceId,
-              externalReference: normalizedEvent.externalReference,
+              headers: eventToProcess.headers,
+              payload: sanitizedPayload,
+              normalizedPayload: {
+                provider: eventToProcess.provider,
+                eventId: eventToProcess.eventId,
+                eventType: eventToProcess.eventType,
+                eventAction: eventToProcess.eventAction,
+                canonicalStatus: eventToProcess.canonicalStatus,
 
-              amount: normalizedEvent.amount,
-              currency: normalizedEvent.currency,
-            },
+                gatewayTransactionId: eventToProcess.gatewayTransactionId,
+                gatewayPaymentIntentId: eventToProcess.gatewayPaymentIntentId,
+                gatewayChargeId: eventToProcess.gatewayChargeId,
+                gatewaySubscriptionId: eventToProcess.gatewaySubscriptionId,
+                gatewayInvoiceId: eventToProcess.gatewayInvoiceId,
 
-            metadata: {
-              source: 'ReceivePagSeguroWebhookUseCase',
-              apiCredentialId: dtoIn.apiCredentialId,
-              signature: {
-                valid: validationDtoOut.valid,
-                skipped: validationDtoOut.skipped,
-                reason: validationDtoOut.reason,
+                paymentTransactionId: eventToProcess.paymentTransactionId,
+                checkoutSessionId: eventToProcess.checkoutSessionId,
+                subscriptionId: eventToProcess.subscriptionId,
+                subscriptionInvoiceId: eventToProcess.subscriptionInvoiceId,
+                externalReference: eventToProcess.externalReference,
+
+                amount: eventToProcess.amount,
+                currency: eventToProcess.currency,
               },
-            },
-            config: null,
-          }),
-        );
 
-      if (registeredDtoOut.wasAlreadyRegistered) {
-        return new ReceivePagSeguroWebhookDtoOut(
-          registeredDtoOut.paymentWebhookEvent,
-          null,
-          {
+              metadata: {
+                source: 'ReceivePagSeguroWebhookUseCase',
+                apiCredentialId: dtoIn.apiCredentialId,
+                effect: {
+                  eventType: eventToProcess.eventType,
+                  eventAction: eventToProcess.eventAction,
+                  canonicalStatus: eventToProcess.canonicalStatus,
+                },
+                signature: {
+                  valid: validationDtoOut.valid,
+                  skipped: validationDtoOut.skipped,
+                  reason: validationDtoOut.reason,
+                },
+              },
+              config: null,
+            }),
+          );
+
+        const paymentWebhookEvent =
+          registeredDtoOut.paymentWebhookEvent as Record<string, unknown>;
+
+        if (primaryPaymentWebhookEvent === null) {
+          primaryPaymentWebhookEvent = paymentWebhookEvent;
+        }
+
+        wasAlreadyRegistered =
+          wasAlreadyRegistered || registeredDtoOut.wasAlreadyRegistered;
+
+        if (
+          registeredDtoOut.wasAlreadyRegistered &&
+          String(paymentWebhookEvent.status) === 'processed'
+        ) {
+          processedEffects.push({
             ignored: true,
-            reason: 'pagseguro webhook event already registered',
-            eventId: normalizedEvent.eventId,
-          },
-          true,
-        );
+            reason: 'pagseguro webhook effect already processed',
+            provider: eventToProcess.provider,
+            eventId: eventToProcess.eventId,
+            eventType: eventToProcess.eventType,
+            eventAction: eventToProcess.eventAction,
+            canonicalStatus: eventToProcess.canonicalStatus,
+          });
+
+          continue;
+        }
+
+        const paymentWebhookEventId = String(paymentWebhookEvent._id ?? '').trim();
+
+        if (paymentWebhookEventId === '') {
+          throw new Error('paymentWebhookEvent._id is required');
+        }
+
+        const paymentProcessedDtoOut =
+          await this.processPaymentWebhookEventUseCase.exec(
+            new ProcessPaymentWebhookEventDtoIn({
+              paymentWebhookEventId,
+              normalizedEvent: eventToProcess,
+            }),
+          );
+
+        const subscriptionProcessedDtoOut =
+          await this.processSubscriptionWebhookEventUseCase.exec(
+            new ProcessSubscriptionWebhookEventDtoIn({
+              paymentWebhookEventId,
+              normalizedEvent: eventToProcess,
+              paymentProcessingResult: paymentProcessedDtoOut.processingResult,
+            }),
+          );
+
+        if (
+          primaryPaymentTransaction === null &&
+          paymentProcessedDtoOut.paymentTransaction !== null
+        ) {
+          primaryPaymentTransaction =
+            paymentProcessedDtoOut.paymentTransaction as Record<string, unknown>;
+        }
+
+        processedEffects.push({
+          ignored: false,
+          provider: eventToProcess.provider,
+          eventId: eventToProcess.eventId,
+          eventType: eventToProcess.eventType,
+          eventAction: eventToProcess.eventAction,
+          canonicalStatus: eventToProcess.canonicalStatus,
+          paymentProcessingResult: paymentProcessedDtoOut.processingResult,
+          subscriptionProcessingResult:
+            subscriptionProcessedDtoOut.processingResult,
+        });
       }
 
-      const processedDtoOut =
-        await this.processPaymentWebhookEventUseCase.exec(
-          new ProcessPaymentWebhookEventDtoIn({
-            paymentWebhookEventId: String(
-              registeredDtoOut.paymentWebhookEvent._id,
-            ),
-            normalizedEvent,
-          }),
-        );
+      if (primaryPaymentWebhookEvent === null) {
+        throw new Error('pagseguro webhook event was not registered');
+      }
 
       return new ReceivePagSeguroWebhookDtoOut(
-        processedDtoOut.paymentWebhookEvent,
-        processedDtoOut.paymentTransaction,
-        processedDtoOut.processingResult,
-        false,
+        primaryPaymentWebhookEvent,
+        primaryPaymentTransaction,
+        {
+          ignored: false,
+          provider: 'pagseguro',
+          effectsTotal: processedEffects.length,
+          effects: processedEffects,
+        },
+        wasAlreadyRegistered,
       );
     } catch (error) {
       await this.handleUseCaseExceptionService.exec(
@@ -277,29 +355,6 @@ export class ReceivePagSeguroWebhookUseCase {
   private async resolvePaymentTransactionFromPagSeguroEvent(
     normalizedEvent: NormalizedPaymentWebhookEventDto,
   ): Promise<Record<string, unknown> | null> {
-    const attempts = 3;
-
-    for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      const paymentTransaction =
-        await this.resolvePaymentTransactionFromPagSeguroEventOnce(
-          normalizedEvent,
-        );
-
-      if (paymentTransaction !== null) {
-        return paymentTransaction;
-      }
-
-      if (attempt < attempts) {
-        await this.delay(800);
-      }
-    }
-
-    return null;
-  }
-
-  private async resolvePaymentTransactionFromPagSeguroEventOnce(
-    normalizedEvent: NormalizedPaymentWebhookEventDto,
-  ): Promise<Record<string, unknown> | null> {
     const paymentTransactionIds = [
       normalizedEvent.paymentTransactionId,
       normalizedEvent.externalReference,
@@ -335,6 +390,228 @@ export class ReceivePagSeguroWebhookUseCase {
     }
 
     return null;
+  }
+
+  private buildPagSeguroWebhookEffects(params: {
+    originalEvent: NormalizedPaymentWebhookEventDto;
+    payload: Record<string, unknown>;
+  }): NormalizedPaymentWebhookEventDto[] {
+    const events: NormalizedPaymentWebhookEventDto[] = [
+      params.originalEvent,
+    ];
+
+    const paidEffect = this.buildPagSeguroPaidEffectFromSubscriptionWebhook({
+      originalEvent: params.originalEvent,
+      payload: params.payload,
+    });
+
+    if (paidEffect !== null) {
+      events.push(paidEffect);
+    }
+
+    return events;
+  }
+
+  private buildPagSeguroPaidEffectFromSubscriptionWebhook(params: {
+    originalEvent: NormalizedPaymentWebhookEventDto;
+    payload: Record<string, unknown>;
+  }): NormalizedPaymentWebhookEventDto | null {
+    if (params.originalEvent.provider !== 'pagseguro') {
+      return null;
+    }
+
+    if (params.originalEvent.eventType !== 'subscription') {
+      return null;
+    }
+
+    if (params.originalEvent.canonicalStatus !== 'subscription_active') {
+      return null;
+    }
+
+    const resource = this.extractObject(params.payload, 'resource');
+
+    if (resource === null) {
+      return null;
+    }
+
+    const currentInvoice = this.extractObject(resource, 'current_invoice');
+
+    if (currentInvoice === null) {
+      return null;
+    }
+
+    const invoiceStatus = this.extractString(currentInvoice, 'status');
+    const paidAt = this.extractString(currentInvoice, 'paid_at');
+
+    const payments = currentInvoice.payments;
+
+    const approvedPayment = Array.isArray(payments)
+      ? payments
+          .map((payment) => this.asRecord(payment))
+          .find((payment) => {
+            const paymentStatus = this.extractString(payment, 'status');
+
+            return paymentStatus === 'APPROVED' || paymentStatus === 'PAID';
+          }) ?? null
+      : null;
+
+    if (
+      invoiceStatus !== 'PAID' &&
+      paidAt === null &&
+      approvedPayment === null
+    ) {
+      return null;
+    }
+
+    const invoiceId = this.extractString(currentInvoice, 'id');
+    const paymentId = this.extractString(approvedPayment, 'id');
+
+    const amountObject = this.extractObject(currentInvoice, 'amount');
+
+    const amount =
+      this.extractNumber(amountObject, 'value') ?? params.originalEvent.amount;
+
+    const currency =
+      this.extractString(amountObject, 'currency') ??
+      params.originalEvent.currency;
+
+    const eventId = [
+      params.originalEvent.gatewaySubscriptionId ??
+        params.originalEvent.gatewayTransactionId ??
+        params.originalEvent.eventId,
+      invoiceId ?? 'invoice',
+      paymentId ?? 'payment',
+      'PAID',
+    ].join(':');
+
+    return new NormalizedPaymentWebhookEventDto({
+      provider: params.originalEvent.provider,
+      eventId,
+      eventType: 'subscription_invoice',
+      eventAction: 'subscription_invoice.paid',
+      canonicalStatus: 'paid',
+
+      gatewayTransactionId:
+        params.originalEvent.gatewayTransactionId ??
+        params.originalEvent.gatewaySubscriptionId,
+
+      gatewayPaymentIntentId:
+        paymentId ??
+        invoiceId ??
+        params.originalEvent.gatewayPaymentIntentId,
+
+      gatewayChargeId: paymentId,
+      gatewaySubscriptionId: params.originalEvent.gatewaySubscriptionId,
+      gatewayInvoiceId: invoiceId,
+
+      paymentTransactionId: params.originalEvent.paymentTransactionId,
+      checkoutSessionId: params.originalEvent.checkoutSessionId,
+      subscriptionId: params.originalEvent.subscriptionId,
+      subscriptionInvoiceId: params.originalEvent.subscriptionInvoiceId,
+
+      externalReference: params.originalEvent.externalReference,
+
+      amount,
+      currency,
+
+      rawPayload: {
+        pagseguro: params.payload,
+        derivedEffect: {
+          sourceEventId: params.originalEvent.eventId,
+          sourceEventType: params.originalEvent.eventType,
+          sourceEventAction: params.originalEvent.eventAction,
+          sourceCanonicalStatus: params.originalEvent.canonicalStatus,
+          reason:
+            'PagSeguro subscription.initial contains current_invoice PAID with APPROVED payment',
+          currentInvoice,
+        },
+      },
+
+      headers: params.originalEvent.headers,
+    });
+  }
+
+  private extractFirstPaymentId(
+    currentInvoice: Record<string, unknown>,
+  ): string | null {
+    const payments = currentInvoice.payments;
+
+    if (!Array.isArray(payments)) {
+      return null;
+    }
+
+    for (const payment of payments) {
+      const paymentObject = this.asRecord(payment);
+
+      if (paymentObject === null) {
+        continue;
+      }
+
+      const paymentId = this.extractString(paymentObject, 'id');
+
+      if (paymentId !== null) {
+        return paymentId;
+      }
+    }
+
+    return null;
+  }
+
+  private extractObject(
+    object: Record<string, unknown> | null,
+    key: string,
+  ): Record<string, unknown> | null {
+    if (object === null) {
+      return null;
+    }
+
+    return this.asRecord(object[key]);
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private extractString(
+    object: Record<string, unknown> | null,
+    key: string,
+  ): string | null {
+    if (object === null) {
+      return null;
+    }
+
+    const value = object[key];
+
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const stringValue = String(value).trim();
+
+    return stringValue === '' ? null : stringValue;
+  }
+
+  private extractNumber(
+    object: Record<string, unknown> | null,
+    key: string,
+  ): number | null {
+    if (object === null) {
+      return null;
+    }
+
+    const value = object[key];
+
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const numberValue = Number(value);
+
+    return Number.isNaN(numberValue) ? null : numberValue;
   }
 
   private async findPaymentTransactionByUniqueIdSafe(
@@ -504,24 +781,5 @@ export class ReceivePagSeguroWebhookUseCase {
     }
 
     return value as Record<string, unknown>;
-  }
-
-  private extractString(
-    object: Record<string, unknown> | null,
-    key: string,
-  ): string | null {
-    if (object === null) {
-      return null;
-    }
-
-    const value = object[key];
-
-    if (value === undefined || value === null) {
-      return null;
-    }
-
-    const stringValue = String(value).trim();
-
-    return stringValue === '' ? null : stringValue;
   }
 }

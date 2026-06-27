@@ -159,9 +159,7 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
             success: false,
             provider: this.getProviderName(),
 
-            gatewayTransactionId:
-              this.extractPaymentLinkId(responseBody) ??
-              requestPayload.charge.order_number,
+            gatewayTransactionId: requestPayload.charge.order_number,
 
             gatewayStatus: String(response.status),
 
@@ -194,9 +192,7 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
           success: false,
           provider: this.getProviderName(),
 
-          gatewayTransactionId:
-            this.extractPaymentLinkId(responseBody) ??
-            requestPayload.charge.order_number,
+          gatewayTransactionId: requestPayload.charge.order_number,
 
           gatewayStatus:
             this.toNullableString(responseBody.status) ?? String(response.status),
@@ -232,9 +228,7 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
           success: false,
           provider: this.getProviderName(),
 
-          gatewayTransactionId:
-            this.extractPaymentLinkId(responseBody) ??
-            requestPayload.charge.order_number,
+          gatewayTransactionId: requestPayload.charge.order_number,
 
           gatewayStatus: 'missing_checkout_url',
 
@@ -264,8 +258,8 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
       const gatewayStatus =
         this.toNullableString(responseBody.status) ?? 'created';
 
-      const paymentLinkPublicId =
-        this.extractPaymentLinkPublicId(responseBody);
+      const paymentLinkPublicId = this.extractPaymentLinkPublicId(responseBody);
+      const paymentLinkId = this.extractPaymentLinkId(responseBody);
 
       const txid = this.toNullableString(responseBody.txid);
       const brcode = this.toNullableString(responseBody.brcode);
@@ -276,9 +270,7 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
         success: true,
         provider: this.getProviderName(),
 
-        gatewayTransactionId:
-          this.extractPaymentLinkId(responseBody) ??
-          requestPayload.charge.order_number,
+        gatewayTransactionId: requestPayload.charge.order_number,
 
         gatewayStatus,
 
@@ -292,7 +284,8 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
           ok: true,
           httpStatus: response.status,
           endpoint: `${apiPath}/paymentlink/create`,
-          paymentLinkId: this.extractPaymentLinkId(responseBody),
+          merchantChargeId: requestPayload.charge.order_number,
+          paymentLinkId,
           paymentLinkPublicId,
           txid,
           link: publicLink,

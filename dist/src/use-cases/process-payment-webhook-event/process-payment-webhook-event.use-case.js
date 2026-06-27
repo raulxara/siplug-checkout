@@ -237,6 +237,7 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
             event.gatewayChargeId,
             event.gatewayInvoiceId,
             event.gatewaySubscriptionId,
+            event.externalReference,
         ].filter((value) => value !== null);
         for (const gatewayTransactionId of gatewayTransactionIds) {
             const found = await this.findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId);
@@ -434,7 +435,9 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
     resolveGatewayTransactionId(event) {
         return (event.gatewayTransactionId ??
             event.gatewayPaymentIntentId ??
-            event.gatewayChargeId);
+            event.gatewayChargeId ??
+            event.gatewayInvoiceId ??
+            event.gatewaySubscriptionId);
     }
     buildProviderResponse(params) {
         return {

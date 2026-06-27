@@ -66,8 +66,7 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                     return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                         success: false,
                         provider: this.getProviderName(),
-                        gatewayTransactionId: this.extractPaymentLinkId(responseBody) ??
-                            requestPayload.charge.order_number,
+                        gatewayTransactionId: requestPayload.charge.order_number,
                         gatewayStatus: String(response.status),
                         status: 'pending',
                         processStatus: 'gateway_unavailable_retryable',
@@ -92,8 +91,7 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                 return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                     success: false,
                     provider: this.getProviderName(),
-                    gatewayTransactionId: this.extractPaymentLinkId(responseBody) ??
-                        requestPayload.charge.order_number,
+                    gatewayTransactionId: requestPayload.charge.order_number,
                     gatewayStatus: this.toNullableString(responseBody.status) ?? String(response.status),
                     status: 'failed',
                     processStatus: 'gateway_dispatch_failed',
@@ -119,8 +117,7 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                 return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                     success: false,
                     provider: this.getProviderName(),
-                    gatewayTransactionId: this.extractPaymentLinkId(responseBody) ??
-                        requestPayload.charge.order_number,
+                    gatewayTransactionId: requestPayload.charge.order_number,
                     gatewayStatus: 'missing_checkout_url',
                     status: 'failed',
                     processStatus: 'gateway_dispatch_failed',
@@ -143,6 +140,7 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
             }
             const gatewayStatus = this.toNullableString(responseBody.status) ?? 'created';
             const paymentLinkPublicId = this.extractPaymentLinkPublicId(responseBody);
+            const paymentLinkId = this.extractPaymentLinkId(responseBody);
             const txid = this.toNullableString(responseBody.txid);
             const brcode = this.toNullableString(responseBody.brcode);
             const deeplink = this.toNullableString(responseBody.deeplink);
@@ -150,8 +148,7 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
             return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                 success: true,
                 provider: this.getProviderName(),
-                gatewayTransactionId: this.extractPaymentLinkId(responseBody) ??
-                    requestPayload.charge.order_number,
+                gatewayTransactionId: requestPayload.charge.order_number,
                 gatewayStatus,
                 status: this.mapPicPayStatusToInternalStatus(gatewayStatus),
                 processStatus: this.mapPicPayStatusToProcessStatus(gatewayStatus),
@@ -162,7 +159,8 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                     ok: true,
                     httpStatus: response.status,
                     endpoint: `${apiPath}/paymentlink/create`,
-                    paymentLinkId: this.extractPaymentLinkId(responseBody),
+                    merchantChargeId: requestPayload.charge.order_number,
+                    paymentLinkId,
                     paymentLinkPublicId,
                     txid,
                     link: publicLink,

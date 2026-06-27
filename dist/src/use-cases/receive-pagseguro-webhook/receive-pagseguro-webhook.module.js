@@ -17,6 +17,7 @@ const process_payment_webhook_event_module_1 = require("../process-payment-webho
 const receive_pagseguro_webhook_controller_1 = require("./receive-pagseguro-webhook.controller");
 const receive_pagseguro_webhook_use_case_1 = require("./receive-pagseguro-webhook.use-case");
 const payment_transactions_module_1 = require("../../modules/payment-transactions/payment-transactions.module");
+const process_subscription_webhook_event_module_1 = require("../process-subscription-webhook-event/process-subscription-webhook-event.module");
 let ReceivePagSeguroWebhookModule = class ReceivePagSeguroWebhookModule {
 };
 exports.ReceivePagSeguroWebhookModule = ReceivePagSeguroWebhookModule;
@@ -29,6 +30,7 @@ exports.ReceivePagSeguroWebhookModule = ReceivePagSeguroWebhookModule = __decora
             payment_webhook_events_module_1.PaymentWebhookEventsModule,
             payment_transactions_module_1.PaymentTransactionsModule,
             process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
+            process_subscription_webhook_event_module_1.ProcessSubscriptionWebhookEventModule,
         ],
         controllers: [receive_pagseguro_webhook_controller_1.ReceivePagSeguroWebhookController],
         providers: [

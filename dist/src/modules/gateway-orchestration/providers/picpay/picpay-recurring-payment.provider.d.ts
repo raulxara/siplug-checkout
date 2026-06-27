@@ -8,6 +8,8 @@ export declare class PicPayRecurringPaymentProvider {
     private createAccessToken;
     private executePicPayJsonRequest;
     private resolveApiBaseUrl;
+    private resolveRecurringApiPath;
+    private normalizePicPayRecurringBaseUrl;
     private resolveTokenUrl;
     private resolvePicPayPlanId;
     private mapPicPayBillingCycle;
@@ -15,6 +17,7 @@ export declare class PicPayRecurringPaymentProvider {
     private mapPicPaySubscriptionStatus;
     private extractFirstChargeId;
     private buildFailedResponse;
+    private isRetryableGatewayFailure;
     private parseJsonResponse;
     private resolvePicPayErrorMessage;
     private normalizeDocumentType;

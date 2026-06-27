@@ -126,19 +126,40 @@ export class DevPicPayTemporaryCardTokenPageUseCase {
 
     const configuredSdkUrl =
       this.toNullableString(config?.sdkUrl) ??
+      this.toNullableString(config?.sdk_url) ??
       this.toNullableString(config?.picpaySdkUrl) ??
+      this.toNullableString(config?.picpay_sdk_url) ??
       this.toNullableString(config?.transparentCheckoutSdkUrl) ??
       this.toNullableString(config?.transparent_checkout_sdk_url);
 
-    if (configuredSdkUrl !== null) {
-      return [configuredSdkUrl];
+    const configuredSdkUrls = this.resolveConfiguredSdkUrls(config);
+
+    const urls = [
+      configuredSdkUrl,
+      ...configuredSdkUrls,
+      sandboxSdkUrl,
+      productionSdkUrl,
+    ].filter((value): value is string => value !== null);
+
+    return [...new Set(urls)];
+  }
+
+  private resolveConfiguredSdkUrls(
+    config: Record<string, unknown> | null,
+  ): string[] {
+    if (config === null) {
+      return [];
     }
 
-    if (environment === 'production' || environment === 'live') {
-      return [productionSdkUrl];
+    const value = config.sdkUrls ?? config.sdk_urls;
+
+    if (!Array.isArray(value)) {
+      return [];
     }
 
-    return [sandboxSdkUrl];
+    return value
+      .map((item) => this.toNullableString(item))
+      .filter((item): item is string => item !== null);
   }
 
   private buildHtmlPage(params: {

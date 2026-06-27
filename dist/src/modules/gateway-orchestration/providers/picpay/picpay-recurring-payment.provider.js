@@ -262,27 +262,44 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
         const gatewayConfig = this.asObject(dtoIn.config.gatewayConfig);
         const configuredRecurringBaseUrl = this.toNullableString(apiCredentialConfig.recurringBaseUrl) ??
             this.toNullableString(apiCredentialConfig.recurring_base_url) ??
-            this.toNullableString(apiCredentialConfig.checkoutBaseUrl) ??
-            this.toNullableString(apiCredentialConfig.checkout_base_url) ??
+            this.toNullableString(apiCredentialConfig.recurrencyBaseUrl) ??
+            this.toNullableString(apiCredentialConfig.recurrency_base_url) ??
             this.toNullableString(gatewayConfig.recurringBaseUrl) ??
-            this.toNullableString(gatewayConfig.checkoutBaseUrl);
+            this.toNullableString(gatewayConfig.recurring_base_url) ??
+            this.toNullableString(gatewayConfig.recurrencyBaseUrl) ??
+            this.toNullableString(gatewayConfig.recurrency_base_url);
         if (configuredRecurringBaseUrl !== null) {
-            return configuredRecurringBaseUrl.replace(/\/+$/, '');
+            return this.normalizePicPayRecurringBaseUrl({
+                baseUrl: configuredRecurringBaseUrl,
+                apiPath: this.resolveRecurringApiPath(dtoIn),
+            });
         }
-        const baseUrl = this.toNullableString(apiCredentialConfig.baseUrl) ??
-            this.toNullableString(apiCredentialConfig.base_url) ??
-            this.toNullableString(gatewayConfig.baseUrl) ??
-            this.toNullableString(gatewayConfig.base_url) ??
-            'https://ecommerce-api.svcp.ppay.me/sandbox/v1';
-        const apiPath = this.toNullableString(apiCredentialConfig.apiPath) ??
-            this.toNullableString(apiCredentialConfig.api_path) ??
-            this.toNullableString(gatewayConfig.apiPath) ??
-            this.toNullableString(gatewayConfig.api_path);
-        const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
-        if (apiPath === null) {
+        return 'https://ecommerce-api.svcp.ppay.me/sandbox/v1';
+    }
+    resolveRecurringApiPath(dtoIn) {
+        const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
+        const gatewayConfig = this.asObject(dtoIn.config.gatewayConfig);
+        return (this.toNullableString(apiCredentialConfig.recurringApiPath) ??
+            this.toNullableString(apiCredentialConfig.recurring_api_path) ??
+            this.toNullableString(apiCredentialConfig.recurrencyApiPath) ??
+            this.toNullableString(apiCredentialConfig.recurrency_api_path) ??
+            this.toNullableString(gatewayConfig.recurringApiPath) ??
+            this.toNullableString(gatewayConfig.recurring_api_path) ??
+            this.toNullableString(gatewayConfig.recurrencyApiPath) ??
+            this.toNullableString(gatewayConfig.recurrency_api_path));
+    }
+    normalizePicPayRecurringBaseUrl(params) {
+        const cleanBaseUrl = params.baseUrl.replace(/\/+$/, '');
+        if (cleanBaseUrl.endsWith('/v1') ||
+            cleanBaseUrl.includes('/sandbox/v1')) {
             return cleanBaseUrl;
         }
-        return `${cleanBaseUrl}/${apiPath.replace(/^\/+/, '').replace(/\/+$/, '')}`;
+        if (params.apiPath === null) {
+            return cleanBaseUrl;
+        }
+        return `${cleanBaseUrl}/${params.apiPath
+            .replace(/^\/+/, '')
+            .replace(/\/+$/, '')}`;
     }
     resolveTokenUrl(dtoIn) {
         const apiCredentialConfig = this.asObject(dtoIn.apiCredential.config);
@@ -385,11 +402,22 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
             this.toNullableString(responseBody.charge_id));
     }
     buildFailedResponse(params) {
-        return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(false, 'picpay', null, this.resolvePicPayPlanId(params.dtoIn), null, null, params.gatewayStatus, 'failed', 'gateway_recurring_provider_failed', params.processMessage, this.sanitizePayload(params.providerRequest), this.sanitizePayload(params.providerResponse), {
+        const retryable = this.isRetryableGatewayFailure(params.httpStatus);
+        return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(false, 'picpay', null, this.resolvePicPayPlanId(params.dtoIn), null, null, params.gatewayStatus, retryable ? 'pending' : 'failed', retryable
+            ? 'gateway_unavailable_retryable'
+            : 'gateway_recurring_provider_failed', params.processMessage, this.sanitizePayload(params.providerRequest), this.sanitizePayload(params.providerResponse), {
             ok: false,
             provider: 'picpay',
             httpStatus: params.httpStatus,
+            retryable,
         }, null, null);
+    }
+    isRetryableGatewayFailure(httpStatus) {
+        return (httpStatus === 408 ||
+            httpStatus === 409 ||
+            httpStatus === 425 ||
+            httpStatus === 429 ||
+            httpStatus >= 500);
     }
     async parseJsonResponse(response, fallbackMessage) {
         const rawText = await response.text();

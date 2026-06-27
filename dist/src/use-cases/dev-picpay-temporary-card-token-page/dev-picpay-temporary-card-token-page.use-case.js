@@ -85,16 +85,31 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
         const sandboxSdkUrl = 'https://checkout-qa.picpay.com/cdn/pp-transparent-v1.0.0.js';
         const productionSdkUrl = 'https://checkout.picpay.com/cdn/pp-transparent-v1.0.0.js';
         const configuredSdkUrl = this.toNullableString(config?.sdkUrl) ??
+            this.toNullableString(config?.sdk_url) ??
             this.toNullableString(config?.picpaySdkUrl) ??
+            this.toNullableString(config?.picpay_sdk_url) ??
             this.toNullableString(config?.transparentCheckoutSdkUrl) ??
             this.toNullableString(config?.transparent_checkout_sdk_url);
-        if (configuredSdkUrl !== null) {
-            return [configuredSdkUrl];
+        const configuredSdkUrls = this.resolveConfiguredSdkUrls(config);
+        const urls = [
+            configuredSdkUrl,
+            ...configuredSdkUrls,
+            sandboxSdkUrl,
+            productionSdkUrl,
+        ].filter((value) => value !== null);
+        return [...new Set(urls)];
+    }
+    resolveConfiguredSdkUrls(config) {
+        if (config === null) {
+            return [];
         }
-        if (environment === 'production' || environment === 'live') {
-            return [productionSdkUrl];
+        const value = config.sdkUrls ?? config.sdk_urls;
+        if (!Array.isArray(value)) {
+            return [];
         }
-        return [sandboxSdkUrl];
+        return value
+            .map((item) => this.toNullableString(item))
+            .filter((item) => item !== null);
     }
     buildHtmlPage(params) {
         const safeMerchantCredential = JSON.stringify(params.merchantCredential);

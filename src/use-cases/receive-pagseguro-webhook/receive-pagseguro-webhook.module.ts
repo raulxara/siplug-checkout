@@ -9,6 +9,7 @@ import { ProcessPaymentWebhookEventModule } from '../process-payment-webhook-eve
 import { ReceivePagSeguroWebhookController } from './receive-pagseguro-webhook.controller';
 import { ReceivePagSeguroWebhookUseCase } from './receive-pagseguro-webhook.use-case';
 import { PaymentTransactionsModule } from '../../modules/payment-transactions/payment-transactions.module';
+import { ProcessSubscriptionWebhookEventModule } from '../process-subscription-webhook-event/process-subscription-webhook-event.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PaymentTransactionsModule } from '../../modules/payment-transactions/pa
     PaymentWebhookEventsModule,
     PaymentTransactionsModule,
     ProcessPaymentWebhookEventModule,
+    ProcessSubscriptionWebhookEventModule,
   ],
   controllers: [ReceivePagSeguroWebhookController],
   providers: [

@@ -10,6 +10,7 @@ export declare class DevPicPayTemporaryCardTokenPageUseCase {
     private resolveTransparentToken;
     private resolveEnvironment;
     private resolveSdkUrls;
+    private resolveConfiguredSdkUrls;
     private buildHtmlPage;
     private toRecordOrNull;
     private toNullableString;

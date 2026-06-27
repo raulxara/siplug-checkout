@@ -9,6 +9,7 @@ import { ReceivePagSeguroWebhookDtoIn } from './dtos/receive-pagseguro-webhook.d
 import { ReceivePagSeguroWebhookDtoOut } from './dtos/receive-pagseguro-webhook.dto-out';
 import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service';
 import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
+import { ProcessSubscriptionWebhookEventUseCase } from '../process-subscription-webhook-event/process-subscription-webhook-event.use-case';
 export declare class ReceivePagSeguroWebhookUseCase {
     private readonly findApiCredentialByUniqueIdService;
     private readonly decryptApiCredentialSecretService;
@@ -18,12 +19,19 @@ export declare class ReceivePagSeguroWebhookUseCase {
     private readonly findPaymentTransactionByUniqueIdService;
     private readonly registerPaymentWebhookEventService;
     private readonly processPaymentWebhookEventUseCase;
+    private readonly processSubscriptionWebhookEventUseCase;
     private readonly handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validatePagSeguroWebhookService: ValidatePagSeguroWebhookService, normalizePagSeguroWebhookService: NormalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validatePagSeguroWebhookService: ValidatePagSeguroWebhookService, normalizePagSeguroWebhookService: NormalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ReceivePagSeguroWebhookDtoIn): Promise<ReceivePagSeguroWebhookDtoOut>;
     private enrichPagSeguroNormalizedEventWithInternalReferences;
     private resolvePaymentTransactionFromPagSeguroEvent;
-    private resolvePaymentTransactionFromPagSeguroEventOnce;
+    private buildPagSeguroWebhookEffects;
+    private buildPagSeguroPaidEffectFromSubscriptionWebhook;
+    private extractFirstPaymentId;
+    private extractObject;
+    private asRecord;
+    private extractString;
+    private extractNumber;
     private findPaymentTransactionByUniqueIdSafe;
     private restoreUuidFromCompactString;
     private delay;
@@ -32,5 +40,4 @@ export declare class ReceivePagSeguroWebhookUseCase {
     private normalizeProvider;
     private sanitizeSensitiveGatewayData;
     private toRecordOrNull;
-    private extractString;
 }

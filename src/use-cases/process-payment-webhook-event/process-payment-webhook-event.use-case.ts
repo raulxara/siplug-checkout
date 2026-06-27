@@ -327,6 +327,7 @@ export class ProcessPaymentWebhookEventUseCase {
       event.gatewayChargeId,
       event.gatewayInvoiceId,
       event.gatewaySubscriptionId,
+      event.externalReference,
     ].filter((value): value is string => value !== null);
 
     for (const gatewayTransactionId of gatewayTransactionIds) {
@@ -620,7 +621,9 @@ export class ProcessPaymentWebhookEventUseCase {
     return (
       event.gatewayTransactionId ??
       event.gatewayPaymentIntentId ??
-      event.gatewayChargeId
+      event.gatewayChargeId ??
+      event.gatewayInvoiceId ??
+      event.gatewaySubscriptionId
     );
   }
 
