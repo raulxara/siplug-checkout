@@ -46,6 +46,7 @@ export declare class ProcessPaymentUseCase {
     private registerPaymentSplitForTransaction;
     private resolveSplitRuleId;
     private getStringFromConfig;
+    private assertResolvedGatewayMatchesCheckoutSession;
     private getBooleanFromConfig;
     private buildPaymentTransactionRowFromCreateDtoOut;
 }

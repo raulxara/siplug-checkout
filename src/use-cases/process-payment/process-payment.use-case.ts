@@ -188,14 +188,22 @@ export class ProcessPaymentUseCase {
 
             gatewayProvider: dtoIn.gatewayProvider,
             gatewaySlug: dtoIn.gatewaySlug,
-            gatewayId: dtoIn.gatewayId,
-            apiCredentialId: dtoIn.apiCredentialId,
+
+            gatewayId: dtoIn.gatewayId ?? checkoutSession.gatewayId,
+            apiCredentialId:
+              dtoIn.apiCredentialId ?? checkoutSession.apiCredentialId,
           }),
         );
 
       const resolvedGateway = resolvedGatewayCredentialDtoOut.gateway;
       const resolvedApiCredential =
         resolvedGatewayCredentialDtoOut.apiCredential;
+
+      this.assertResolvedGatewayMatchesCheckoutSession({
+        checkoutSession,
+        resolvedGateway,
+        resolvedApiCredential,
+      });
 
       let rawProviderPayload: Record<string, unknown> = {
         checkoutSession: {
@@ -855,6 +863,78 @@ if (paymentSplitSnapshot !== null) {
     const stringValue = String(value).trim();
 
     return stringValue === '' ? null : stringValue;
+  }
+
+  private assertResolvedGatewayMatchesCheckoutSession(params: {
+    checkoutSession: {
+      _id: string;
+      gatewayId: string | null;
+      apiCredentialId: string | null;
+    };
+    resolvedGateway: {
+      _id: string;
+      provider: string;
+      slug: string;
+    };
+    resolvedApiCredential: {
+      _id: string;
+      gatewayId: string | null;
+      slug: string;
+    };
+  }): void {
+    if (
+      params.checkoutSession.gatewayId !== null &&
+      params.resolvedGateway._id !== params.checkoutSession.gatewayId
+    ) {
+      throw new Error(
+        [
+          'resolved gateway does not match checkout session gateway',
+          `checkoutSessionId=${params.checkoutSession._id}`,
+          `checkoutGatewayId=${params.checkoutSession.gatewayId}`,
+          `resolvedGatewayId=${params.resolvedGateway._id}`,
+          `resolvedGatewayProvider=${params.resolvedGateway.provider}`,
+          `resolvedGatewaySlug=${params.resolvedGateway.slug}`,
+        ].join(' | '),
+      );
+    }
+
+    if (
+      params.checkoutSession.apiCredentialId !== null &&
+      params.resolvedApiCredential._id !==
+        params.checkoutSession.apiCredentialId
+    ) {
+      throw new Error(
+        [
+          'resolved api credential does not match checkout session api credential',
+          `checkoutSessionId=${params.checkoutSession._id}`,
+          `checkoutApiCredentialId=${params.checkoutSession.apiCredentialId}`,
+          `resolvedApiCredentialId=${params.resolvedApiCredential._id}`,
+          `resolvedApiCredentialSlug=${params.resolvedApiCredential.slug}`,
+        ].join(' | '),
+      );
+    }
+
+    if (params.resolvedApiCredential.gatewayId === null) {
+      throw new Error(
+        [
+          'resolved api credential does not have gateway id',
+          `resolvedGatewayId=${params.resolvedGateway._id}`,
+          `resolvedApiCredentialId=${params.resolvedApiCredential._id}`,
+          `resolvedApiCredentialSlug=${params.resolvedApiCredential.slug}`,
+        ].join(' | '),
+      );
+    }
+
+    if (params.resolvedApiCredential.gatewayId !== params.resolvedGateway._id) {
+      throw new Error(
+        [
+          'resolved api credential does not belong to resolved gateway',
+          `resolvedGatewayId=${params.resolvedGateway._id}`,
+          `resolvedApiCredentialId=${params.resolvedApiCredential._id}`,
+          `resolvedApiCredentialGatewayId=${params.resolvedApiCredential.gatewayId}`,
+        ].join(' | '),
+      );
+    }
   }
 
   private getBooleanFromConfig(

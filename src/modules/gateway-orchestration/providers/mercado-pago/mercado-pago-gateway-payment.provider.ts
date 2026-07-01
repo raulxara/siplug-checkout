@@ -127,9 +127,7 @@ type MercadoPagoPreferenceResponse = {
 };
 
 @Injectable()
-export class MercadoPagoGatewayPaymentProvider
-  implements IGatewayPaymentProvider
-{
+export class MercadoPagoGatewayPaymentProvider implements IGatewayPaymentProvider {
   getProviderName(): string {
     return 'mercado_pago';
   }
@@ -148,6 +146,13 @@ export class MercadoPagoGatewayPaymentProvider
     try {
       const accessToken = this.resolveAccessToken(dtoIn);
       const idempotencyKey = this.resolveIdempotencyKey(dtoIn);
+
+      const credentialValidationFailure =
+        this.validateMercadoPagoCredentialForTestScenario(dtoIn, accessToken);
+
+      if (credentialValidationFailure !== null) {
+        return credentialValidationFailure;
+      }
 
       if (dtoIn.paymentTransaction.paymentMethod === 'payment_link') {
         return await this.processPaymentLink({
@@ -211,6 +216,8 @@ export class MercadoPagoGatewayPaymentProvider
       }))) as MercadoPagoPixPaymentResponse;
 
       if (!response.ok) {
+        const retryable = this.isRetryableGatewayFailure(response.status);
+
         return new GatewayPaymentDtoOut({
           success: false,
           provider: this.getProviderName(),
@@ -220,8 +227,11 @@ export class MercadoPagoGatewayPaymentProvider
             this.toNullableString(responseBody.status) ??
             String(response.status),
 
-          status: 'failed',
-          processStatus: 'gateway_dispatch_failed',
+          status: retryable ? 'pending' : 'failed',
+          processStatus: retryable
+            ? 'gateway_unavailable_retryable'
+            : 'gateway_dispatch_failed',
+
           processMessage:
             this.extractMercadoPagoErrorMessage(responseBody) ??
             `Mercado Pago Payments request failed with status ${response.status}`,
@@ -234,7 +244,7 @@ export class MercadoPagoGatewayPaymentProvider
             endpoint: '/v1/payments',
           },
 
-          failedAt: this.nowAsSqlDateTime(),
+          failedAt: retryable ? null : this.nowAsSqlDateTime(),
           expiresAt: dtoIn.paymentTransaction.expiresAt,
         });
       }
@@ -285,8 +295,9 @@ export class MercadoPagoGatewayPaymentProvider
     accessToken: string;
     idempotencyKey: string;
   }): Promise<GatewayPaymentDtoOut> {
-    const requestPayload =
-      this.buildPaymentLinkPreferenceRequestPayload(params.dtoIn);
+    const requestPayload = this.buildPaymentLinkPreferenceRequestPayload(
+      params.dtoIn,
+    );
 
     const headers: Record<string, string> = {
       accept: 'application/json',
@@ -538,10 +549,7 @@ export class MercadoPagoGatewayPaymentProvider
       itemsPayload.length > 0
         ? itemsPayload.map((item, index) => {
             const itemObject = this.asObject(item);
-            const quantity = this.resolvePositiveNumber(
-              itemObject.quantity,
-              1,
-            );
+            const quantity = this.resolvePositiveNumber(itemObject.quantity, 1);
 
             const unitAmountInCents =
               this.resolvePositiveNumber(itemObject.unitAmount, 0) ||
@@ -734,6 +742,16 @@ export class MercadoPagoGatewayPaymentProvider
     return Object.keys(payer).length > 0 ? payer : null;
   }
 
+  private isRetryableGatewayFailure(httpStatus: number): boolean {
+    return (
+      httpStatus === 408 ||
+      httpStatus === 409 ||
+      httpStatus === 425 ||
+      httpStatus === 429 ||
+      httpStatus >= 500
+    );
+  }
+
   private buildAddress(
     payerPayload: Record<string, unknown>,
   ): MercadoPagoPixPayer['address'] | null {
@@ -870,9 +888,10 @@ export class MercadoPagoGatewayPaymentProvider
   }): GatewayPaymentDtoOut {
     const preferenceId = this.toNullableString(params.responseBody.id);
 
-    const checkoutUrl =
-      this.toNullableString(params.responseBody.init_point) ??
-      this.toNullableString(params.responseBody.sandbox_init_point);
+    const checkoutUrl = this.resolvePreferenceCheckoutUrl({
+      dtoIn: params.dtoIn,
+      responseBody: params.responseBody,
+    });
 
     return new GatewayPaymentDtoOut({
       success: true,
@@ -908,9 +927,34 @@ export class MercadoPagoGatewayPaymentProvider
 
   private resolveAccessToken(dtoIn: GatewayPaymentDtoIn): string {
     const connectionData = dtoIn.apiCredential?.connectionData ?? {};
-    const config = dtoIn.apiCredential?.config ?? {};
+    const credentialConfig = dtoIn.apiCredential?.config ?? {};
 
-    const candidates = [
+    const config = dtoIn.config ?? {};
+    const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+
+    const shouldPreferTestToken =
+      this.isSandboxEnvironment(dtoIn) ||
+      this.isMercadoPagoTestPayer(dtoIn) ||
+      this.isMercadoPagoTestCardPayload(dtoIn);
+
+    const testCandidates = [
+      connectionData.testAccessToken,
+      connectionData.test_access_token,
+      connectionData.sandboxAccessToken,
+      connectionData.sandbox_access_token,
+
+      credentialConfig.testAccessToken,
+      credentialConfig.test_access_token,
+      credentialConfig.sandboxAccessToken,
+      credentialConfig.sandbox_access_token,
+
+      apiCredentialConfig.testAccessToken,
+      apiCredentialConfig.test_access_token,
+      apiCredentialConfig.sandboxAccessToken,
+      apiCredentialConfig.sandbox_access_token,
+    ];
+
+    const defaultCandidates = [
       dtoIn.apiCredential?.token,
 
       connectionData.token,
@@ -919,11 +963,20 @@ export class MercadoPagoGatewayPaymentProvider
       connectionData.providerToken,
       connectionData.provider_token,
 
-      config.accessToken,
-      config.access_token,
-      config.providerToken,
-      config.provider_token,
+      credentialConfig.accessToken,
+      credentialConfig.access_token,
+      credentialConfig.providerToken,
+      credentialConfig.provider_token,
+
+      apiCredentialConfig.accessToken,
+      apiCredentialConfig.access_token,
+      apiCredentialConfig.providerToken,
+      apiCredentialConfig.provider_token,
     ];
+
+    const candidates = shouldPreferTestToken
+      ? [...testCandidates, ...defaultCandidates]
+      : [...defaultCandidates, ...testCandidates];
 
     const token = candidates.find(
       (value) => typeof value === 'string' && value.trim() !== '',
@@ -971,14 +1024,65 @@ export class MercadoPagoGatewayPaymentProvider
     const gatewayConfig = this.asObject(config.gatewayConfig);
     const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
 
-    return (
+    const configuredDate =
       this.toNullableString(transactionConfig.dateOfExpiration) ??
       this.toNullableString(transactionConfig.date_of_expiration) ??
       this.toNullableString(gatewayConfig.dateOfExpiration) ??
       this.toNullableString(gatewayConfig.date_of_expiration) ??
       this.toNullableString(apiCredentialConfig.dateOfExpiration) ??
-      this.toNullableString(apiCredentialConfig.date_of_expiration)
-    );
+      this.toNullableString(apiCredentialConfig.date_of_expiration);
+
+    const normalizedConfiguredDate =
+      this.normalizeMercadoPagoDateOfExpiration(configuredDate);
+
+    if (normalizedConfiguredDate !== null) {
+      return normalizedConfiguredDate;
+    }
+
+    if (
+      dtoIn.paymentTransaction.paymentMethod === 'pix' ||
+      dtoIn.paymentTransaction.paymentMethod === 'boleto'
+    ) {
+      return this.buildFutureMercadoPagoExpirationDate(3);
+    }
+
+    return null;
+  }
+
+  private normalizeMercadoPagoDateOfExpiration(
+    value: string | null,
+  ): string | null {
+    if (value === null) {
+      return null;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const minimumDate = new Date();
+    minimumDate.setDate(minimumDate.getDate() + 1);
+
+    if (date.getTime() <= minimumDate.getTime()) {
+      return null;
+    }
+
+    return value;
+  }
+
+  private buildFutureMercadoPagoExpirationDate(daysFromNow: number): string {
+    const date = new Date();
+
+    date.setDate(date.getDate() + daysFromNow);
+    date.setHours(23, 59, 59, 0);
+
+    const year = date.getFullYear();
+    const month = this.pad(date.getMonth() + 1);
+    const day = this.pad(date.getDate());
+
+    return `${year}-${month}-${day}T23:59:59.000-03:00`;
   }
 
   private mapMercadoPagoStatusToInternalStatus(params: {
@@ -1085,6 +1189,145 @@ export class MercadoPagoGatewayPaymentProvider
     }
 
     return null;
+  }
+
+  private validateMercadoPagoCredentialForTestScenario(
+    dtoIn: GatewayPaymentDtoIn,
+    accessToken: string,
+  ): GatewayPaymentDtoOut | null {
+    const paymentMethod = dtoIn.paymentTransaction.paymentMethod;
+
+    if (paymentMethod === 'payment_link') {
+      return null;
+    }
+
+    const isTestScenario =
+      this.isSandboxEnvironment(dtoIn) ||
+      this.isMercadoPagoTestPayer(dtoIn) ||
+      this.isMercadoPagoTestCardPayload(dtoIn);
+
+    if (!isTestScenario) {
+      return null;
+    }
+
+    if (!this.isMercadoPagoLiveAccessToken(accessToken)) {
+      return null;
+    }
+
+    return new GatewayPaymentDtoOut({
+      success: false,
+      provider: this.getProviderName(),
+
+      gatewayTransactionId: null,
+      gatewayStatus: 'local_validation_failed',
+
+      status: 'failed',
+      processStatus: 'gateway_credential_invalid_for_test',
+      processMessage:
+        'Mercado Pago TEST access token is required for sandbox/test PIX, boleto and credit_card payments',
+
+      providerRequest: {
+        paymentTransactionId: dtoIn.paymentTransaction._id,
+        paymentMethod,
+        externalReference: dtoIn.paymentTransaction.externalReference,
+        environment: this.resolveMercadoPagoEnvironment(dtoIn),
+      },
+
+      providerResponse: {
+        message:
+          'Current access token looks like a production/live credential, but this is a Mercado Pago test scenario. Use a TEST access token generated for the seller test account and generate cardToken with the matching TEST public key.',
+      },
+
+      gatewayResponse: {
+        ok: false,
+        endpoint: 'local-validation',
+        provider: 'mercado_pago',
+        reason: 'live_credentials_used_in_test_scenario',
+      },
+
+      failedAt: this.nowAsSqlDateTime(),
+      expiresAt: dtoIn.paymentTransaction.expiresAt,
+    });
+  }
+
+  private isMercadoPagoLiveAccessToken(accessToken: string): boolean {
+    const normalized = accessToken.trim();
+
+    return (
+      normalized.startsWith('APP_USR-') || normalized.startsWith('APP_USR')
+    );
+  }
+
+  private isMercadoPagoTestPayer(dtoIn: GatewayPaymentDtoIn): boolean {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const payer = this.asObject(providerPayload.payer);
+
+    const email = this.toNullableString(payer.email);
+
+    return email !== null && email.toLowerCase().includes('@testuser.com');
+  }
+
+  private isMercadoPagoTestCardPayload(dtoIn: GatewayPaymentDtoIn): boolean {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const paymentData = this.asObject(providerPayload.paymentData);
+
+    const cardToken =
+      this.toNullableString(paymentData.cardToken) ??
+      this.toNullableString(paymentData.card_token) ??
+      this.toNullableString(paymentData.token);
+
+    return (
+      cardToken !== null &&
+      dtoIn.paymentTransaction.paymentMethod === 'credit_card'
+    );
+  }
+
+  private resolveMercadoPagoEnvironment(dtoIn: GatewayPaymentDtoIn): string {
+    const config = dtoIn.config ?? {};
+    const transactionConfig = this.asObject(config.transactionConfig);
+    const gatewayConfig = this.asObject(config.gatewayConfig);
+    const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+
+    return (
+      this.toNullableString(transactionConfig.environment) ??
+      this.toNullableString(transactionConfig.env) ??
+      this.toNullableString(gatewayConfig.environment) ??
+      this.toNullableString(gatewayConfig.env) ??
+      this.toNullableString(apiCredentialConfig.environment) ??
+      this.toNullableString(apiCredentialConfig.env) ??
+      'local'
+    )
+      .toLowerCase()
+      .trim();
+  }
+
+  private isSandboxEnvironment(dtoIn: GatewayPaymentDtoIn): boolean {
+    const environment = this.resolveMercadoPagoEnvironment(dtoIn);
+
+    return [
+      'local',
+      'dev',
+      'development',
+      'sandbox',
+      'test',
+      'testing',
+    ].includes(environment);
+  }
+
+  private resolvePreferenceCheckoutUrl(params: {
+    dtoIn: GatewayPaymentDtoIn;
+    responseBody: MercadoPagoPreferenceResponse;
+  }): string | null {
+    const initPoint = this.toNullableString(params.responseBody.init_point);
+    const sandboxInitPoint = this.toNullableString(
+      params.responseBody.sandbox_init_point,
+    );
+
+    if (this.isSandboxEnvironment(params.dtoIn)) {
+      return sandboxInitPoint ?? initPoint;
+    }
+
+    return initPoint ?? sandboxInitPoint;
   }
 
   private convertCentsToAmount(amountInCents: number): number {

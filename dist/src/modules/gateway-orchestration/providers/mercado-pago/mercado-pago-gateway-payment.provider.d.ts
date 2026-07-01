@@ -12,6 +12,7 @@ export declare class MercadoPagoGatewayPaymentProvider implements IGatewayPaymen
     private buildPaymentLinkPreferenceRequestPayload;
     private buildPayer;
     private buildPreferencePayer;
+    private isRetryableGatewayFailure;
     private buildAddress;
     private mapSuccessfulPixPaymentResponse;
     private mapSuccessfulPaymentLinkPreferenceResponse;
@@ -19,9 +20,18 @@ export declare class MercadoPagoGatewayPaymentProvider implements IGatewayPaymen
     private resolveIdempotencyKey;
     private resolveNotificationUrl;
     private resolveDateOfExpiration;
+    private normalizeMercadoPagoDateOfExpiration;
+    private buildFutureMercadoPagoExpirationDate;
     private mapMercadoPagoStatusToInternalStatus;
     private mapMercadoPagoStatusToProcessStatus;
     private extractMercadoPagoErrorMessage;
+    private validateMercadoPagoCredentialForTestScenario;
+    private isMercadoPagoLiveAccessToken;
+    private isMercadoPagoTestPayer;
+    private isMercadoPagoTestCardPayload;
+    private resolveMercadoPagoEnvironment;
+    private isSandboxEnvironment;
+    private resolvePreferenceCheckoutUrl;
     private convertCentsToAmount;
     private resolvePositiveNumber;
     private asObject;

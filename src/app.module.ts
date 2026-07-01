@@ -53,7 +53,7 @@ import { RegisterSubscriptionPlanModule } from './use-cases/register-subscriptio
 import { RegisterSubscriptionModule } from './use-cases/register-subscription/register-subscription.module';
 import { GenerateSubscriptionInvoiceModule } from './use-cases/generate-subscription-invoice/generate-subscription-invoice.module';
 import { ProcessRecurringPaymentModule } from './use-cases/process-recurring-payment/process-recurring-payment.module';
-import { DevMercadoPagoCardTokenPageModule } from './use-cases/dev-mercado-pago-card-token-page/dev-mercado-pago-card-token-page.module';
+// import { DevMercadoPagoCardTokenPageModule } from './use-cases/dev-mercado-pago-card-token-page/dev-mercado-pago-card-token-page.module';
 import { DevPicPayTemporaryCardTokenPageModule } from './use-cases/dev-picpay-temporary-card-token-page/dev-picpay-temporary-card-token-page.module';
 import { GetSubscriptionPlanByUniqueIdModule } from './use-cases/get-subscription-plan-by-unique-id/get-subscription-plan-by-unique-id.module';
 import { ListSubscriptionPlansModule } from './use-cases/list-subscription-plans/list-subscription-plans.module';
@@ -150,7 +150,7 @@ import { ReceiveInfinitePayWebhookModule } from './use-cases/receive-infinitepay
     RegisterSubscriptionModule,
     GenerateSubscriptionInvoiceModule,
     ProcessRecurringPaymentModule,
-    DevMercadoPagoCardTokenPageModule,
+    // DevMercadoPagoCardTokenPageModule,
     DevPicPayTemporaryCardTokenPageModule,
     GetSubscriptionPlanByUniqueIdModule,
     ListSubscriptionPlansModule,
