@@ -351,22 +351,26 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
             payload.redirect_url = redirectUrl;
             payload.return_url = redirectUrl;
         }
-        const notificationUrl = this.toNullableString(transactionConfig.notificationUrl) ??
-            this.toNullableString(transactionConfig.notification_url) ??
-            this.toNullableString(gatewayConfig.notificationUrl) ??
-            this.toNullableString(gatewayConfig.notification_url) ??
-            this.toNullableString(apiCredentialConfig.notificationUrl) ??
-            this.toNullableString(apiCredentialConfig.notification_url);
+        const notificationUrl = this.resolvePagSeguroCheckoutNotificationUrl({
+            transactionConfig,
+            gatewayConfig,
+            apiCredentialConfig,
+            fallbackKeys: ['notificationUrl', 'notification_url'],
+        });
         if (notificationUrl !== null) {
             payload.notification_urls = [notificationUrl];
         }
-        const paymentNotificationUrl = this.toNullableString(transactionConfig.paymentNotificationUrl) ??
-            this.toNullableString(transactionConfig.payment_notification_url) ??
-            this.toNullableString(gatewayConfig.paymentNotificationUrl) ??
-            this.toNullableString(gatewayConfig.payment_notification_url) ??
-            this.toNullableString(apiCredentialConfig.paymentNotificationUrl) ??
-            this.toNullableString(apiCredentialConfig.payment_notification_url) ??
-            notificationUrl;
+        const paymentNotificationUrl = this.resolvePagSeguroCheckoutNotificationUrl({
+            transactionConfig,
+            gatewayConfig,
+            apiCredentialConfig,
+            fallbackKeys: [
+                'paymentNotificationUrl',
+                'payment_notification_url',
+                'notificationUrl',
+                'notification_url',
+            ],
+        });
         if (paymentNotificationUrl !== null) {
             payload.payment_notification_urls = [paymentNotificationUrl];
         }
@@ -564,6 +568,44 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
                 unit_amount: unitAmount,
             };
         });
+    }
+    resolvePagSeguroCheckoutNotificationUrl(params) {
+        const specificCandidates = [
+            this.toNullableString(params.transactionConfig.checkoutNotificationUrl),
+            this.toNullableString(params.transactionConfig.checkout_notification_url),
+            this.toNullableString(params.transactionConfig.hostedCheckoutNotificationUrl),
+            this.toNullableString(params.transactionConfig.hosted_checkout_notification_url),
+            this.toNullableString(params.gatewayConfig.checkoutNotificationUrl),
+            this.toNullableString(params.gatewayConfig.checkout_notification_url),
+            this.toNullableString(params.gatewayConfig.hostedCheckoutNotificationUrl),
+            this.toNullableString(params.gatewayConfig.hosted_checkout_notification_url),
+            this.toNullableString(params.apiCredentialConfig.checkoutNotificationUrl),
+            this.toNullableString(params.apiCredentialConfig.checkout_notification_url),
+            this.toNullableString(params.apiCredentialConfig.hostedCheckoutNotificationUrl),
+            this.toNullableString(params.apiCredentialConfig.hosted_checkout_notification_url),
+        ];
+        const fallbackCandidates = params.fallbackKeys.flatMap((key) => [
+            this.toNullableString(params.transactionConfig[key]),
+            this.toNullableString(params.gatewayConfig[key]),
+            this.toNullableString(params.apiCredentialConfig[key]),
+        ]);
+        const url = specificCandidates.find((candidate) => candidate !== null) ??
+            fallbackCandidates.find((candidate) => candidate !== null) ??
+            null;
+        return this.normalizePagSeguroCheckoutNotificationUrl(url);
+    }
+    normalizePagSeguroCheckoutNotificationUrl(url) {
+        if (url === null) {
+            return null;
+        }
+        const normalizedUrl = url.trim();
+        if (normalizedUrl === '') {
+            return null;
+        }
+        if (normalizedUrl.length > 100) {
+            return null;
+        }
+        return normalizedUrl;
     }
     buildCustomer(payerPayload) {
         const name = this.toNullableString(payerPayload.name) ??

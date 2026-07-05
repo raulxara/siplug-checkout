@@ -370,13 +370,20 @@ export class ReceivePagSeguroWebhookUseCase {
       }
     }
 
+    const xProductId = this.extractString(
+      normalizedEvent.headers,
+      'x-product-id',
+    );
+
     const gatewayTransactionIds = [
+      xProductId,
       normalizedEvent.gatewayTransactionId,
       normalizedEvent.gatewayChargeId,
       normalizedEvent.gatewayPaymentIntentId,
       normalizedEvent.gatewayInvoiceId,
-      normalizedEvent.gatewaySubscriptionId,
-    ].filter((value): value is string => value !== null);
+    ]
+      .filter((value): value is string => value !== null)
+      .filter((value, index, array) => array.indexOf(value) === index);
 
     for (const gatewayTransactionId of gatewayTransactionIds) {
       const paymentTransaction =

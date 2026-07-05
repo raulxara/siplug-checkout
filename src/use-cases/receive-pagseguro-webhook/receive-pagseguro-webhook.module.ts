@@ -10,6 +10,7 @@ import { ReceivePagSeguroWebhookController } from './receive-pagseguro-webhook.c
 import { ReceivePagSeguroWebhookUseCase } from './receive-pagseguro-webhook.use-case';
 import { PaymentTransactionsModule } from '../../modules/payment-transactions/payment-transactions.module';
 import { ProcessSubscriptionWebhookEventModule } from '../process-subscription-webhook-event/process-subscription-webhook-event.module';
+import { ReceivePagSeguroShortWebhookController } from './receive-pagseguro-short-webhook.controller';
 
 @Module({
   imports: [
@@ -21,7 +22,10 @@ import { ProcessSubscriptionWebhookEventModule } from '../process-subscription-w
     ProcessPaymentWebhookEventModule,
     ProcessSubscriptionWebhookEventModule,
   ],
-  controllers: [ReceivePagSeguroWebhookController],
+  controllers: [
+    ReceivePagSeguroWebhookController,
+    ReceivePagSeguroShortWebhookController,
+  ],
   providers: [
     DecryptApiCredentialSecretService,
     ReceivePagSeguroWebhookUseCase,

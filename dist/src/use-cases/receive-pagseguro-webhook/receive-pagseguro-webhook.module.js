@@ -18,6 +18,7 @@ const receive_pagseguro_webhook_controller_1 = require("./receive-pagseguro-webh
 const receive_pagseguro_webhook_use_case_1 = require("./receive-pagseguro-webhook.use-case");
 const payment_transactions_module_1 = require("../../modules/payment-transactions/payment-transactions.module");
 const process_subscription_webhook_event_module_1 = require("../process-subscription-webhook-event/process-subscription-webhook-event.module");
+const receive_pagseguro_short_webhook_controller_1 = require("./receive-pagseguro-short-webhook.controller");
 let ReceivePagSeguroWebhookModule = class ReceivePagSeguroWebhookModule {
 };
 exports.ReceivePagSeguroWebhookModule = ReceivePagSeguroWebhookModule;
@@ -32,7 +33,10 @@ exports.ReceivePagSeguroWebhookModule = ReceivePagSeguroWebhookModule = __decora
             process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
             process_subscription_webhook_event_module_1.ProcessSubscriptionWebhookEventModule,
         ],
-        controllers: [receive_pagseguro_webhook_controller_1.ReceivePagSeguroWebhookController],
+        controllers: [
+            receive_pagseguro_webhook_controller_1.ReceivePagSeguroWebhookController,
+            receive_pagseguro_short_webhook_controller_1.ReceivePagSeguroShortWebhookController,
+        ],
         providers: [
             decrypt_api_credential_secret_service_1.DecryptApiCredentialSecretService,
             receive_pagseguro_webhook_use_case_1.ReceivePagSeguroWebhookUseCase,

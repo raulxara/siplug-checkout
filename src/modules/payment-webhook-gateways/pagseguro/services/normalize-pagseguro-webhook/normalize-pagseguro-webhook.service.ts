@@ -9,9 +9,7 @@ import { NormalizePagSeguroWebhookDtoOut } from './dtos/normalize-pagseguro-webh
 
 @Injectable()
 export class NormalizePagSeguroWebhookService {
-  exec(
-    dtoIn: NormalizePagSeguroWebhookDtoIn,
-  ): NormalizePagSeguroWebhookDtoOut {
+  exec(dtoIn: NormalizePagSeguroWebhookDtoIn): NormalizePagSeguroWebhookDtoOut {
     if (this.isSubscriptionPayload(dtoIn.payload, dtoIn.headers)) {
       return this.normalizeSubscriptionEvent(dtoIn);
     }
@@ -24,6 +22,9 @@ export class NormalizePagSeguroWebhookService {
   ): NormalizePagSeguroWebhookDtoOut {
     const orderId = this.getString(dtoIn.payload, 'id');
     const referenceId = this.getString(dtoIn.payload, 'reference_id');
+
+    const xProductId = this.getString(dtoIn.headers, 'x-product-id');
+    const xProductOrigin = this.getString(dtoIn.headers, 'x-product-origin');
 
     const charges = this.getObjectsArray(dtoIn.payload, 'charges');
     const primaryCharge = this.resolvePrimaryCharge(charges);
@@ -41,7 +42,11 @@ export class NormalizePagSeguroWebhookService {
     const gatewayTransactionId = this.resolveGatewayTransactionId({
       orderId,
       chargeId,
+      payloadStatus: orderStatus,
+      chargeStatus,
       paymentMethodType,
+      xProductId,
+      xProductOrigin,
     });
 
     const eventId = this.resolveEventId({
@@ -49,7 +54,7 @@ export class NormalizePagSeguroWebhookService {
       chargeId,
       status,
       referenceId: chargeReferenceId ?? referenceId,
-      xProductId: this.getString(dtoIn.headers, 'x-product-id'),
+      xProductId,
     });
 
     const amount = this.resolveAmount(primaryCharge, dtoIn.payload);
@@ -130,8 +135,7 @@ export class NormalizePagSeguroWebhookService {
     const eventType =
       chargeId !== null ? 'subscription_charge' : 'subscription';
 
-    const eventAction =
-      providerEvent ?? `${eventType}.${status.toLowerCase()}`;
+    const eventAction = providerEvent ?? `${eventType}.${status.toLowerCase()}`;
 
     const eventId = this.resolveSubscriptionEventId({
       gatewaySubscriptionId,
@@ -142,8 +146,7 @@ export class NormalizePagSeguroWebhookService {
       xProductId: this.getString(dtoIn.headers, 'x-product-id'),
     });
 
-    const gatewayTransactionId =
-      chargeId ?? invoiceId ?? gatewaySubscriptionId;
+    const gatewayTransactionId = chargeId ?? invoiceId ?? gatewaySubscriptionId;
 
     const amount = this.resolveAmount(primaryCharge, resource);
     const currency = this.resolveCurrency(primaryCharge, resource);
@@ -291,8 +294,30 @@ export class NormalizePagSeguroWebhookService {
   private resolveGatewayTransactionId(params: {
     orderId: string | null;
     chargeId: string | null;
+    payloadStatus: string | null;
+    chargeStatus: string | null;
     paymentMethodType: string | null;
+    xProductId: string | null;
+    xProductOrigin: string | null;
   }): string | null {
+    const productOrigin = String(params.xProductOrigin ?? '')
+      .trim()
+      .toUpperCase();
+
+    const xProductId = String(params.xProductId ?? '').trim();
+
+    if (productOrigin === 'CHECKOUT' && xProductId.startsWith('CHEC_')) {
+      return xProductId;
+    }
+
+    if (
+      xProductId.startsWith('CHEC_') &&
+      params.orderId !== null &&
+      params.chargeId !== null
+    ) {
+      return xProductId;
+    }
+
     const method = String(params.paymentMethodType ?? '').toUpperCase();
 
     if (method === 'PIX' && params.orderId !== null) {

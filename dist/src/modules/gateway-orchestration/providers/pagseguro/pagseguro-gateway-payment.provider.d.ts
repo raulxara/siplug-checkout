@@ -14,6 +14,8 @@ export declare class PagSeguroGatewayPaymentProvider implements IGatewayPaymentP
     private buildCheckoutRequestPayload;
     private processHostedCheckout;
     private buildItems;
+    private resolvePagSeguroCheckoutNotificationUrl;
+    private normalizePagSeguroCheckoutNotificationUrl;
     private buildCustomer;
     private buildPhone;
     private resolvePaymentMethods;

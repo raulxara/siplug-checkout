@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { RequestMethod } from '@nestjs/common';
 
 import { AppModule } from './app.module';
 
@@ -10,7 +11,14 @@ async function bootstrap(): Promise<void> {
     rawBody: true,
   });
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [
+      {
+        path: 'w/p/:apiCredentialId',
+        method: RequestMethod.POST,
+      },
+    ],
+  });
 
   app.useBodyParser('json', {
     limit: '10mb',

@@ -275,13 +275,16 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
                 return paymentTransaction;
             }
         }
+        const xProductId = this.extractString(normalizedEvent.headers, 'x-product-id');
         const gatewayTransactionIds = [
+            xProductId,
             normalizedEvent.gatewayTransactionId,
             normalizedEvent.gatewayChargeId,
             normalizedEvent.gatewayPaymentIntentId,
             normalizedEvent.gatewayInvoiceId,
-            normalizedEvent.gatewaySubscriptionId,
-        ].filter((value) => value !== null);
+        ]
+            .filter((value) => value !== null)
+            .filter((value, index, array) => array.indexOf(value) === index);
         for (const gatewayTransactionId of gatewayTransactionIds) {
             const paymentTransaction = await this.findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId);
             if (paymentTransaction !== null) {

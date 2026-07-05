@@ -20,6 +20,8 @@ let NormalizePagSeguroWebhookService = class NormalizePagSeguroWebhookService {
     normalizeOrderOrChargeEvent(dtoIn) {
         const orderId = this.getString(dtoIn.payload, 'id');
         const referenceId = this.getString(dtoIn.payload, 'reference_id');
+        const xProductId = this.getString(dtoIn.headers, 'x-product-id');
+        const xProductOrigin = this.getString(dtoIn.headers, 'x-product-origin');
         const charges = this.getObjectsArray(dtoIn.payload, 'charges');
         const primaryCharge = this.resolvePrimaryCharge(charges);
         const chargeId = this.getString(primaryCharge, 'id');
@@ -32,14 +34,18 @@ let NormalizePagSeguroWebhookService = class NormalizePagSeguroWebhookService {
         const gatewayTransactionId = this.resolveGatewayTransactionId({
             orderId,
             chargeId,
+            payloadStatus: orderStatus,
+            chargeStatus,
             paymentMethodType,
+            xProductId,
+            xProductOrigin,
         });
         const eventId = this.resolveEventId({
             orderId,
             chargeId,
             status,
             referenceId: chargeReferenceId ?? referenceId,
-            xProductId: this.getString(dtoIn.headers, 'x-product-id'),
+            xProductId,
         });
         const amount = this.resolveAmount(primaryCharge, dtoIn.payload);
         const currency = this.resolveCurrency(primaryCharge, dtoIn.payload);
@@ -189,6 +195,18 @@ let NormalizePagSeguroWebhookService = class NormalizePagSeguroWebhookService {
         return paidCharge ?? charges[0];
     }
     resolveGatewayTransactionId(params) {
+        const productOrigin = String(params.xProductOrigin ?? '')
+            .trim()
+            .toUpperCase();
+        const xProductId = String(params.xProductId ?? '').trim();
+        if (productOrigin === 'CHECKOUT' && xProductId.startsWith('CHEC_')) {
+            return xProductId;
+        }
+        if (xProductId.startsWith('CHEC_') &&
+            params.orderId !== null &&
+            params.chargeId !== null) {
+            return xProductId;
+        }
         const method = String(params.paymentMethodType ?? '').toUpperCase();
         if (method === 'PIX' && params.orderId !== null) {
             return params.orderId;
