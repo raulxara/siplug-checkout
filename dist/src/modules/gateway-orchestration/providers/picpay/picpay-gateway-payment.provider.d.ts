@@ -9,6 +9,7 @@ export declare class PicPayGatewayPaymentProvider implements IGatewayPaymentProv
     private buildPicPayOrderNumber;
     private extractPaymentLinkPublicId;
     private resolvePicPayPaymentMethods;
+    private resolveTokenUrl;
     private resolvePicPayExpirationDate;
     private buildPaymentLinkRequestPayload;
     private limitText;

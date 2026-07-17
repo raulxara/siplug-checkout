@@ -226,8 +226,8 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
             }
             return token;
         }
-        const baseUrl = this.resolveBaseUrl(dtoIn);
-        const response = await fetch(`${baseUrl}/oauth2/token`, {
+        const tokenUrl = this.resolveTokenUrl(dtoIn);
+        const response = await fetch(tokenUrl, {
             method: 'POST',
             headers: {
                 Accept: 'application/json',
@@ -299,6 +299,16 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
             methods: ['BRCODE', 'CREDIT_CARD'],
             brcodeArrangements: ['PICPAY', 'PIX'],
         };
+    }
+    resolveTokenUrl(dtoIn) {
+        const config = dtoIn.config ?? {};
+        const gatewayConfig = this.asObject(config.gatewayConfig);
+        const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+        return (this.toNullableString(apiCredentialConfig.tokenUrl) ??
+            this.toNullableString(apiCredentialConfig.token_url) ??
+            this.toNullableString(gatewayConfig.tokenUrl) ??
+            this.toNullableString(gatewayConfig.token_url) ??
+            `${this.resolveBaseUrl(dtoIn)}/oauth2/token`);
     }
     resolvePicPayExpirationDate(dtoIn) {
         const config = dtoIn.config ?? {};
