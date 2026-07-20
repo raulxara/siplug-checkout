@@ -148,6 +148,19 @@ export class ApiCredentialsRepository implements IApiCredentialsRepository {
     return model ? this.toRow(model) : null;
   }
 
+  async getAllByOfficeId(officeId: string): Promise<ApiCredentialRow[]> {
+    const rows = await this.prisma.apiCredential.findMany({
+      where: {
+        office_id: officeId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return rows.map((row) => this.toRow(row));
+  }
+
   async findBySlug(slug: string): Promise<ApiCredentialRow | null> {
     const model = await this.prisma.apiCredential.findFirst({
       where: {

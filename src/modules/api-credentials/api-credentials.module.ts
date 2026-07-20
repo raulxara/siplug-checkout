@@ -11,6 +11,7 @@ import { NormalizeApiCredentialConfigService } from './services/normalize-api-cr
 import { UpdateApiCredentialService } from './services/update-api-credential/update-api-credential.service';
 import { ValidateApiCredentialSlugUniquenessService } from './services/validate-api-credential-slug-uniqueness/validate-api-credential-slug-uniqueness.service';
 import { API_CREDENTIALS_REPOSITORY } from './tokens/api-credentials.tokens';
+import { ListApiCredentialsByOfficeIdService } from './services/list-api-credentials-by-office-id/list-api-credentials-by-office-id.service';
 
 @Module({
   providers: [
@@ -28,6 +29,7 @@ import { API_CREDENTIALS_REPOSITORY } from './tokens/api-credentials.tokens';
     UpdateApiCredentialService,
     ValidateApiCredentialSlugUniquenessService,
     NormalizeApiCredentialConfigService,
+    ListApiCredentialsByOfficeIdService,
   ],
   exports: [
     API_CREDENTIALS_REPOSITORY,
@@ -40,6 +42,7 @@ import { API_CREDENTIALS_REPOSITORY } from './tokens/api-credentials.tokens';
     UpdateApiCredentialService,
     ValidateApiCredentialSlugUniquenessService,
     NormalizeApiCredentialConfigService,
+    ListApiCredentialsByOfficeIdService,
   ],
 })
 export class ApiCredentialsModule {}

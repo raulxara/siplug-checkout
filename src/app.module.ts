@@ -91,6 +91,8 @@ import { ReceivePicPayWebhookModule } from './use-cases/receive-picpay-webhook/r
 import { CapturePayPalOrderReturnModule } from './use-cases/capture-paypal-order-return/capture-paypal-order-return.module';
 import { ReceivePayPalWebhookModule } from './use-cases/receive-paypal-webhook/receive-paypal-webhook.module';
 import { ReceiveInfinitePayWebhookModule } from './use-cases/receive-infinitepay-webhook/receive-infinitepay-webhook.module';
+import { ListApiCredentialByOfficeIdModule } from './use-cases/list-api-credential-by-office-id/list-api-credential-by-office-id.module';
+import { GetApiCredentialsByUniqueIdModule } from './use-cases/get-api-credentials-by-unique-id/get-api-credentials-by-unique-id.module';
 
 @Module({
   imports: [
@@ -188,6 +190,8 @@ import { ReceiveInfinitePayWebhookModule } from './use-cases/receive-infinitepay
     ReceivePicPayWebhookModule,
     CapturePayPalOrderReturnModule,
     ReceivePayPalWebhookModule,
+    ListApiCredentialByOfficeIdModule,
+    GetApiCredentialsByUniqueIdModule,
   ],
 })
 export class AppModule {}

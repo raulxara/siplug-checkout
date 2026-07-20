@@ -20,6 +20,7 @@ const normalize_api_credential_config_service_1 = require("./services/normalize-
 const update_api_credential_service_1 = require("./services/update-api-credential/update-api-credential.service");
 const validate_api_credential_slug_uniqueness_service_1 = require("./services/validate-api-credential-slug-uniqueness/validate-api-credential-slug-uniqueness.service");
 const api_credentials_tokens_1 = require("./tokens/api-credentials.tokens");
+const list_api_credentials_by_office_id_service_1 = require("./services/list-api-credentials-by-office-id/list-api-credentials-by-office-id.service");
 let ApiCredentialsModule = class ApiCredentialsModule {
 };
 exports.ApiCredentialsModule = ApiCredentialsModule;
@@ -40,6 +41,7 @@ exports.ApiCredentialsModule = ApiCredentialsModule = __decorate([
             update_api_credential_service_1.UpdateApiCredentialService,
             validate_api_credential_slug_uniqueness_service_1.ValidateApiCredentialSlugUniquenessService,
             normalize_api_credential_config_service_1.NormalizeApiCredentialConfigService,
+            list_api_credentials_by_office_id_service_1.ListApiCredentialsByOfficeIdService,
         ],
         exports: [
             api_credentials_tokens_1.API_CREDENTIALS_REPOSITORY,
@@ -52,6 +54,7 @@ exports.ApiCredentialsModule = ApiCredentialsModule = __decorate([
             update_api_credential_service_1.UpdateApiCredentialService,
             validate_api_credential_slug_uniqueness_service_1.ValidateApiCredentialSlugUniquenessService,
             normalize_api_credential_config_service_1.NormalizeApiCredentialConfigService,
+            list_api_credentials_by_office_id_service_1.ListApiCredentialsByOfficeIdService,
         ],
     })
 ], ApiCredentialsModule);

@@ -127,6 +127,17 @@ let ApiCredentialsRepository = class ApiCredentialsRepository {
         });
         return model ? this.toRow(model) : null;
     }
+    async getAllByOfficeId(officeId) {
+        const rows = await this.prisma.apiCredential.findMany({
+            where: {
+                office_id: officeId,
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+        return rows.map((row) => this.toRow(row));
+    }
     async findBySlug(slug) {
         const model = await this.prisma.apiCredential.findFirst({
             where: {

@@ -41,4 +41,6 @@ export interface IApiCredentialsRepository {
   getAll(): Promise<ApiCredentialRow[]>;
 
   getAllByClientId(clientId: string): Promise<ApiCredentialRow[]>;
+
+  getAllByOfficeId(officeId: string): Promise<ApiCredentialRow[]>;
 }

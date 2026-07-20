@@ -7,6 +7,7 @@ export declare class ApiCredentialsRepository implements IApiCredentialsReposito
     create(entity: ApiCredentialEntity): Promise<ApiCredentialEntity>;
     updateByUniqueId(_id: string, data: Record<string, unknown>): Promise<ApiCredentialRow>;
     findByUniqueId(_id: string): Promise<ApiCredentialRow | null>;
+    getAllByOfficeId(officeId: string): Promise<ApiCredentialRow[]>;
     findBySlug(slug: string): Promise<ApiCredentialRow | null>;
     findByOfficeIdAndSlug(officeId: string | null, slug: string): Promise<ApiCredentialRow | null>;
     getAll(): Promise<ApiCredentialRow[]>;

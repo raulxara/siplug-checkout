@@ -27,4 +27,5 @@ export interface IApiCredentialsRepository {
     findByOfficeIdAndSlug(officeId: string | null, slug: string): Promise<ApiCredentialRow | null>;
     getAll(): Promise<ApiCredentialRow[]>;
     getAllByClientId(clientId: string): Promise<ApiCredentialRow[]>;
+    getAllByOfficeId(officeId: string): Promise<ApiCredentialRow[]>;
 }
