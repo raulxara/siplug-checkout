@@ -70,9 +70,9 @@ let PositionsRepository = class PositionsRepository {
         if (data.config !== undefined && data.config !== null) {
             updateData.config = data.config;
         }
-        if (data.changes_history !== undefined && data.changes_history !== null) {
-            updateData.changes_history =
-                data.changes_history;
+        const changesHistory = data.changes_history ?? data.changesHistory;
+        if (changesHistory !== undefined && changesHistory !== null) {
+            updateData.changes_history = changesHistory;
         }
         if (data.status !== undefined && data.status !== null) {
             updateData.status = String(data.status);

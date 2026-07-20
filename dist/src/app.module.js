@@ -101,6 +101,9 @@ const receive_paypal_webhook_module_1 = require("./use-cases/receive-paypal-webh
 const receive_infinitepay_webhook_module_1 = require("./use-cases/receive-infinitepay-webhook/receive-infinitepay-webhook.module");
 const list_api_credential_by_office_id_module_1 = require("./use-cases/list-api-credential-by-office-id/list-api-credential-by-office-id.module");
 const get_api_credentials_by_unique_id_module_1 = require("./use-cases/get-api-credentials-by-unique-id/get-api-credentials-by-unique-id.module");
+const list_position_by_office_id_module_1 = require("./use-cases/list-position-by-office-id/list-position-by-office-id.module");
+const get_position_by_unique_id_module_1 = require("./use-cases/get-position-by-unique-id/get-position-by-unique-id.module");
+const update_position_by_unique_id_module_1 = require("./use-cases/update-position-by-unique-id/update-position-by-unique-id.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -202,6 +205,9 @@ exports.AppModule = AppModule = __decorate([
             receive_paypal_webhook_module_1.ReceivePayPalWebhookModule,
             list_api_credential_by_office_id_module_1.ListApiCredentialByOfficeIdModule,
             get_api_credentials_by_unique_id_module_1.GetApiCredentialsByUniqueIdModule,
+            list_position_by_office_id_module_1.ListPositionByOfficeIdModule,
+            get_position_by_unique_id_module_1.GetPositionByUniqueIdModule,
+            update_position_by_unique_id_module_1.UpdatePositionByUniqueIdModule,
         ],
     })
 ], AppModule);

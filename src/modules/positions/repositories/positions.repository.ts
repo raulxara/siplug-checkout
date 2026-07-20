@@ -78,9 +78,10 @@ export class PositionsRepository implements IPositionsRepository {
       updateData.config = data.config as Prisma.InputJsonValue;
     }
 
-    if (data.changes_history !== undefined && data.changes_history !== null) {
-      updateData.changes_history =
-        data.changes_history as Prisma.InputJsonValue;
+    const changesHistory = data.changes_history ?? data.changesHistory;
+
+    if (changesHistory !== undefined && changesHistory !== null) {
+      updateData.changes_history = changesHistory as Prisma.InputJsonValue;
     }
 
     if (data.status !== undefined && data.status !== null) {

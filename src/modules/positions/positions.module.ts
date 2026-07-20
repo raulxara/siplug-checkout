@@ -10,6 +10,8 @@ import { GetAllPositionsService } from './services/get-all-positions/get-all-pos
 import { UpdatePositionService } from './services/update-position/update-position.service';
 import { ValidatePositionSlugUniquenessService } from './services/validate-position-slug-uniqueness/validate-position-slug-uniqueness.service';
 import { POSITIONS_REPOSITORY } from './tokens/positions.tokens';
+import { ListPositionsByOfficeIdService } from './services/list-positions-by-office-id/list-positions-by-office-id.service';
+import { UpdatePositionByUniqueIdService } from './services/update-position-by-unique-id/update-position-by-unique-id.service';
 
 @Module({
   providers: [
@@ -26,6 +28,8 @@ import { POSITIONS_REPOSITORY } from './tokens/positions.tokens';
     GetAllPositionsByOfficeIdService,
     GetAllPositionsByUniqueIdsService,
     ValidatePositionSlugUniquenessService,
+    ListPositionsByOfficeIdService,
+    UpdatePositionByUniqueIdService,
   ],
   exports: [
     POSITIONS_REPOSITORY,
@@ -37,6 +41,8 @@ import { POSITIONS_REPOSITORY } from './tokens/positions.tokens';
     GetAllPositionsByOfficeIdService,
     GetAllPositionsByUniqueIdsService,
     ValidatePositionSlugUniquenessService,
+    ListPositionsByOfficeIdService,
+    UpdatePositionByUniqueIdService,
   ],
 })
 export class PositionsModule {}

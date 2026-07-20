@@ -93,6 +93,9 @@ import { ReceivePayPalWebhookModule } from './use-cases/receive-paypal-webhook/r
 import { ReceiveInfinitePayWebhookModule } from './use-cases/receive-infinitepay-webhook/receive-infinitepay-webhook.module';
 import { ListApiCredentialByOfficeIdModule } from './use-cases/list-api-credential-by-office-id/list-api-credential-by-office-id.module';
 import { GetApiCredentialsByUniqueIdModule } from './use-cases/get-api-credentials-by-unique-id/get-api-credentials-by-unique-id.module';
+import { ListPositionByOfficeIdModule } from './use-cases/list-position-by-office-id/list-position-by-office-id.module';
+import { GetPositionByUniqueIdModule } from './use-cases/get-position-by-unique-id/get-position-by-unique-id.module';
+import { UpdatePositionByUniqueIdModule } from './use-cases/update-position-by-unique-id/update-position-by-unique-id.module';
 
 @Module({
   imports: [
@@ -192,6 +195,9 @@ import { GetApiCredentialsByUniqueIdModule } from './use-cases/get-api-credentia
     ReceivePayPalWebhookModule,
     ListApiCredentialByOfficeIdModule,
     GetApiCredentialsByUniqueIdModule,
+    ListPositionByOfficeIdModule,
+    GetPositionByUniqueIdModule,
+    UpdatePositionByUniqueIdModule,
   ],
 })
 export class AppModule {}

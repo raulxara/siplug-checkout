@@ -19,6 +19,8 @@ const get_all_positions_service_1 = require("./services/get-all-positions/get-al
 const update_position_service_1 = require("./services/update-position/update-position.service");
 const validate_position_slug_uniqueness_service_1 = require("./services/validate-position-slug-uniqueness/validate-position-slug-uniqueness.service");
 const positions_tokens_1 = require("./tokens/positions.tokens");
+const list_positions_by_office_id_service_1 = require("./services/list-positions-by-office-id/list-positions-by-office-id.service");
+const update_position_by_unique_id_service_1 = require("./services/update-position-by-unique-id/update-position-by-unique-id.service");
 let PositionsModule = class PositionsModule {
 };
 exports.PositionsModule = PositionsModule;
@@ -38,6 +40,8 @@ exports.PositionsModule = PositionsModule = __decorate([
             get_all_positions_by_office_id_service_1.GetAllPositionsByOfficeIdService,
             get_all_positions_by_unique_ids_service_1.GetAllPositionsByUniqueIdsService,
             validate_position_slug_uniqueness_service_1.ValidatePositionSlugUniquenessService,
+            list_positions_by_office_id_service_1.ListPositionsByOfficeIdService,
+            update_position_by_unique_id_service_1.UpdatePositionByUniqueIdService,
         ],
         exports: [
             positions_tokens_1.POSITIONS_REPOSITORY,
@@ -49,6 +53,8 @@ exports.PositionsModule = PositionsModule = __decorate([
             get_all_positions_by_office_id_service_1.GetAllPositionsByOfficeIdService,
             get_all_positions_by_unique_ids_service_1.GetAllPositionsByUniqueIdsService,
             validate_position_slug_uniqueness_service_1.ValidatePositionSlugUniquenessService,
+            list_positions_by_office_id_service_1.ListPositionsByOfficeIdService,
+            update_position_by_unique_id_service_1.UpdatePositionByUniqueIdService,
         ],
     })
 ], PositionsModule);
