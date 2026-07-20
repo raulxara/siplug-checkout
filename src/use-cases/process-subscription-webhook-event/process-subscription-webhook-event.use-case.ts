@@ -103,7 +103,10 @@ export class ProcessSubscriptionWebhookEventUseCase {
         );
       }
 
-      const resolution = await this.resolveSubscriptionEntities(event);
+      const resolution = await this.resolveSubscriptionEntities({
+        event,
+        paymentTransaction: dtoIn.paymentTransaction,
+      });
 
       if (resolution.subscription === null) {
         const processingResult = this.buildIgnoredProcessingResult({
@@ -297,13 +300,22 @@ export class ProcessSubscriptionWebhookEventUseCase {
     return subscriptionStatuses.includes(event.canonicalStatus);
   }
 
-  private async resolveSubscriptionEntities(
-    event: NormalizedPaymentWebhookEventDto,
-  ): Promise<SubscriptionWebhookResolution> {
-    const subscriptionInvoice = await this.resolveSubscriptionInvoice(event);
+  private async resolveSubscriptionEntities(params: {
+    event: NormalizedPaymentWebhookEventDto;
+    paymentTransaction: Record<string, unknown> | null;
+  }): Promise<SubscriptionWebhookResolution> {
+    const subscriptionByEvent = await this.resolveSubscriptionByEvent(
+      params.event,
+    );
+
+    const subscriptionInvoice = await this.resolveSubscriptionInvoice({
+      event: params.event,
+      paymentTransaction: params.paymentTransaction,
+      subscription: subscriptionByEvent,
+    });
 
     const subscription =
-      (await this.resolveSubscriptionByEvent(event)) ??
+      subscriptionByEvent ??
       (subscriptionInvoice !== null
         ? await this.findSubscriptionByUniqueIdSafe(
             subscriptionInvoice.subscriptionId,
@@ -311,11 +323,12 @@ export class ProcessSubscriptionWebhookEventUseCase {
         : null);
 
     const subscriptionCycle =
-        subscriptionInvoice !== null && subscriptionInvoice.subscriptionCycleId !== null
-            ? await this.findSubscriptionCycleByUniqueIdSafe(
-                subscriptionInvoice.subscriptionCycleId,
-            )
-            : null;
+      subscriptionInvoice !== null &&
+      subscriptionInvoice.subscriptionCycleId !== null
+        ? await this.findSubscriptionCycleByUniqueIdSafe(
+            subscriptionInvoice.subscriptionCycleId,
+          )
+        : null;
 
     return {
       subscription,
@@ -324,12 +337,53 @@ export class ProcessSubscriptionWebhookEventUseCase {
     };
   }
 
-  private async resolveSubscriptionInvoice(
-    event: NormalizedPaymentWebhookEventDto,
-  ): Promise<SubscriptionInvoiceRow | null> {
-    if (event.subscriptionInvoiceId !== null) {
+  private async resolveSubscriptionInvoice(params: {
+    event: NormalizedPaymentWebhookEventDto;
+    paymentTransaction: Record<string, unknown> | null;
+    subscription: SubscriptionRow | null;
+  }): Promise<SubscriptionInvoiceRow | null> {
+    if (params.event.subscriptionInvoiceId !== null) {
       const found = await this.findSubscriptionInvoiceByUniqueIdSafe(
-        event.subscriptionInvoiceId,
+        params.event.subscriptionInvoiceId,
+      );
+
+      if (found !== null) {
+        return found;
+      }
+    }
+
+    const paymentTransactionId =
+      this.toNullableString(params.paymentTransaction?._id) ??
+      params.event.paymentTransactionId;
+
+    if (paymentTransactionId !== null) {
+      const found = await this.findSubscriptionInvoiceByPaymentTransactionIdSafe(
+        paymentTransactionId,
+      );
+
+      if (found !== null) {
+        return found;
+      }
+    }
+
+    if (params.event.gatewayInvoiceId !== null) {
+      const found = await this.findSubscriptionInvoiceByGatewayInvoiceIdSafe(
+        params.event.gatewayInvoiceId,
+      );
+
+      if (found !== null) {
+        return found;
+      }
+    }
+
+    if (
+      params.subscription !== null &&
+      this.shouldResolveLatestInvoiceFromSubscription(
+        params.event.canonicalStatus,
+      )
+    ) {
+      const found = await this.findLatestSubscriptionInvoiceBySubscriptionIdSafe(
+        params.subscription._id,
       );
 
       if (found !== null) {
@@ -338,6 +392,56 @@ export class ProcessSubscriptionWebhookEventUseCase {
     }
 
     return null;
+  }
+
+  private async findSubscriptionInvoiceByPaymentTransactionIdSafe(
+    paymentTransactionId: string,
+  ): Promise<SubscriptionInvoiceRow | null> {
+    try {
+      return await this.subscriptionInvoicesRepository.findByPaymentTransactionId(
+        paymentTransactionId,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  private async findSubscriptionInvoiceByGatewayInvoiceIdSafe(
+    gatewayInvoiceId: string,
+  ): Promise<SubscriptionInvoiceRow | null> {
+    try {
+      return await this.subscriptionInvoicesRepository.findByGatewayInvoiceId(
+        gatewayInvoiceId,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  private async findLatestSubscriptionInvoiceBySubscriptionIdSafe(
+    subscriptionId: string,
+  ): Promise<SubscriptionInvoiceRow | null> {
+    try {
+      return await this.subscriptionInvoicesRepository.findLatestBySubscriptionId(
+        subscriptionId,
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  private shouldResolveLatestInvoiceFromSubscription(
+    canonicalStatus: string,
+  ): boolean {
+    return [
+      'paid',
+      'invoice_paid',
+      'subscription_invoice_paid',
+      'failed',
+      'payment_failed',
+      'invoice_payment_failed',
+      'subscription_invoice_failed',
+    ].includes(canonicalStatus);
   }
 
   private async resolveSubscriptionByEvent(

@@ -159,6 +159,51 @@ export class SubscriptionInvoicesRepository
     return this.toRow(model);
   }
 
+  async findByPaymentTransactionId(
+    paymentTransactionId: string,
+  ): Promise<SubscriptionInvoiceRow | null> {
+    const model = await this.prisma.subscriptionInvoice.findFirst({
+      where: {
+        payment_transaction_id: paymentTransactionId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return model ? this.toRow(model) : null;
+  }
+
+  async findByGatewayInvoiceId(
+    gatewayInvoiceId: string,
+  ): Promise<SubscriptionInvoiceRow | null> {
+    const model = await this.prisma.subscriptionInvoice.findFirst({
+      where: {
+        gateway_invoice_id: gatewayInvoiceId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return model ? this.toRow(model) : null;
+  }
+
+  async findLatestBySubscriptionId(
+    subscriptionId: string,
+  ): Promise<SubscriptionInvoiceRow | null> {
+    const model = await this.prisma.subscriptionInvoice.findFirst({
+      where: {
+        subscription_id: subscriptionId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return model ? this.toRow(model) : null;
+  }
+
   async getAll(): Promise<SubscriptionInvoiceEntity[]> {
     const rows = await this.prisma.subscriptionInvoice.findMany({
       orderBy: {

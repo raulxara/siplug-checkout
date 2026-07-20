@@ -54,7 +54,10 @@ let ProcessSubscriptionWebhookEventUseCase = class ProcessSubscriptionWebhookEve
                 });
                 return new process_subscription_webhook_event_dto_out_1.ProcessSubscriptionWebhookEventDtoOut(paymentWebhookEvent, dtoIn.paymentTransaction, null, null, null, false, false, false, processingResult);
             }
-            const resolution = await this.resolveSubscriptionEntities(event);
+            const resolution = await this.resolveSubscriptionEntities({
+                event,
+                paymentTransaction: dtoIn.paymentTransaction,
+            });
             if (resolution.subscription === null) {
                 const processingResult = this.buildIgnoredProcessingResult({
                     reason: 'subscription not found for webhook event',
@@ -174,13 +177,19 @@ let ProcessSubscriptionWebhookEventUseCase = class ProcessSubscriptionWebhookEve
         ];
         return subscriptionStatuses.includes(event.canonicalStatus);
     }
-    async resolveSubscriptionEntities(event) {
-        const subscriptionInvoice = await this.resolveSubscriptionInvoice(event);
-        const subscription = (await this.resolveSubscriptionByEvent(event)) ??
+    async resolveSubscriptionEntities(params) {
+        const subscriptionByEvent = await this.resolveSubscriptionByEvent(params.event);
+        const subscriptionInvoice = await this.resolveSubscriptionInvoice({
+            event: params.event,
+            paymentTransaction: params.paymentTransaction,
+            subscription: subscriptionByEvent,
+        });
+        const subscription = subscriptionByEvent ??
             (subscriptionInvoice !== null
                 ? await this.findSubscriptionByUniqueIdSafe(subscriptionInvoice.subscriptionId)
                 : null);
-        const subscriptionCycle = subscriptionInvoice !== null && subscriptionInvoice.subscriptionCycleId !== null
+        const subscriptionCycle = subscriptionInvoice !== null &&
+            subscriptionInvoice.subscriptionCycleId !== null
             ? await this.findSubscriptionCycleByUniqueIdSafe(subscriptionInvoice.subscriptionCycleId)
             : null;
         return {
@@ -189,14 +198,70 @@ let ProcessSubscriptionWebhookEventUseCase = class ProcessSubscriptionWebhookEve
             subscriptionCycle,
         };
     }
-    async resolveSubscriptionInvoice(event) {
-        if (event.subscriptionInvoiceId !== null) {
-            const found = await this.findSubscriptionInvoiceByUniqueIdSafe(event.subscriptionInvoiceId);
+    async resolveSubscriptionInvoice(params) {
+        if (params.event.subscriptionInvoiceId !== null) {
+            const found = await this.findSubscriptionInvoiceByUniqueIdSafe(params.event.subscriptionInvoiceId);
+            if (found !== null) {
+                return found;
+            }
+        }
+        const paymentTransactionId = this.toNullableString(params.paymentTransaction?._id) ??
+            params.event.paymentTransactionId;
+        if (paymentTransactionId !== null) {
+            const found = await this.findSubscriptionInvoiceByPaymentTransactionIdSafe(paymentTransactionId);
+            if (found !== null) {
+                return found;
+            }
+        }
+        if (params.event.gatewayInvoiceId !== null) {
+            const found = await this.findSubscriptionInvoiceByGatewayInvoiceIdSafe(params.event.gatewayInvoiceId);
+            if (found !== null) {
+                return found;
+            }
+        }
+        if (params.subscription !== null &&
+            this.shouldResolveLatestInvoiceFromSubscription(params.event.canonicalStatus)) {
+            const found = await this.findLatestSubscriptionInvoiceBySubscriptionIdSafe(params.subscription._id);
             if (found !== null) {
                 return found;
             }
         }
         return null;
+    }
+    async findSubscriptionInvoiceByPaymentTransactionIdSafe(paymentTransactionId) {
+        try {
+            return await this.subscriptionInvoicesRepository.findByPaymentTransactionId(paymentTransactionId);
+        }
+        catch {
+            return null;
+        }
+    }
+    async findSubscriptionInvoiceByGatewayInvoiceIdSafe(gatewayInvoiceId) {
+        try {
+            return await this.subscriptionInvoicesRepository.findByGatewayInvoiceId(gatewayInvoiceId);
+        }
+        catch {
+            return null;
+        }
+    }
+    async findLatestSubscriptionInvoiceBySubscriptionIdSafe(subscriptionId) {
+        try {
+            return await this.subscriptionInvoicesRepository.findLatestBySubscriptionId(subscriptionId);
+        }
+        catch {
+            return null;
+        }
+    }
+    shouldResolveLatestInvoiceFromSubscription(canonicalStatus) {
+        return [
+            'paid',
+            'invoice_paid',
+            'subscription_invoice_paid',
+            'failed',
+            'payment_failed',
+            'invoice_payment_failed',
+            'subscription_invoice_failed',
+        ].includes(canonicalStatus);
     }
     async resolveSubscriptionByEvent(event) {
         if (event.subscriptionId !== null) {

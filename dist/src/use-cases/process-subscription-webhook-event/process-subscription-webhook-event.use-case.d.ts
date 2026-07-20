@@ -18,6 +18,10 @@ export declare class ProcessSubscriptionWebhookEventUseCase {
     private shouldProcessSubscriptionWebhook;
     private resolveSubscriptionEntities;
     private resolveSubscriptionInvoice;
+    private findSubscriptionInvoiceByPaymentTransactionIdSafe;
+    private findSubscriptionInvoiceByGatewayInvoiceIdSafe;
+    private findLatestSubscriptionInvoiceBySubscriptionIdSafe;
+    private shouldResolveLatestInvoiceFromSubscription;
     private resolveSubscriptionByEvent;
     private resolveSubscriptionStatusUpdate;
     private updateSubscriptionInvoiceIfNeeded;

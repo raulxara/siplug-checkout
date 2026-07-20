@@ -116,6 +116,39 @@ let SubscriptionInvoicesRepository = class SubscriptionInvoicesRepository {
         });
         return this.toRow(model);
     }
+    async findByPaymentTransactionId(paymentTransactionId) {
+        const model = await this.prisma.subscriptionInvoice.findFirst({
+            where: {
+                payment_transaction_id: paymentTransactionId,
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+        return model ? this.toRow(model) : null;
+    }
+    async findByGatewayInvoiceId(gatewayInvoiceId) {
+        const model = await this.prisma.subscriptionInvoice.findFirst({
+            where: {
+                gateway_invoice_id: gatewayInvoiceId,
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+        return model ? this.toRow(model) : null;
+    }
+    async findLatestBySubscriptionId(subscriptionId) {
+        const model = await this.prisma.subscriptionInvoice.findFirst({
+            where: {
+                subscription_id: subscriptionId,
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+        return model ? this.toRow(model) : null;
+    }
     async getAll() {
         const rows = await this.prisma.subscriptionInvoice.findMany({
             orderBy: {

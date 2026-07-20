@@ -29,4 +29,7 @@ export interface ISubscriptionInvoicesRepository {
     getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceEntity[]>;
     findByInvoiceNumber(invoiceNumber: string): Promise<SubscriptionInvoiceRow | null>;
     getAllBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow[]>;
+    findByPaymentTransactionId(paymentTransactionId: string): Promise<SubscriptionInvoiceRow | null>;
+    findByGatewayInvoiceId(gatewayInvoiceId: string): Promise<SubscriptionInvoiceRow | null>;
+    findLatestBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow | null>;
 }
