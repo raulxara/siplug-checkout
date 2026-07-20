@@ -99,6 +99,7 @@ import { UpdatePositionByUniqueIdModule } from './use-cases/update-position-by-u
 import { ListPermissionByOfficeIdModule } from './use-cases/list-permission-by-office-id/list-permission-by-office-id.module';
 import { GetPermissionByUniqueIdModule } from './use-cases/get-permission-by-unique-id/get-permission-by-unique-id.module';
 import { UpdatePermissionByUniqueIdModule } from './use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module';
+import { ListPermissionPositionByPositionIdModule } from './use-cases/list-permission-position-by-position-id/list-permission-position-by-position-id.module';
 
 @Module({
   imports: [
@@ -204,6 +205,7 @@ import { UpdatePermissionByUniqueIdModule } from './use-cases/update-permission-
     ListPermissionByOfficeIdModule,
     GetPermissionByUniqueIdModule,
     UpdatePermissionByUniqueIdModule,
+    ListPermissionPositionByPositionIdModule,
   ],
 })
 export class AppModule {}
