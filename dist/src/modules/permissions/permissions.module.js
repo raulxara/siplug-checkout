@@ -19,6 +19,7 @@ const get_all_permissions_service_1 = require("./services/get-all-permissions/ge
 const update_permission_service_1 = require("./services/update-permission/update-permission.service");
 const validate_permission_slug_uniqueness_service_1 = require("./services/validate-permission-slug-uniqueness/validate-permission-slug-uniqueness.service");
 const permissions_tokens_1 = require("./tokens/permissions.tokens");
+const list_permissions_by_office_id_service_1 = require("./services/list-permissions-by-office-id/list-permissions-by-office-id.service");
 let PermissionsModule = class PermissionsModule {
 };
 exports.PermissionsModule = PermissionsModule;
@@ -38,6 +39,7 @@ exports.PermissionsModule = PermissionsModule = __decorate([
             get_all_permissions_by_office_id_service_1.GetAllPermissionsByOfficeIdService,
             get_all_permissions_by_unique_ids_service_1.GetAllPermissionsByUniqueIdsService,
             validate_permission_slug_uniqueness_service_1.ValidatePermissionSlugUniquenessService,
+            list_permissions_by_office_id_service_1.ListPermissionsByOfficeIdService,
         ],
         exports: [
             permissions_tokens_1.PERMISSIONS_REPOSITORY,
@@ -49,6 +51,7 @@ exports.PermissionsModule = PermissionsModule = __decorate([
             get_all_permissions_by_office_id_service_1.GetAllPermissionsByOfficeIdService,
             get_all_permissions_by_unique_ids_service_1.GetAllPermissionsByUniqueIdsService,
             validate_permission_slug_uniqueness_service_1.ValidatePermissionSlugUniquenessService,
+            list_permissions_by_office_id_service_1.ListPermissionsByOfficeIdService,
         ],
     })
 ], PermissionsModule);

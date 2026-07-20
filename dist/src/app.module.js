@@ -104,6 +104,9 @@ const get_api_credentials_by_unique_id_module_1 = require("./use-cases/get-api-c
 const list_position_by_office_id_module_1 = require("./use-cases/list-position-by-office-id/list-position-by-office-id.module");
 const get_position_by_unique_id_module_1 = require("./use-cases/get-position-by-unique-id/get-position-by-unique-id.module");
 const update_position_by_unique_id_module_1 = require("./use-cases/update-position-by-unique-id/update-position-by-unique-id.module");
+const list_permission_by_office_id_module_1 = require("./use-cases/list-permission-by-office-id/list-permission-by-office-id.module");
+const get_permission_by_unique_id_module_1 = require("./use-cases/get-permission-by-unique-id/get-permission-by-unique-id.module");
+const update_permission_by_unique_id_module_1 = require("./use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -208,6 +211,9 @@ exports.AppModule = AppModule = __decorate([
             list_position_by_office_id_module_1.ListPositionByOfficeIdModule,
             get_position_by_unique_id_module_1.GetPositionByUniqueIdModule,
             update_position_by_unique_id_module_1.UpdatePositionByUniqueIdModule,
+            list_permission_by_office_id_module_1.ListPermissionByOfficeIdModule,
+            get_permission_by_unique_id_module_1.GetPermissionByUniqueIdModule,
+            update_permission_by_unique_id_module_1.UpdatePermissionByUniqueIdModule,
         ],
     })
 ], AppModule);

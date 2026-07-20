@@ -96,6 +96,9 @@ import { GetApiCredentialsByUniqueIdModule } from './use-cases/get-api-credentia
 import { ListPositionByOfficeIdModule } from './use-cases/list-position-by-office-id/list-position-by-office-id.module';
 import { GetPositionByUniqueIdModule } from './use-cases/get-position-by-unique-id/get-position-by-unique-id.module';
 import { UpdatePositionByUniqueIdModule } from './use-cases/update-position-by-unique-id/update-position-by-unique-id.module';
+import { ListPermissionByOfficeIdModule } from './use-cases/list-permission-by-office-id/list-permission-by-office-id.module';
+import { GetPermissionByUniqueIdModule } from './use-cases/get-permission-by-unique-id/get-permission-by-unique-id.module';
+import { UpdatePermissionByUniqueIdModule } from './use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module';
 
 @Module({
   imports: [
@@ -198,6 +201,9 @@ import { UpdatePositionByUniqueIdModule } from './use-cases/update-position-by-u
     ListPositionByOfficeIdModule,
     GetPositionByUniqueIdModule,
     UpdatePositionByUniqueIdModule,
+    ListPermissionByOfficeIdModule,
+    GetPermissionByUniqueIdModule,
+    UpdatePermissionByUniqueIdModule,
   ],
 })
 export class AppModule {}

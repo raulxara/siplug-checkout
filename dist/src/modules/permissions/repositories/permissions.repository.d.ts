@@ -7,9 +7,9 @@ export declare class PermissionsRepository implements IPermissionsRepository {
     create(entity: PermissionEntity): Promise<PermissionEntity>;
     updateByUniqueId(_id: string, data: Record<string, unknown>): Promise<PermissionRow>;
     findByUniqueId(_id: string): Promise<PermissionRow | null>;
+    getAllByOfficeId(officeId: string): Promise<PermissionRow[]>;
     findBySlug(officeId: string | null, slug: string): Promise<PermissionRow | null>;
     getAll(): Promise<PermissionRow[]>;
-    getAllByOfficeId(officeId: string): Promise<PermissionRow[]>;
     getAllByUniqueIds(_ids: string[]): Promise<PermissionRow[]>;
     private toRow;
     private parseJsonObject;

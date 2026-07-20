@@ -10,6 +10,7 @@ import { GetAllPermissionsService } from './services/get-all-permissions/get-all
 import { UpdatePermissionService } from './services/update-permission/update-permission.service';
 import { ValidatePermissionSlugUniquenessService } from './services/validate-permission-slug-uniqueness/validate-permission-slug-uniqueness.service';
 import { PERMISSIONS_REPOSITORY } from './tokens/permissions.tokens';
+import { ListPermissionsByOfficeIdService } from './services/list-permissions-by-office-id/list-permissions-by-office-id.service';
 
 @Module({
   providers: [
@@ -26,6 +27,7 @@ import { PERMISSIONS_REPOSITORY } from './tokens/permissions.tokens';
     GetAllPermissionsByOfficeIdService,
     GetAllPermissionsByUniqueIdsService,
     ValidatePermissionSlugUniquenessService,
+    ListPermissionsByOfficeIdService,
   ],
   exports: [
     PERMISSIONS_REPOSITORY,
@@ -37,6 +39,7 @@ import { PERMISSIONS_REPOSITORY } from './tokens/permissions.tokens';
     GetAllPermissionsByOfficeIdService,
     GetAllPermissionsByUniqueIdsService,
     ValidatePermissionSlugUniquenessService,
+    ListPermissionsByOfficeIdService,
   ],
 })
 export class PermissionsModule {}

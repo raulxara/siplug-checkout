@@ -59,9 +59,6 @@ let PermissionsRepository = class PermissionsRepository {
     }
     async updateByUniqueId(_id, data) {
         const updateData = {};
-        if (data.office_id !== undefined && data.office_id !== null) {
-            updateData.office_id = String(data.office_id);
-        }
         if (data.name !== undefined && data.name !== null) {
             updateData.name = String(data.name);
         }
@@ -71,18 +68,12 @@ let PermissionsRepository = class PermissionsRepository {
         if (data.description !== undefined && data.description !== null) {
             updateData.description = String(data.description);
         }
-        if (data.entity !== undefined && data.entity !== null) {
-            updateData.entity = String(data.entity);
-        }
-        if (data.action !== undefined && data.action !== null) {
-            updateData.action = String(data.action);
-        }
         if (data.config !== undefined && data.config !== null) {
             updateData.config = data.config;
         }
-        if (data.changes_history !== undefined && data.changes_history !== null) {
-            updateData.changes_history =
-                data.changes_history;
+        const changesHistory = data.changes_history ?? data.changesHistory;
+        if (changesHistory !== undefined && changesHistory !== null) {
+            updateData.changes_history = changesHistory;
         }
         if (data.status !== undefined && data.status !== null) {
             updateData.status = String(data.status);
@@ -103,6 +94,17 @@ let PermissionsRepository = class PermissionsRepository {
         });
         return model ? this.toRow(model) : null;
     }
+    async getAllByOfficeId(officeId) {
+        const rows = await this.prisma.permission.findMany({
+            where: {
+                office_id: officeId,
+            },
+            orderBy: {
+                id: 'desc',
+            },
+        });
+        return rows.map((row) => this.toRow(row));
+    }
     async findBySlug(officeId, slug) {
         const model = await this.prisma.permission.findFirst({
             where: {
@@ -114,17 +116,6 @@ let PermissionsRepository = class PermissionsRepository {
     }
     async getAll() {
         const rows = await this.prisma.permission.findMany({
-            orderBy: {
-                id: 'desc',
-            },
-        });
-        return rows.map((row) => this.toRow(row));
-    }
-    async getAllByOfficeId(officeId) {
-        const rows = await this.prisma.permission.findMany({
-            where: {
-                office_id: officeId,
-            },
             orderBy: {
                 id: 'desc',
             },

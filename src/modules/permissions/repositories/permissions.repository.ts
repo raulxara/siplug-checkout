@@ -62,10 +62,6 @@ export class PermissionsRepository implements IPermissionsRepository {
   ): Promise<PermissionRow> {
     const updateData: Prisma.PermissionUncheckedUpdateInput = {};
 
-    if (data.office_id !== undefined && data.office_id !== null) {
-      updateData.office_id = String(data.office_id);
-    }
-
     if (data.name !== undefined && data.name !== null) {
       updateData.name = String(data.name);
     }
@@ -78,21 +74,14 @@ export class PermissionsRepository implements IPermissionsRepository {
       updateData.description = String(data.description);
     }
 
-    if (data.entity !== undefined && data.entity !== null) {
-      updateData.entity = String(data.entity);
-    }
-
-    if (data.action !== undefined && data.action !== null) {
-      updateData.action = String(data.action);
-    }
-
     if (data.config !== undefined && data.config !== null) {
       updateData.config = data.config as Prisma.InputJsonValue;
     }
 
-    if (data.changes_history !== undefined && data.changes_history !== null) {
-      updateData.changes_history =
-        data.changes_history as Prisma.InputJsonValue;
+    const changesHistory = data.changes_history ?? data.changesHistory;
+
+    if (changesHistory !== undefined && changesHistory !== null) {
+      updateData.changes_history = changesHistory as Prisma.InputJsonValue;
     }
 
     if (data.status !== undefined && data.status !== null) {
@@ -119,6 +108,19 @@ export class PermissionsRepository implements IPermissionsRepository {
     return model ? this.toRow(model) : null;
   }
 
+  async getAllByOfficeId(officeId: string): Promise<PermissionRow[]> {
+    const rows = await this.prisma.permission.findMany({
+      where: {
+        office_id: officeId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+    });
+
+    return rows.map((row) => this.toRow(row));
+  }
+
   async findBySlug(
     officeId: string | null,
     slug: string,
@@ -135,19 +137,6 @@ export class PermissionsRepository implements IPermissionsRepository {
 
   async getAll(): Promise<PermissionRow[]> {
     const rows = await this.prisma.permission.findMany({
-      orderBy: {
-        id: 'desc',
-      },
-    });
-
-    return rows.map((row) => this.toRow(row));
-  }
-
-  async getAllByOfficeId(officeId: string): Promise<PermissionRow[]> {
-    const rows = await this.prisma.permission.findMany({
-      where: {
-        office_id: officeId,
-      },
       orderBy: {
         id: 'desc',
       },

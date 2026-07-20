@@ -146,43 +146,43 @@ export class UpdatePositionByUniqueIdUseCase {
   }
 
   private buildChangesHistory(
-  currentChangesHistory: unknown,
-  details: Record<string, { old: unknown; new: unknown }>,
-): unknown[] {
-  const history = this.normalizeChangesHistory(currentChangesHistory);
+    currentChangesHistory: unknown,
+    details: Record<string, { old: unknown; new: unknown }>,
+  ): unknown[] {
+    const history = this.normalizeChangesHistory(currentChangesHistory);
 
-  return [
-    ...history,
-    {
-      source: 'UpdatePositionByUniqueIdController',
-      action: 'update',
-      details,
-      updated_at: this.nowAsSqlDateTime(),
-    },
-  ];
-}
-
-private normalizeChangesHistory(currentChangesHistory: unknown): unknown[] {
-  if (Array.isArray(currentChangesHistory)) {
-    return currentChangesHistory;
+    return [
+      ...history,
+      {
+        source: 'UpdatePositionByUniqueIdController',
+        action: 'update',
+        details,
+        updated_at: this.nowAsSqlDateTime(),
+      },
+    ];
   }
 
-  if (typeof currentChangesHistory === 'string') {
-    try {
-      const parsed = JSON.parse(currentChangesHistory);
-
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-
-      return [];
-    } catch {
-      return [];
+  private normalizeChangesHistory(currentChangesHistory: unknown): unknown[] {
+    if (Array.isArray(currentChangesHistory)) {
+      return currentChangesHistory;
     }
-  }
 
-  return [];
-}
+    if (typeof currentChangesHistory === 'string') {
+      try {
+        const parsed = JSON.parse(currentChangesHistory);
+
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+
+        return [];
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  }
 
   private nowAsSqlDateTime(): string {
     const date = new Date();
