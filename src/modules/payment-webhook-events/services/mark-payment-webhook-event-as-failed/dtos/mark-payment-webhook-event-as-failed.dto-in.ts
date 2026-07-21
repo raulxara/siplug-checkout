@@ -1,0 +1,38 @@
+export class MarkPaymentWebhookEventAsFailedDtoIn {
+  public readonly _id: string;
+  public readonly errorMessage: string;
+  public readonly processingResult: Record<string, unknown>;
+  public readonly source: string;
+
+  constructor(params: {
+    _id?: unknown;
+    errorMessage?: unknown;
+    processingResult?: unknown;
+    source?: unknown;
+  }) {
+    this._id = String(params._id ?? '').trim();
+    this.errorMessage = String(params.errorMessage ?? '').trim();
+    this.processingResult = this.toObject(params.processingResult);
+    this.source = String(params.source ?? 'system').trim();
+
+    if (this._id === '') {
+      throw new Error('_id is required');
+    }
+
+    if (this.errorMessage === '') {
+      throw new Error('errorMessage is required');
+    }
+  }
+
+  private toObject(value: unknown): Record<string, unknown> {
+    if (value === undefined || value === null) {
+      return {};
+    }
+
+    if (typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('processingResult must be an object');
+    }
+
+    return value as Record<string, unknown>;
+  }
+}

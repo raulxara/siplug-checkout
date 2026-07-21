@@ -1,0 +1,7 @@
+export class ValidatePagSeguroWebhookDtoOut {
+  constructor(
+    public readonly valid: boolean,
+    public readonly skipped: boolean,
+    public readonly reason: string | null,
+  ) {}
+}

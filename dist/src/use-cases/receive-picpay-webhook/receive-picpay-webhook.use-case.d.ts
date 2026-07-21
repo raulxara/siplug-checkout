@@ -1,0 +1,34 @@
+import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
+import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
+import { FindApiCredentialByUniqueIdService } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service';
+import { RegisterPaymentWebhookEventService } from '../../modules/payment-webhook-events/services/register-payment-webhook-event/register-payment-webhook-event.service';
+import { NormalizePicPayWebhookService } from '../../modules/payment-webhook-gateways/picpay/services/normalize-picpay-webhook/normalize-picpay-webhook.service';
+import { ValidatePicPayWebhookService } from '../../modules/payment-webhook-gateways/picpay/services/validate-picpay-webhook/validate-picpay-webhook.service';
+import { FindPaymentTransactionByGatewayTransactionIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/find-payment-transaction-by-gateway-transaction-id.service';
+import { ProcessPaymentWebhookEventUseCase } from '../process-payment-webhook-event/process-payment-webhook-event.use-case';
+import { ReceivePicPayWebhookDtoIn } from './dtos/receive-picpay-webhook.dto-in';
+import { ReceivePicPayWebhookDtoOut } from './dtos/receive-picpay-webhook.dto-out';
+import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
+export declare class ReceivePicPayWebhookUseCase {
+    private readonly findApiCredentialByUniqueIdService;
+    private readonly decryptApiCredentialSecretService;
+    private readonly validatePicPayWebhookService;
+    private readonly normalizePicPayWebhookService;
+    private readonly findPaymentTransactionByGatewayTransactionIdService;
+    private readonly findPaymentTransactionByUniqueIdService;
+    private readonly registerPaymentWebhookEventService;
+    private readonly processPaymentWebhookEventUseCase;
+    private readonly handleUseCaseExceptionService;
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validatePicPayWebhookService: ValidatePicPayWebhookService, normalizePicPayWebhookService: NormalizePicPayWebhookService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    exec(dtoIn: ReceivePicPayWebhookDtoIn): Promise<ReceivePicPayWebhookDtoOut>;
+    private resolveCredentialData;
+    private enrichPicPayNormalizedEventWithInternalReferences;
+    private resolvePaymentTransactionFromPicPayEvent;
+    private findPaymentTransactionByUniqueIdSafe;
+    private restoreUuidFromCompactString;
+    private findPaymentTransactionByGatewayTransactionIdSafe;
+    private normalizeProvider;
+    private sanitizeSensitiveGatewayData;
+    private toRecordOrNull;
+    private extractString;
+}

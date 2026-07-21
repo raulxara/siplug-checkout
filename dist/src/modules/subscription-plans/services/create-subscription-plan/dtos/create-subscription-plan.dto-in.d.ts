@@ -1,0 +1,21 @@
+export declare class CreateSubscriptionPlanDtoIn {
+    readonly officeId: string;
+    readonly clientId: string;
+    readonly gatewayId: string | null;
+    readonly apiCredentialId: string | null;
+    readonly gatewayPlanId: string | null;
+    readonly name: string;
+    readonly slug: string;
+    readonly description: string | null;
+    readonly billingInterval: string;
+    readonly billingIntervalCount: number;
+    readonly amount: number;
+    readonly currency: string;
+    readonly trialDays: number | null;
+    readonly maxBillingCycles: number | null;
+    readonly paymentMethods: string[] | null;
+    readonly metadata: Record<string, unknown> | null;
+    readonly config: Record<string, unknown> | null;
+    readonly status: string;
+    constructor(officeId: string, clientId: string, gatewayId: string | null, apiCredentialId: string | null, gatewayPlanId: string | null, name: string, slug: string, description: string | null, billingInterval: string, billingIntervalCount: number, amount: number, currency: string, trialDays: number | null, maxBillingCycles: number | null, paymentMethods: string[] | null, metadata: Record<string, unknown> | null, config: Record<string, unknown> | null, status: string);
+}

@@ -1,0 +1,45 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PaymentSplitRecipientsModule = void 0;
+const common_1 = require("@nestjs/common");
+const prisma_module_1 = require("../../infra/database/prisma/prisma.module");
+const payment_split_recipients_repository_1 = require("./repositories/payment-split-recipients.repository");
+const create_payment_split_recipient_service_1 = require("./services/create-payment-split-recipient/create-payment-split-recipient.service");
+const payment_split_recipients_tokens_1 = require("./tokens/payment-split-recipients.tokens");
+const get_all_payment_split_recipients_by_payment_split_id_service_1 = require("./services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service");
+const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
+const update_payment_split_recipient_status_service_1 = require("./services/update-payment-split-recipient-status/update-payment-split-recipient-status.service");
+const update_payment_split_recipient_service_1 = require("./services/update-payment-split-recipient/update-payment-split-recipient.service");
+let PaymentSplitRecipientsModule = class PaymentSplitRecipientsModule {
+};
+exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule;
+exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule = __decorate([
+    (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
+        providers: [
+            {
+                provide: payment_split_recipients_tokens_1.PAYMENT_SPLIT_RECIPIENTS_REPOSITORY,
+                useClass: payment_split_recipients_repository_1.PaymentSplitRecipientsRepository,
+            },
+            create_payment_split_recipient_service_1.CreatePaymentSplitRecipientService,
+            get_all_payment_split_recipients_by_payment_split_id_service_1.GetAllPaymentSplitRecipientsByPaymentSplitIdService,
+            build_changes_history_service_1.BuildChangesHistoryService,
+            update_payment_split_recipient_status_service_1.UpdatePaymentSplitRecipientStatusService,
+            update_payment_split_recipient_service_1.UpdatePaymentSplitRecipientService,
+        ],
+        exports: [
+            payment_split_recipients_tokens_1.PAYMENT_SPLIT_RECIPIENTS_REPOSITORY,
+            create_payment_split_recipient_service_1.CreatePaymentSplitRecipientService,
+            get_all_payment_split_recipients_by_payment_split_id_service_1.GetAllPaymentSplitRecipientsByPaymentSplitIdService,
+            update_payment_split_recipient_status_service_1.UpdatePaymentSplitRecipientStatusService,
+            update_payment_split_recipient_service_1.UpdatePaymentSplitRecipientService,
+        ],
+    })
+], PaymentSplitRecipientsModule);
+//# sourceMappingURL=payment-split-recipients.module.js.map
