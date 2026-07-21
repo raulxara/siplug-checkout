@@ -108,6 +108,7 @@ const list_permission_by_office_id_module_1 = require("./use-cases/list-permissi
 const get_permission_by_unique_id_module_1 = require("./use-cases/get-permission-by-unique-id/get-permission-by-unique-id.module");
 const update_permission_by_unique_id_module_1 = require("./use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module");
 const list_permission_position_by_position_id_module_1 = require("./use-cases/list-permission-position-by-position-id/list-permission-position-by-position-id.module");
+const list_checkout_sessions_by_office_id_module_1 = require("./use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -216,6 +217,7 @@ exports.AppModule = AppModule = __decorate([
             get_permission_by_unique_id_module_1.GetPermissionByUniqueIdModule,
             update_permission_by_unique_id_module_1.UpdatePermissionByUniqueIdModule,
             list_permission_position_by_position_id_module_1.ListPermissionPositionByPositionIdModule,
+            list_checkout_sessions_by_office_id_module_1.ListCheckoutSessionsByOfficeIdModule,
         ],
     })
 ], AppModule);

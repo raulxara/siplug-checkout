@@ -100,6 +100,7 @@ import { ListPermissionByOfficeIdModule } from './use-cases/list-permission-by-o
 import { GetPermissionByUniqueIdModule } from './use-cases/get-permission-by-unique-id/get-permission-by-unique-id.module';
 import { UpdatePermissionByUniqueIdModule } from './use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module';
 import { ListPermissionPositionByPositionIdModule } from './use-cases/list-permission-position-by-position-id/list-permission-position-by-position-id.module';
+import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module';
 
 @Module({
   imports: [
@@ -206,6 +207,7 @@ import { ListPermissionPositionByPositionIdModule } from './use-cases/list-permi
     GetPermissionByUniqueIdModule,
     UpdatePermissionByUniqueIdModule,
     ListPermissionPositionByPositionIdModule,
+    ListCheckoutSessionsByOfficeIdModule,
   ],
 })
 export class AppModule {}
