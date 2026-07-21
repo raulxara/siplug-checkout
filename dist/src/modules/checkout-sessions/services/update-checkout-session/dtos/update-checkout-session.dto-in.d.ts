@@ -1,0 +1,44 @@
+export declare class UpdateCheckoutSessionDtoIn {
+    readonly _id: string;
+    readonly officeId: string | null;
+    readonly clientId: string | null;
+    readonly paymentCustomerId: string | null;
+    readonly gatewayId: string | null;
+    readonly apiCredentialId: string | null;
+    readonly code: string | null;
+    readonly externalReference: string | null;
+    readonly idempotencyKey: string | null;
+    readonly paymentType: string | null;
+    readonly amount: number | null;
+    readonly currency: string | null;
+    readonly description: string | null;
+    readonly successUrl: string | null;
+    readonly cancelUrl: string | null;
+    readonly expiresAt: string | null;
+    readonly metadata: Record<string, unknown> | null;
+    readonly config: Record<string, unknown> | null;
+    readonly status: string | null;
+    readonly source: string;
+    constructor(params: {
+        _id: string;
+        officeId?: string | null;
+        clientId?: string | null;
+        paymentCustomerId?: string | null;
+        gatewayId?: string | null;
+        apiCredentialId?: string | null;
+        code?: string | null;
+        externalReference?: string | null;
+        idempotencyKey?: string | null;
+        paymentType?: string | null;
+        amount?: number | null;
+        currency?: string | null;
+        description?: string | null;
+        successUrl?: string | null;
+        cancelUrl?: string | null;
+        expiresAt?: string | null;
+        metadata?: Record<string, unknown> | null;
+        config?: Record<string, unknown> | null;
+        status?: string | null;
+        source?: string;
+    });
+}

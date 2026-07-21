@@ -1,0 +1,3 @@
+export const PAYMENT_SPLITS_REPOSITORY = Symbol(
+  'PAYMENT_SPLITS_REPOSITORY',
+);

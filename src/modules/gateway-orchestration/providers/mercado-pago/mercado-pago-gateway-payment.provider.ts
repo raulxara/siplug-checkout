@@ -1,0 +1,1408 @@
+import { Injectable } from '@nestjs/common';
+import type { IGatewayPaymentProvider } from '../../contracts/gateway-payment-provider.interface';
+import { GatewayPaymentDtoIn } from '../../dtos/gateway-payment.dto-in';
+import { GatewayPaymentDtoOut } from '../../dtos/gateway-payment.dto-out';
+
+type MercadoPagoPixPayer = {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  identification?: {
+    type: string;
+    number: string;
+  };
+  address?: {
+    zip_code?: string;
+    street_name?: string;
+    street_number?: string;
+    neighborhood?: string;
+    city?: string;
+    federal_unit?: string;
+  };
+};
+
+type MercadoPagoPixPaymentRequest = {
+  transaction_amount: number;
+  description: string;
+  payment_method_id: 'pix';
+  payer: MercadoPagoPixPayer;
+  external_reference?: string;
+  notification_url?: string;
+  date_of_expiration?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type MercadoPagoPixPaymentResponse = {
+  id?: number | string;
+  status?: string;
+  status_detail?: string;
+  date_approved?: string | null;
+  date_created?: string | null;
+  date_of_expiration?: string | null;
+  external_reference?: string | null;
+  transaction_amount?: number;
+  currency_id?: string;
+  payment_method_id?: string;
+  transaction_details?: {
+    net_received_amount?: number;
+    total_paid_amount?: number;
+    overpaid_amount?: number;
+    external_resource_url?: string | null;
+    installment_amount?: number;
+    financial_institution?: string | null;
+    transaction_id?: string | null;
+  };
+  point_of_interaction?: {
+    type?: string;
+    sub_type?: string | null;
+    transaction_data?: {
+      qr_code_base64?: string;
+      qr_code?: string;
+      ticket_url?: string;
+      transaction_id?: string | null;
+    };
+  };
+  cause?: Array<{
+    code?: number | string;
+    data?: string;
+    description?: string;
+    message?: string;
+  }>;
+  error?: string;
+  message?: string;
+  status_code?: number;
+  statusCode?: number;
+  [key: string]: unknown;
+};
+
+type MercadoPagoPreferenceItem = {
+  id?: string;
+  title: string;
+  description?: string;
+  quantity: number;
+  unit_price: number;
+  currency_id: string;
+};
+
+type MercadoPagoPreferencePayer = {
+  name?: string;
+  surname?: string;
+  email?: string;
+  identification?: {
+    type: string;
+    number: string;
+  };
+};
+
+type MercadoPagoPreferenceRequest = {
+  items: MercadoPagoPreferenceItem[];
+  payer?: MercadoPagoPreferencePayer;
+  external_reference?: string;
+  notification_url?: string;
+  back_urls?: {
+    success?: string;
+    failure?: string;
+    pending?: string;
+  };
+  auto_return?: 'approved' | 'all';
+  metadata?: Record<string, unknown>;
+};
+
+type MercadoPagoPreferenceResponse = {
+  id?: string;
+  init_point?: string;
+  sandbox_init_point?: string;
+  external_reference?: string;
+  date_created?: string;
+  status?: string | number;
+  cause?: Array<{
+    code?: number | string;
+    data?: string;
+    description?: string;
+    message?: string;
+  }>;
+  error?: string;
+  message?: string;
+  [key: string]: unknown;
+};
+
+@Injectable()
+export class MercadoPagoGatewayPaymentProvider implements IGatewayPaymentProvider {
+  getProviderName(): string {
+    return 'mercado_pago';
+  }
+
+  supports(gatewayProvider: string): boolean {
+    const normalizedProvider = this.normalize(gatewayProvider);
+
+    return ['mercado_pago', 'mercadopago', 'mercado-pago']
+      .map((alias) => this.normalize(alias))
+      .includes(normalizedProvider);
+  }
+
+  async processPayment(
+    dtoIn: GatewayPaymentDtoIn,
+  ): Promise<GatewayPaymentDtoOut> {
+    try {
+      const accessToken = this.resolveAccessToken(dtoIn);
+      const idempotencyKey = this.resolveIdempotencyKey(dtoIn);
+
+      const credentialValidationFailure =
+        this.validateMercadoPagoCredentialForTestScenario(dtoIn, accessToken);
+
+      if (credentialValidationFailure !== null) {
+        return credentialValidationFailure;
+      }
+
+      if (dtoIn.paymentTransaction.paymentMethod === 'payment_link') {
+        return await this.processPaymentLink({
+          dtoIn,
+          accessToken,
+          idempotencyKey,
+        });
+      }
+
+      let requestPayload: Record<string, unknown>;
+
+      if (dtoIn.paymentTransaction.paymentMethod === 'pix') {
+        requestPayload = this.buildPixPaymentRequestPayload(
+          dtoIn,
+        ) as unknown as Record<string, unknown>;
+      } else if (dtoIn.paymentTransaction.paymentMethod === 'credit_card') {
+        requestPayload = this.buildCreditCardPaymentRequestPayload(dtoIn);
+      } else if (dtoIn.paymentTransaction.paymentMethod === 'boleto') {
+        requestPayload = this.buildBoletoPaymentRequestPayload(dtoIn);
+      } else {
+        return new GatewayPaymentDtoOut({
+          success: false,
+          provider: this.getProviderName(),
+
+          gatewayTransactionId: null,
+          gatewayStatus: null,
+
+          status: 'failed',
+          processStatus: 'gateway_payment_method_not_implemented',
+          processMessage: `Mercado Pago provider does not support payment method ${dtoIn.paymentTransaction.paymentMethod}`,
+
+          providerRequest: {
+            paymentTransactionId: dtoIn.paymentTransaction._id,
+            paymentMethod: dtoIn.paymentTransaction.paymentMethod,
+          },
+
+          providerResponse: {
+            message: 'payment method not implemented for Mercado Pago adapter',
+          },
+
+          gatewayResponse: null,
+
+          failedAt: this.nowAsSqlDateTime(),
+          expiresAt: dtoIn.paymentTransaction.expiresAt,
+        });
+      }
+
+      const response = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      const responseBody = (await response.json().catch(() => ({
+        message: 'Mercado Pago returned a non JSON response',
+      }))) as MercadoPagoPixPaymentResponse;
+
+      if (!response.ok) {
+        const retryable = this.isRetryableGatewayFailure(response.status);
+
+        return new GatewayPaymentDtoOut({
+          success: false,
+          provider: this.getProviderName(),
+
+          gatewayTransactionId: this.toNullableString(responseBody.id),
+          gatewayStatus:
+            this.toNullableString(responseBody.status) ??
+            String(response.status),
+
+          status: retryable ? 'pending' : 'failed',
+          processStatus: retryable
+            ? 'gateway_unavailable_retryable'
+            : 'gateway_dispatch_failed',
+
+          processMessage:
+            this.extractMercadoPagoErrorMessage(responseBody) ??
+            `Mercado Pago Payments request failed with status ${response.status}`,
+
+          providerRequest: requestPayload,
+          providerResponse: responseBody,
+          gatewayResponse: {
+            httpStatus: response.status,
+            ok: response.ok,
+            endpoint: '/v1/payments',
+          },
+
+          failedAt: retryable ? null : this.nowAsSqlDateTime(),
+          expiresAt: dtoIn.paymentTransaction.expiresAt,
+        });
+      }
+
+      return this.mapSuccessfulPixPaymentResponse({
+        dtoIn,
+        requestPayload,
+        responseBody,
+        httpStatus: response.status,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'error on Mercado Pago payment provider';
+
+      return new GatewayPaymentDtoOut({
+        success: false,
+        provider: this.getProviderName(),
+
+        gatewayTransactionId: null,
+        gatewayStatus: null,
+
+        status: 'failed',
+        processStatus: 'gateway_dispatch_exception',
+        processMessage: message,
+
+        providerRequest: {
+          paymentTransactionId: dtoIn.paymentTransaction._id,
+          idempotencyKey: dtoIn.idempotencyKey,
+          providerPayload: dtoIn.providerPayload,
+        },
+
+        providerResponse: {
+          message,
+        },
+
+        gatewayResponse: null,
+
+        failedAt: this.nowAsSqlDateTime(),
+        expiresAt: dtoIn.paymentTransaction.expiresAt,
+      });
+    }
+  }
+
+  private async processPaymentLink(params: {
+    dtoIn: GatewayPaymentDtoIn;
+    accessToken: string;
+    idempotencyKey: string;
+  }): Promise<GatewayPaymentDtoOut> {
+    const requestPayload = this.buildPaymentLinkPreferenceRequestPayload(
+      params.dtoIn,
+    );
+
+    const headers: Record<string, string> = {
+      accept: 'application/json',
+      Authorization: `Bearer ${params.accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    if (params.idempotencyKey.trim() !== '') {
+      headers['X-Idempotency-Key'] = params.idempotencyKey;
+    }
+
+    const response = await fetch(
+      'https://api.mercadopago.com/checkout/preferences',
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestPayload),
+      },
+    );
+
+    const responseBody = (await response.json().catch(() => ({
+      message: 'Mercado Pago returned a non JSON preference response',
+    }))) as MercadoPagoPreferenceResponse;
+
+    if (!response.ok) {
+      return new GatewayPaymentDtoOut({
+        success: false,
+        provider: this.getProviderName(),
+
+        gatewayTransactionId: this.toNullableString(responseBody.id),
+        gatewayStatus:
+          this.toNullableString(responseBody.status) ?? String(response.status),
+
+        status: 'failed',
+        processStatus: 'gateway_payment_link_creation_failed',
+        processMessage:
+          this.extractMercadoPagoErrorMessage(
+            responseBody as MercadoPagoPixPaymentResponse,
+          ) ??
+          `Mercado Pago preference request failed with status ${response.status}`,
+
+        providerRequest: requestPayload as unknown as Record<string, unknown>,
+        providerResponse: responseBody,
+        gatewayResponse: {
+          httpStatus: response.status,
+          ok: response.ok,
+          endpoint: '/checkout/preferences',
+        },
+
+        failedAt: this.nowAsSqlDateTime(),
+        expiresAt: params.dtoIn.paymentTransaction.expiresAt,
+      });
+    }
+
+    return this.mapSuccessfulPaymentLinkPreferenceResponse({
+      dtoIn: params.dtoIn,
+      requestPayload: requestPayload as unknown as Record<string, unknown>,
+      responseBody,
+      httpStatus: response.status,
+    });
+  }
+
+  private buildPixPaymentRequestPayload(
+    dtoIn: GatewayPaymentDtoIn,
+  ): MercadoPagoPixPaymentRequest {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const checkoutSession = this.asObject(providerPayload.checkoutSession);
+    const payerPayload = this.asObject(providerPayload.payer);
+
+    const payer = this.buildPayer(payerPayload);
+
+    const description =
+      this.toNullableString(checkoutSession.description) ??
+      `Pagamento ${dtoIn.paymentTransaction._id}`;
+
+    const payload: MercadoPagoPixPaymentRequest = {
+      transaction_amount: this.convertCentsToAmount(
+        dtoIn.paymentTransaction.amount,
+      ),
+      description,
+      payment_method_id: 'pix',
+      payer,
+      external_reference:
+        dtoIn.paymentTransaction.externalReference ??
+        dtoIn.paymentTransaction._id,
+      metadata: {
+        paymentTransactionId: dtoIn.paymentTransaction._id,
+        checkoutSessionId: dtoIn.paymentTransaction.checkoutSessionId,
+        officeId: dtoIn.paymentTransaction.officeId,
+        clientId: dtoIn.paymentTransaction.clientId,
+      },
+    };
+
+    const notificationUrl = this.resolveNotificationUrl(dtoIn);
+
+    if (notificationUrl !== null) {
+      payload.notification_url = notificationUrl;
+    }
+
+    const dateOfExpiration = this.resolveDateOfExpiration(dtoIn);
+
+    if (dateOfExpiration !== null) {
+      payload.date_of_expiration = dateOfExpiration;
+    }
+
+    return payload;
+  }
+
+  private buildCreditCardPaymentRequestPayload(
+    dtoIn: GatewayPaymentDtoIn,
+  ): Record<string, unknown> {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const checkoutSession = this.asObject(providerPayload.checkoutSession);
+    const payerPayload = this.asObject(providerPayload.payer);
+    const paymentData = this.asObject(providerPayload.paymentData);
+
+    const cardToken =
+      this.toNullableString(paymentData.cardToken) ??
+      this.toNullableString(paymentData.card_token) ??
+      this.toNullableString(paymentData.cardTokenId) ??
+      this.toNullableString(paymentData.card_token_id) ??
+      this.toNullableString(paymentData.token);
+
+    const paymentMethodId =
+      this.toNullableString(paymentData.paymentMethodId) ??
+      this.toNullableString(paymentData.payment_method_id);
+
+    const issuerId =
+      this.toNullableString(paymentData.issuerId) ??
+      this.toNullableString(paymentData.issuer_id);
+
+    if (cardToken === null) {
+      throw new Error(
+        'paymentData.cardToken is required for Mercado Pago credit card',
+      );
+    }
+
+    if (paymentMethodId === null) {
+      throw new Error(
+        'paymentData.paymentMethodId is required for Mercado Pago credit card',
+      );
+    }
+
+    const payer = this.buildPayer(payerPayload);
+
+    const description =
+      this.toNullableString(checkoutSession.description) ??
+      `Pagamento ${dtoIn.paymentTransaction._id}`;
+
+    const payload: Record<string, unknown> = {
+      token: cardToken,
+      transaction_amount: this.convertCentsToAmount(
+        dtoIn.paymentTransaction.amount,
+      ),
+      installments: dtoIn.paymentTransaction.installments ?? 1,
+      payment_method_id: paymentMethodId,
+      description,
+      payer,
+      external_reference:
+        dtoIn.paymentTransaction.externalReference ??
+        dtoIn.paymentTransaction._id,
+      metadata: {
+        paymentTransactionId: dtoIn.paymentTransaction._id,
+        checkoutSessionId: dtoIn.paymentTransaction.checkoutSessionId,
+        officeId: dtoIn.paymentTransaction.officeId,
+        clientId: dtoIn.paymentTransaction.clientId,
+      },
+    };
+
+    if (issuerId !== null) {
+      payload.issuer_id = issuerId;
+    }
+
+    const notificationUrl = this.resolveNotificationUrl(dtoIn);
+
+    if (notificationUrl !== null) {
+      payload.notification_url = notificationUrl;
+    }
+
+    return payload;
+  }
+
+  private buildBoletoPaymentRequestPayload(
+    dtoIn: GatewayPaymentDtoIn,
+  ): Record<string, unknown> {
+    const boletoMinimumAmountInCents = 500;
+
+    if (dtoIn.paymentTransaction.amount < boletoMinimumAmountInCents) {
+      throw new Error(
+        'Mercado Pago boleto requires amount greater than or equal to R$ 5,00',
+      );
+    }
+
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const checkoutSession = this.asObject(providerPayload.checkoutSession);
+    const payerPayload = this.asObject(providerPayload.payer);
+
+    const payer = this.buildPayer(payerPayload);
+
+    const description =
+      this.toNullableString(checkoutSession.description) ??
+      `Pagamento ${dtoIn.paymentTransaction._id}`;
+
+    const payload: Record<string, unknown> = {
+      transaction_amount: this.convertCentsToAmount(
+        dtoIn.paymentTransaction.amount,
+      ),
+      description,
+      payment_method_id: 'bolbradesco',
+      payer,
+      external_reference:
+        dtoIn.paymentTransaction.externalReference ??
+        dtoIn.paymentTransaction._id,
+      metadata: {
+        paymentTransactionId: dtoIn.paymentTransaction._id,
+        checkoutSessionId: dtoIn.paymentTransaction.checkoutSessionId,
+        officeId: dtoIn.paymentTransaction.officeId,
+        clientId: dtoIn.paymentTransaction.clientId,
+      },
+    };
+
+    const notificationUrl = this.resolveNotificationUrl(dtoIn);
+
+    if (notificationUrl !== null) {
+      payload.notification_url = notificationUrl;
+    }
+
+    const dateOfExpiration = this.resolveDateOfExpiration(dtoIn);
+
+    if (dateOfExpiration !== null) {
+      payload.date_of_expiration = dateOfExpiration;
+    }
+
+    return payload;
+  }
+
+  private buildPaymentLinkPreferenceRequestPayload(
+    dtoIn: GatewayPaymentDtoIn,
+  ): MercadoPagoPreferenceRequest {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const checkoutSession = this.asObject(providerPayload.checkoutSession);
+    const payerPayload = this.asObject(providerPayload.payer);
+
+    const itemsPayload = Array.isArray(providerPayload.items)
+      ? providerPayload.items
+      : [];
+
+    const items: MercadoPagoPreferenceItem[] =
+      itemsPayload.length > 0
+        ? itemsPayload.map((item, index) => {
+            const itemObject = this.asObject(item);
+            const quantity = this.resolvePositiveNumber(itemObject.quantity, 1);
+
+            const unitAmountInCents =
+              this.resolvePositiveNumber(itemObject.unitAmount, 0) ||
+              this.resolvePositiveNumber(itemObject.unit_amount, 0) ||
+              this.resolvePositiveNumber(itemObject.totalAmount, 0) /
+                quantity ||
+              dtoIn.paymentTransaction.amount;
+
+            return {
+              id:
+                this.toNullableString(itemObject._id) ??
+                this.toNullableString(itemObject.id) ??
+                this.toNullableString(itemObject.itemRef) ??
+                this.toNullableString(itemObject.item_ref) ??
+                `item-${index + 1}`,
+              title:
+                this.toNullableString(itemObject.name) ??
+                this.toNullableString(itemObject.title) ??
+                `Item ${index + 1}`,
+              description:
+                this.toNullableString(itemObject.description) ?? undefined,
+              quantity,
+              unit_price: this.convertCentsToAmount(unitAmountInCents),
+              currency_id: dtoIn.paymentTransaction.currency,
+            };
+          })
+        : [
+            {
+              id: dtoIn.paymentTransaction._id,
+              title:
+                this.toNullableString(checkoutSession.description) ??
+                `Pagamento ${dtoIn.paymentTransaction._id}`,
+              quantity: 1,
+              unit_price: this.convertCentsToAmount(
+                dtoIn.paymentTransaction.amount,
+              ),
+              currency_id: dtoIn.paymentTransaction.currency,
+            },
+          ];
+
+    const payer = this.buildPreferencePayer(payerPayload);
+
+    const payload: MercadoPagoPreferenceRequest = {
+      items,
+      external_reference:
+        dtoIn.paymentTransaction.externalReference ??
+        dtoIn.paymentTransaction._id,
+      metadata: {
+        paymentTransactionId: dtoIn.paymentTransaction._id,
+        checkoutSessionId: dtoIn.paymentTransaction.checkoutSessionId,
+        officeId: dtoIn.paymentTransaction.officeId,
+        clientId: dtoIn.paymentTransaction.clientId,
+      },
+    };
+
+    if (payer !== null) {
+      payload.payer = payer;
+    }
+
+    const notificationUrl = this.resolveNotificationUrl(dtoIn);
+
+    if (notificationUrl !== null) {
+      payload.notification_url = notificationUrl;
+    }
+
+    const successUrl =
+      this.toNullableString(checkoutSession.successUrl) ??
+      this.toNullableString(checkoutSession.success_url);
+
+    const cancelUrl =
+      this.toNullableString(checkoutSession.cancelUrl) ??
+      this.toNullableString(checkoutSession.cancel_url);
+
+    if (successUrl !== null || cancelUrl !== null) {
+      payload.back_urls = {};
+
+      if (successUrl !== null) {
+        payload.back_urls.success = successUrl;
+        payload.back_urls.pending = successUrl;
+      }
+
+      if (cancelUrl !== null) {
+        payload.back_urls.failure = cancelUrl;
+      }
+    }
+
+    if (successUrl !== null) {
+      payload.auto_return = 'approved';
+    }
+
+    return payload;
+  }
+
+  private buildPayer(
+    payerPayload: Record<string, unknown>,
+  ): MercadoPagoPixPayer {
+    const email = this.toNullableString(payerPayload.email);
+
+    if (email === null) {
+      throw new Error('payer.email is required for Mercado Pago PIX');
+    }
+
+    const name = this.toNullableString(payerPayload.name);
+    const firstName = this.toNullableString(payerPayload.firstName);
+    const lastName = this.toNullableString(payerPayload.lastName);
+
+    const documentType = this.toNullableString(payerPayload.documentType);
+    const documentValue = this.toNullableString(payerPayload.documentValue);
+
+    const payer: MercadoPagoPixPayer = {
+      email,
+    };
+
+    if (firstName !== null) {
+      payer.first_name = firstName;
+    }
+
+    if (lastName !== null) {
+      payer.last_name = lastName;
+    }
+
+    if (firstName === null && name !== null) {
+      const nameParts = name.trim().split(/\s+/);
+
+      payer.first_name = nameParts.shift() ?? name;
+
+      if (nameParts.length > 0) {
+        payer.last_name = nameParts.join(' ');
+      }
+    }
+
+    if (documentType !== null && documentValue !== null) {
+      payer.identification = {
+        type: documentType.toUpperCase(),
+        number: documentValue.replace(/\D/g, ''),
+      };
+    }
+
+    const address = this.buildAddress(payerPayload);
+
+    if (address !== null) {
+      payer.address = address;
+    }
+
+    return payer;
+  }
+
+  private buildPreferencePayer(
+    payerPayload: Record<string, unknown>,
+  ): MercadoPagoPreferencePayer | null {
+    const email = this.toNullableString(payerPayload.email);
+    const name = this.toNullableString(payerPayload.name);
+    const firstName = this.toNullableString(payerPayload.firstName);
+    const lastName = this.toNullableString(payerPayload.lastName);
+
+    const documentType = this.toNullableString(payerPayload.documentType);
+    const documentValue = this.toNullableString(payerPayload.documentValue);
+
+    const payer: MercadoPagoPreferencePayer = {};
+
+    if (email !== null) {
+      payer.email = email;
+    }
+
+    if (firstName !== null) {
+      payer.name = firstName;
+    }
+
+    if (lastName !== null) {
+      payer.surname = lastName;
+    }
+
+    if (firstName === null && name !== null) {
+      const nameParts = name.trim().split(/\s+/);
+
+      payer.name = nameParts.shift() ?? name;
+
+      if (nameParts.length > 0) {
+        payer.surname = nameParts.join(' ');
+      }
+    }
+
+    if (documentType !== null && documentValue !== null) {
+      payer.identification = {
+        type: documentType.toUpperCase(),
+        number: documentValue.replace(/\D/g, ''),
+      };
+    }
+
+    return Object.keys(payer).length > 0 ? payer : null;
+  }
+
+  private isRetryableGatewayFailure(httpStatus: number): boolean {
+    return (
+      httpStatus === 408 ||
+      httpStatus === 409 ||
+      httpStatus === 425 ||
+      httpStatus === 429 ||
+      httpStatus >= 500
+    );
+  }
+
+  private buildAddress(
+    payerPayload: Record<string, unknown>,
+  ): MercadoPagoPixPayer['address'] | null {
+    const addressPayload = this.asObject(payerPayload.address);
+
+    const zipCode =
+      this.toNullableString(addressPayload.zipCode) ??
+      this.toNullableString(addressPayload.zip_code);
+
+    const streetName =
+      this.toNullableString(addressPayload.streetName) ??
+      this.toNullableString(addressPayload.street_name);
+
+    const streetNumber =
+      this.toNullableString(addressPayload.streetNumber) ??
+      this.toNullableString(addressPayload.street_number);
+
+    const neighborhood = this.toNullableString(addressPayload.neighborhood);
+    const city = this.toNullableString(addressPayload.city);
+
+    const federalUnit =
+      this.toNullableString(addressPayload.federalUnit) ??
+      this.toNullableString(addressPayload.federal_unit);
+
+    const address: MercadoPagoPixPayer['address'] = {};
+
+    if (zipCode !== null) {
+      address.zip_code = zipCode.replace(/\D/g, '');
+    }
+
+    if (streetName !== null) {
+      address.street_name = streetName;
+    }
+
+    if (streetNumber !== null) {
+      address.street_number = streetNumber;
+    }
+
+    if (neighborhood !== null) {
+      address.neighborhood = neighborhood;
+    }
+
+    if (city !== null) {
+      address.city = city;
+    }
+
+    if (federalUnit !== null) {
+      address.federal_unit = federalUnit;
+    }
+
+    return Object.keys(address).length > 0 ? address : null;
+  }
+
+  private mapSuccessfulPixPaymentResponse(params: {
+    dtoIn: GatewayPaymentDtoIn;
+    requestPayload: Record<string, unknown>;
+    responseBody: MercadoPagoPixPaymentResponse;
+    httpStatus: number;
+  }): GatewayPaymentDtoOut {
+    const gatewayStatus =
+      this.toNullableString(params.responseBody.status) ?? 'unknown';
+
+    const gatewayStatusDetail = this.toNullableString(
+      params.responseBody.status_detail,
+    );
+
+    const internalStatus = this.mapMercadoPagoStatusToInternalStatus({
+      status: gatewayStatus,
+      statusDetail: gatewayStatusDetail,
+    });
+
+    const processStatus = this.mapMercadoPagoStatusToProcessStatus({
+      status: gatewayStatus,
+      statusDetail: gatewayStatusDetail,
+    });
+
+    const transactionData =
+      params.responseBody.point_of_interaction?.transaction_data;
+
+    const transactionDetails = params.responseBody.transaction_details;
+
+    const boletoUrl =
+      this.toNullableString(transactionDetails?.external_resource_url) ?? null;
+
+    return new GatewayPaymentDtoOut({
+      success: true,
+      provider: this.getProviderName(),
+
+      gatewayTransactionId: this.toNullableString(params.responseBody.id),
+      gatewayStatus,
+
+      status: internalStatus,
+      processStatus,
+      processMessage: `Mercado Pago payment returned status ${gatewayStatus}${
+        gatewayStatusDetail !== null ? `/${gatewayStatusDetail}` : ''
+      }`,
+
+      providerRequest: params.requestPayload,
+      providerResponse: params.responseBody,
+      gatewayResponse: {
+        httpStatus: params.httpStatus,
+        ok: true,
+        endpoint: '/v1/payments',
+        paymentId: params.responseBody.id ?? null,
+        paymentStatus: params.responseBody.status ?? null,
+        paymentStatusDetail: params.responseBody.status_detail ?? null,
+      },
+
+      qrCode: transactionData?.qr_code ?? null,
+      qrCodeBase64: transactionData?.qr_code_base64 ?? null,
+      boletoUrl,
+      checkoutUrl: transactionData?.ticket_url ?? null,
+
+      paidAt: internalStatus === 'paid' ? this.nowAsSqlDateTime() : null,
+      authorizedAt:
+        internalStatus === 'authorized' ? this.nowAsSqlDateTime() : null,
+      canceledAt:
+        internalStatus === 'canceled' ? this.nowAsSqlDateTime() : null,
+      failedAt: internalStatus === 'failed' ? this.nowAsSqlDateTime() : null,
+      refundedAt:
+        internalStatus === 'refunded' ? this.nowAsSqlDateTime() : null,
+
+      expiresAt:
+        this.formatExternalDate(params.responseBody.date_of_expiration) ??
+        params.dtoIn.paymentTransaction.expiresAt,
+    });
+  }
+
+  private mapSuccessfulPaymentLinkPreferenceResponse(params: {
+    dtoIn: GatewayPaymentDtoIn;
+    requestPayload: Record<string, unknown>;
+    responseBody: MercadoPagoPreferenceResponse;
+    httpStatus: number;
+  }): GatewayPaymentDtoOut {
+    const preferenceId = this.toNullableString(params.responseBody.id);
+
+    const checkoutUrl = this.resolvePreferenceCheckoutUrl({
+      dtoIn: params.dtoIn,
+      responseBody: params.responseBody,
+    });
+
+    return new GatewayPaymentDtoOut({
+      success: true,
+      provider: this.getProviderName(),
+
+      gatewayTransactionId: preferenceId,
+      gatewayStatus: 'pending',
+
+      status: 'pending',
+      processStatus: 'gateway_payment_link_created',
+      processMessage: 'Mercado Pago payment link created successfully',
+
+      providerRequest: params.requestPayload,
+      providerResponse: params.responseBody,
+      gatewayResponse: {
+        httpStatus: params.httpStatus,
+        ok: true,
+        endpoint: '/checkout/preferences',
+        preferenceId,
+      },
+
+      checkoutUrl,
+
+      paidAt: null,
+      authorizedAt: null,
+      canceledAt: null,
+      failedAt: null,
+      refundedAt: null,
+
+      expiresAt: params.dtoIn.paymentTransaction.expiresAt,
+    });
+  }
+
+  private resolveAccessToken(dtoIn: GatewayPaymentDtoIn): string {
+    const connectionData = dtoIn.apiCredential?.connectionData ?? {};
+    const credentialConfig = dtoIn.apiCredential?.config ?? {};
+
+    const config = dtoIn.config ?? {};
+    const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+
+    const shouldPreferTestToken =
+      this.isSandboxEnvironment(dtoIn) ||
+      this.isMercadoPagoTestPayer(dtoIn) ||
+      this.isMercadoPagoTestCardPayload(dtoIn);
+
+    const testCandidates = [
+      connectionData.testAccessToken,
+      connectionData.test_access_token,
+      connectionData.sandboxAccessToken,
+      connectionData.sandbox_access_token,
+
+      credentialConfig.testAccessToken,
+      credentialConfig.test_access_token,
+      credentialConfig.sandboxAccessToken,
+      credentialConfig.sandbox_access_token,
+
+      apiCredentialConfig.testAccessToken,
+      apiCredentialConfig.test_access_token,
+      apiCredentialConfig.sandboxAccessToken,
+      apiCredentialConfig.sandbox_access_token,
+    ];
+
+    const defaultCandidates = [
+      dtoIn.apiCredential?.token,
+
+      connectionData.token,
+      connectionData.accessToken,
+      connectionData.access_token,
+      connectionData.providerToken,
+      connectionData.provider_token,
+
+      credentialConfig.accessToken,
+      credentialConfig.access_token,
+      credentialConfig.providerToken,
+      credentialConfig.provider_token,
+
+      apiCredentialConfig.accessToken,
+      apiCredentialConfig.access_token,
+      apiCredentialConfig.providerToken,
+      apiCredentialConfig.provider_token,
+    ];
+
+    const candidates = shouldPreferTestToken
+      ? [...testCandidates, ...defaultCandidates]
+      : [...defaultCandidates, ...testCandidates];
+
+    const token = candidates.find(
+      (value) => typeof value === 'string' && value.trim() !== '',
+    );
+
+    if (typeof token !== 'string') {
+      throw new Error(
+        'Mercado Pago token is required in api credential connection data',
+      );
+    }
+
+    return token;
+  }
+
+  private resolveIdempotencyKey(dtoIn: GatewayPaymentDtoIn): string {
+    const idempotencyKey =
+      dtoIn.idempotencyKey ?? dtoIn.paymentTransaction.idempotencyKey;
+
+    if (idempotencyKey !== null && idempotencyKey.trim() !== '') {
+      return idempotencyKey;
+    }
+
+    return dtoIn.paymentTransaction._id;
+  }
+
+  private resolveNotificationUrl(dtoIn: GatewayPaymentDtoIn): string | null {
+    const config = dtoIn.config ?? {};
+    const transactionConfig = this.asObject(config.transactionConfig);
+    const gatewayConfig = this.asObject(config.gatewayConfig);
+    const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+
+    return (
+      this.toNullableString(transactionConfig.notificationUrl) ??
+      this.toNullableString(transactionConfig.notification_url) ??
+      this.toNullableString(gatewayConfig.notificationUrl) ??
+      this.toNullableString(gatewayConfig.notification_url) ??
+      this.toNullableString(apiCredentialConfig.notificationUrl) ??
+      this.toNullableString(apiCredentialConfig.notification_url)
+    );
+  }
+
+  private resolveDateOfExpiration(dtoIn: GatewayPaymentDtoIn): string | null {
+    const config = dtoIn.config ?? {};
+    const transactionConfig = this.asObject(config.transactionConfig);
+    const gatewayConfig = this.asObject(config.gatewayConfig);
+    const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+
+    const configuredDate =
+      this.toNullableString(transactionConfig.dateOfExpiration) ??
+      this.toNullableString(transactionConfig.date_of_expiration) ??
+      this.toNullableString(gatewayConfig.dateOfExpiration) ??
+      this.toNullableString(gatewayConfig.date_of_expiration) ??
+      this.toNullableString(apiCredentialConfig.dateOfExpiration) ??
+      this.toNullableString(apiCredentialConfig.date_of_expiration);
+
+    const normalizedConfiguredDate =
+      this.normalizeMercadoPagoDateOfExpiration(configuredDate);
+
+    if (normalizedConfiguredDate !== null) {
+      return normalizedConfiguredDate;
+    }
+
+    if (
+      dtoIn.paymentTransaction.paymentMethod === 'pix' ||
+      dtoIn.paymentTransaction.paymentMethod === 'boleto'
+    ) {
+      return this.buildFutureMercadoPagoExpirationDate(3);
+    }
+
+    return null;
+  }
+
+  private normalizeMercadoPagoDateOfExpiration(
+    value: string | null,
+  ): string | null {
+    if (value === null) {
+      return null;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const minimumDate = new Date();
+    minimumDate.setDate(minimumDate.getDate() + 1);
+
+    if (date.getTime() <= minimumDate.getTime()) {
+      return null;
+    }
+
+    return value;
+  }
+
+  private buildFutureMercadoPagoExpirationDate(daysFromNow: number): string {
+    const date = new Date();
+
+    date.setDate(date.getDate() + daysFromNow);
+    date.setHours(23, 59, 59, 0);
+
+    const year = date.getFullYear();
+    const month = this.pad(date.getMonth() + 1);
+    const day = this.pad(date.getDate());
+
+    return `${year}-${month}-${day}T23:59:59.000-03:00`;
+  }
+
+  private mapMercadoPagoStatusToInternalStatus(params: {
+    status: string;
+    statusDetail: string | null;
+  }): string {
+    const status = params.status.toLowerCase().trim();
+    const statusDetail = params.statusDetail?.toLowerCase().trim() ?? null;
+
+    if (status === 'approved') {
+      return 'paid';
+    }
+
+    if (status === 'authorized') {
+      return 'authorized';
+    }
+
+    if (
+      status === 'pending' ||
+      status === 'in_process' ||
+      statusDetail === 'pending_waiting_transfer'
+    ) {
+      return 'pending';
+    }
+
+    if (status === 'rejected' || status === 'failed') {
+      return 'failed';
+    }
+
+    if (status === 'cancelled' || status === 'canceled') {
+      return 'canceled';
+    }
+
+    if (status === 'refunded') {
+      return 'refunded';
+    }
+
+    return 'processing';
+  }
+
+  private mapMercadoPagoStatusToProcessStatus(params: {
+    status: string;
+    statusDetail: string | null;
+  }): string {
+    const status = params.status.toLowerCase().trim();
+    const statusDetail = params.statusDetail?.toLowerCase().trim() ?? null;
+
+    if (status === 'approved') {
+      return 'gateway_approved';
+    }
+
+    if (status === 'authorized') {
+      return 'gateway_authorized';
+    }
+
+    if (
+      status === 'pending' ||
+      status === 'in_process' ||
+      statusDetail === 'pending_waiting_transfer'
+    ) {
+      return 'gateway_pending';
+    }
+
+    if (status === 'rejected' || status === 'failed') {
+      return 'gateway_rejected';
+    }
+
+    if (status === 'cancelled' || status === 'canceled') {
+      return 'gateway_cancelled';
+    }
+
+    if (status === 'refunded') {
+      return 'gateway_refunded';
+    }
+
+    return 'gateway_dispatched';
+  }
+
+  private extractMercadoPagoErrorMessage(
+    responseBody: MercadoPagoPixPaymentResponse,
+  ): string | null {
+    const message = this.toNullableString(responseBody.message);
+
+    if (message !== null) {
+      return message;
+    }
+
+    const error = this.toNullableString(responseBody.error);
+
+    if (error !== null) {
+      return error;
+    }
+
+    const cause = responseBody.cause;
+
+    if (Array.isArray(cause) && cause.length > 0) {
+      const firstCause = cause[0];
+
+      return (
+        this.toNullableString(firstCause.description) ??
+        this.toNullableString(firstCause.message) ??
+        this.toNullableString(firstCause.code)
+      );
+    }
+
+    return null;
+  }
+
+  private validateMercadoPagoCredentialForTestScenario(
+    dtoIn: GatewayPaymentDtoIn,
+    accessToken: string,
+  ): GatewayPaymentDtoOut | null {
+    const paymentMethod = dtoIn.paymentTransaction.paymentMethod;
+
+    if (paymentMethod === 'payment_link') {
+      return null;
+    }
+
+    const isTestScenario =
+      this.isSandboxEnvironment(dtoIn) ||
+      this.isMercadoPagoTestPayer(dtoIn) ||
+      this.isMercadoPagoTestCardPayload(dtoIn);
+
+    if (!isTestScenario) {
+      return null;
+    }
+
+    if (!this.isMercadoPagoLiveAccessToken(accessToken)) {
+      return null;
+    }
+
+    return new GatewayPaymentDtoOut({
+      success: false,
+      provider: this.getProviderName(),
+
+      gatewayTransactionId: null,
+      gatewayStatus: 'local_validation_failed',
+
+      status: 'failed',
+      processStatus: 'gateway_credential_invalid_for_test',
+      processMessage:
+        'Mercado Pago TEST access token is required for sandbox/test PIX, boleto and credit_card payments',
+
+      providerRequest: {
+        paymentTransactionId: dtoIn.paymentTransaction._id,
+        paymentMethod,
+        externalReference: dtoIn.paymentTransaction.externalReference,
+        environment: this.resolveMercadoPagoEnvironment(dtoIn),
+      },
+
+      providerResponse: {
+        message:
+          'Current access token looks like a production/live credential, but this is a Mercado Pago test scenario. Use a TEST access token generated for the seller test account and generate cardToken with the matching TEST public key.',
+      },
+
+      gatewayResponse: {
+        ok: false,
+        endpoint: 'local-validation',
+        provider: 'mercado_pago',
+        reason: 'live_credentials_used_in_test_scenario',
+      },
+
+      failedAt: this.nowAsSqlDateTime(),
+      expiresAt: dtoIn.paymentTransaction.expiresAt,
+    });
+  }
+
+  private isMercadoPagoLiveAccessToken(accessToken: string): boolean {
+    const normalized = accessToken.trim();
+
+    return (
+      normalized.startsWith('APP_USR-') || normalized.startsWith('APP_USR')
+    );
+  }
+
+  private isMercadoPagoTestPayer(dtoIn: GatewayPaymentDtoIn): boolean {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const payer = this.asObject(providerPayload.payer);
+
+    const email = this.toNullableString(payer.email);
+
+    return email !== null && email.toLowerCase().includes('@testuser.com');
+  }
+
+  private isMercadoPagoTestCardPayload(dtoIn: GatewayPaymentDtoIn): boolean {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const paymentData = this.asObject(providerPayload.paymentData);
+
+    const cardToken =
+      this.toNullableString(paymentData.cardToken) ??
+      this.toNullableString(paymentData.card_token) ??
+      this.toNullableString(paymentData.token);
+
+    return (
+      cardToken !== null &&
+      dtoIn.paymentTransaction.paymentMethod === 'credit_card'
+    );
+  }
+
+  private resolveMercadoPagoEnvironment(dtoIn: GatewayPaymentDtoIn): string {
+    const config = dtoIn.config ?? {};
+    const transactionConfig = this.asObject(config.transactionConfig);
+    const gatewayConfig = this.asObject(config.gatewayConfig);
+    const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+
+    return (
+      this.toNullableString(transactionConfig.environment) ??
+      this.toNullableString(transactionConfig.env) ??
+      this.toNullableString(gatewayConfig.environment) ??
+      this.toNullableString(gatewayConfig.env) ??
+      this.toNullableString(apiCredentialConfig.environment) ??
+      this.toNullableString(apiCredentialConfig.env) ??
+      'local'
+    )
+      .toLowerCase()
+      .trim();
+  }
+
+  private isSandboxEnvironment(dtoIn: GatewayPaymentDtoIn): boolean {
+    const environment = this.resolveMercadoPagoEnvironment(dtoIn);
+
+    return [
+      'local',
+      'dev',
+      'development',
+      'sandbox',
+      'test',
+      'testing',
+    ].includes(environment);
+  }
+
+  private resolvePreferenceCheckoutUrl(params: {
+    dtoIn: GatewayPaymentDtoIn;
+    responseBody: MercadoPagoPreferenceResponse;
+  }): string | null {
+    const initPoint = this.toNullableString(params.responseBody.init_point);
+    const sandboxInitPoint = this.toNullableString(
+      params.responseBody.sandbox_init_point,
+    );
+
+    if (this.isSandboxEnvironment(params.dtoIn)) {
+      return sandboxInitPoint ?? initPoint;
+    }
+
+    return initPoint ?? sandboxInitPoint;
+  }
+
+  private convertCentsToAmount(amountInCents: number): number {
+    return Number((amountInCents / 100).toFixed(2));
+  }
+
+  private resolvePositiveNumber(value: unknown, fallback: number): number {
+    const numberValue = Number(value);
+
+    if (!Number.isFinite(numberValue) || numberValue <= 0) {
+      return fallback;
+    }
+
+    return numberValue;
+  }
+
+  private asObject(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private toNullableString(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const stringValue = String(value).trim();
+
+    return stringValue === '' ? null : stringValue;
+  }
+
+  private formatExternalDate(value: string | null | undefined): string | null {
+    if (!value) {
+      return null;
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return this.formatDateToSqlDateTime(date);
+  }
+
+  private nowAsSqlDateTime(): string {
+    return this.formatDateToSqlDateTime(new Date());
+  }
+
+  private formatDateToSqlDateTime(date: Date): string {
+    const year = date.getFullYear();
+    const month = this.pad(date.getMonth() + 1);
+    const day = this.pad(date.getDate());
+    const hours = this.pad(date.getHours());
+    const minutes = this.pad(date.getMinutes());
+    const seconds = this.pad(date.getSeconds());
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  private pad(value: number): string {
+    return String(value).padStart(2, '0');
+  }
+
+  private normalize(value: string): string {
+    return value
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\./g, '')
+      .replace(/-/g, '_')
+      .replace(/\s+/g, '_');
+  }
+}

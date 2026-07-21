@@ -1,0 +1,34 @@
+import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
+import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
+import { FindApiCredentialByUniqueIdService } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service';
+import { DispatchGatewaySplitTransferService } from '../../modules/gateway-split-transfers/services/dispatch-gateway-split-transfer/dispatch-gateway-split-transfer.service';
+import { GetAllPaymentSplitRecipientsByPaymentSplitIdService } from '../../modules/payment-split-recipients/services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service';
+import { UpdatePaymentSplitRecipientService } from '../../modules/payment-split-recipients/services/update-payment-split-recipient/update-payment-split-recipient.service';
+import { FindPaymentSplitByUniqueIdService } from '../../modules/payment-splits/services/find-payment-split-by-unique-id/find-payment-split-by-unique-id.service';
+import { UpdatePaymentSplitService } from '../../modules/payment-splits/services/update-payment-split/update-payment-split.service';
+import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
+import { DispatchPaymentSplitToGatewayDtoIn } from './dtos/dispatch-payment-split-to-gateway.dto-in';
+import { DispatchPaymentSplitToGatewayDtoOut } from './dtos/dispatch-payment-split-to-gateway.dto-out';
+export declare class DispatchPaymentSplitToGatewayUseCase {
+    private readonly findPaymentSplitByUniqueIdService;
+    private readonly updatePaymentSplitService;
+    private readonly getAllPaymentSplitRecipientsByPaymentSplitIdService;
+    private readonly updatePaymentSplitRecipientService;
+    private readonly findPaymentTransactionByUniqueIdService;
+    private readonly findApiCredentialByUniqueIdService;
+    private readonly decryptApiCredentialSecretService;
+    private readonly dispatchGatewaySplitTransferService;
+    private readonly handleUseCaseExceptionService;
+    constructor(findPaymentSplitByUniqueIdService: FindPaymentSplitByUniqueIdService, updatePaymentSplitService: UpdatePaymentSplitService, getAllPaymentSplitRecipientsByPaymentSplitIdService: GetAllPaymentSplitRecipientsByPaymentSplitIdService, updatePaymentSplitRecipientService: UpdatePaymentSplitRecipientService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, dispatchGatewaySplitTransferService: DispatchGatewaySplitTransferService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    exec(dtoIn: DispatchPaymentSplitToGatewayDtoIn): Promise<DispatchPaymentSplitToGatewayDtoOut>;
+    private resolveProviderToken;
+    private extractRecipients;
+    private buildRecipientsForGateway;
+    private resolveDestinationAccountId;
+    private updateRecipientsAfterGatewayDispatch;
+    private markSplitAsFailedSafe;
+    private buildIdempotencyKey;
+    private toObject;
+    private toNullableString;
+    private extractString;
+}
