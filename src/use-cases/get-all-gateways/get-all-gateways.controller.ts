@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { GetAllGatewaysDtoIn } from './dtos/get-all-gateways.dto-in';
@@ -16,6 +18,7 @@ export class GetAllGatewaysController {
   ) {}
 
   @Post('get-all')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: GetAllGatewaysRequest,
     @Headers('authorization') authorization?: string,
