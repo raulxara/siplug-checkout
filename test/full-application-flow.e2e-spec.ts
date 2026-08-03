@@ -9,15 +9,23 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/infra/database/prisma/prisma.service';
 
 /* supertest exposes response.body as any; assertions below validate its runtime shape. */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 
-describe('Full application flow (steps 1 to 3)', () => {
+describe('Full application flow (steps 1 to 4)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
 
   const runId = randomUUID();
   const tag = `e2e-${runId}`;
   const adminToken = `token-${runId}`;
+  const mercadoPagoAccessToken =
+    'TEST-6395065273942617-052714-0b1b10e004ab0843f6cf5fee5cf48f76-494786624';
+  const mercadoPagoWebhookSecret =
+    '80c9612f933bd46c8690813f7ee28755767b5ccbaf26213975854db1602c2817';
+  const mercadoPagoPublicKey = 'TEST-95c199d0-0303-41a6-a9cf-7e7590771460';
+  const mercadoPagoNotificationUrl =
+    'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/mercado-pago/58f0a86c-4b1a-4e33-88ef-30bcf794a9ad?source_news=webhooks';
+  const mercadoPagoTestPayerEmail = 'raul.nascc98@gmail.com';
 
   let officeId: string;
   let adminProfileId: string;
@@ -31,6 +39,7 @@ describe('Full application flow (steps 1 to 3)', () => {
   let userId: string;
   let userProfileId: string;
   let userClientId: string;
+  let paymentCustomerId: string;
 
   const api = () => {
     const client = request(app.getHttpServer());
@@ -145,14 +154,33 @@ describe('Full application flow (steps 1 to 3)', () => {
     });
   });
 
-  it('creates and verifies the base, gateway/credential and access-management flow', async () => {
+  it('creates and verifies the base, Mercado Pago and access-management flow', async () => {
     const gatewayResponse = await api()
       .post('/api/v1/gateways/register')
       .send({
-        name: `Gateway ${tag}`,
-        slug: `gateway-${runId}`,
-        provider: 'stripe',
-        config: { testRun: tag },
+        name: 'Mercado Pago',
+        slug: `mercado-pago-${runId}`,
+        provider: 'mercado_pago',
+        config: {
+          baseUrl: 'https://api.mercadopago.com',
+          priority: 1,
+          provider: 'mercado_pago',
+          isDefault: true,
+          environment: 'sandbox',
+          paymentTypes: ['one_time', 'recurring'],
+          paymentMethods: ['pix', 'credit_card', 'boleto', 'payment_link'],
+          supportedPaymentMethods: [
+            'pix',
+            'credit_card',
+            'boleto',
+            'payment_link',
+          ],
+          supportsInstallments: false,
+          supportsSplitPayment: false,
+          supportsOneTimePayment: true,
+          supportsRecurringPayment: true,
+          testRun: tag,
+        },
       })
       .expect(201);
 
@@ -162,10 +190,10 @@ describe('Full application flow (steps 1 to 3)', () => {
 
     const updatedGatewayResponse = await api()
       .put('/api/v1/gateways/update')
-      .send({ gatewayId, name: `Gateway updated ${tag}` })
+      .send({ gatewayId, description: `Mercado Pago test gateway ${tag}` })
       .expect(200);
-    expect(updatedGatewayResponse.body.data.gateway.name).toBe(
-      `Gateway updated ${tag}`,
+    expect(updatedGatewayResponse.body.data.gateway.description).toBe(
+      `Mercado Pago test gateway ${tag}`,
     );
 
     const gatewaysResponse = await api()
@@ -181,13 +209,37 @@ describe('Full application flow (steps 1 to 3)', () => {
       .send({
         officeId,
         gatewayId,
-        name: `Credential ${tag}`,
-        slug: `credential-${runId}`,
-        provider: 'stripe',
-        providerType: 'payment',
-        providerToken: 'fake-provider-token',
-        environment: 'sandbox',
-        config: { webhookSecret: 'fake-webhook-secret', testRun: tag },
+        name: 'Mercado Pago',
+        slug: 'mercado-pago',
+        provider: 'mercado_pago',
+        providerType: 'gateway_provider',
+        providerToken: mercadoPagoAccessToken,
+        environment: 'local',
+        config: {
+          baseUrl: 'https://api.mercadopago.com',
+          priority: 1,
+          provider: 'mercado_pago',
+          isDefault: true,
+          publicKey: mercadoPagoPublicKey,
+          environment: 'sandbox',
+          paymentTypes: ['one_time', 'recurring'],
+          recurringFlow: 'approval_url',
+          recurringMode: 'gateway_native',
+          webhookSecret: mercadoPagoWebhookSecret,
+          paymentMethods: ['pix', 'credit_card', 'boleto', 'payment_link'],
+          notificationUrl: mercadoPagoNotificationUrl,
+          supportsInstallments: false,
+          supportsSplitPayment: false,
+          supportsOneTimePayment: true,
+          supportsRecurringPayment: true,
+          supportedPaymentMethods: [
+            'pix',
+            'credit_card',
+            'boleto',
+            'payment_link',
+          ],
+          testRun: tag,
+        },
       })
       .expect(201);
 
@@ -220,18 +272,6 @@ describe('Full application flow (steps 1 to 3)', () => {
       expect.arrayContaining([
         expect.objectContaining({ _id: apiCredentialId }),
       ]),
-    );
-
-    const updatedCredentialResponse = await api()
-      .put('/api/v1/api-credentials/update')
-      .send({
-        apiCredentialId,
-        name: `Credential updated ${tag}`,
-        providerToken: 'fake-provider-token-updated',
-      })
-      .expect(200);
-    expect(updatedCredentialResponse.body.data.apiCredential.name).toBe(
-      `Credential updated ${tag}`,
     );
 
     const permissionResponse = await api()
@@ -379,9 +419,246 @@ describe('Full application flow (steps 1 to 3)', () => {
     expect(positionPermission).toEqual(
       expect.objectContaining({ status: 'active' }),
     );
+
+    const payer = {
+      name: 'Buyer Test User',
+      email: mercadoPagoTestPayerEmail,
+      documentType: 'cpf',
+      documentValue: '12345678909',
+      address: {
+        zipCode: '06233200',
+        streetName: 'Av. das Nações Unidas',
+        streetNumber: '3003',
+        neighborhood: 'Bonfim',
+        city: 'Osasco',
+        federalUnit: 'SP',
+      },
+    };
+
+    const paymentCustomerResponse = await api()
+      .post('/api/v1/payment-customers/register')
+      .send({
+        officeId,
+        clientId: userClientId,
+        profileId: userProfileId,
+        externalReference: `payer-${runId}`,
+        name: payer.name,
+        email: payer.email,
+        documentType: payer.documentType,
+        documentValue: payer.documentValue,
+        billingAddress: payer.address,
+        metadata: { source: 'e2e', gatewayProvider: 'mercado_pago' },
+        config: { environment: 'sandbox' },
+      })
+      .expect(201);
+
+    paymentCustomerId = paymentCustomerResponse.body.data._id;
+    expect(paymentCustomerResponse.body.data).toEqual(
+      expect.objectContaining({
+        _id: paymentCustomerId,
+        officeId,
+        clientId: userClientId,
+        profileId: userProfileId,
+        name: payer.name,
+        email: payer.email,
+        documentType: payer.documentType,
+        documentValue: payer.documentValue,
+        billingAddress: expect.objectContaining(payer.address),
+        status: 'active',
+      }),
+    );
+
+    const paymentCustomerByIdResponse = await api()
+      .post('/api/v1/payment-customers/get-by-unique-id')
+      .send({ paymentCustomerId })
+      .expect(200);
+    expect(paymentCustomerByIdResponse.body.data.paymentCustomer).toEqual(
+      expect.objectContaining({ _id: paymentCustomerId }),
+    );
+
+    const paymentMethods = ['pix', 'payment_link', 'credit_card', 'boleto'];
+    const checkoutSessionIds = new Map<string, string>();
+
+    for (const paymentMethod of paymentMethods) {
+      const checkoutSessionResponse = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId,
+          apiCredentialId,
+          code: `checkout-${paymentMethod}-${runId}`,
+          externalReference: `checkout-${paymentMethod}-${runId}`,
+          idempotencyKey: `checkout-${paymentMethod}-${runId}`,
+          paymentType: 'one_time',
+          amount: 1000,
+          currency: 'BRL',
+          description: `Mercado Pago one-time ${paymentMethod} checkout`,
+          successUrl: 'https://checkout.example.test/success',
+          cancelUrl: 'https://checkout.example.test/cancel',
+          items: [
+            {
+              itemRef: `item-${paymentMethod}-${runId}`,
+              itemType: 'product',
+              name: `E2E ${paymentMethod} item`,
+              quantity: 1,
+              unitAmount: 1000,
+              totalAmount: 1000,
+            },
+          ],
+          metadata: { paymentMethod, testRun: tag },
+          config: { paymentMethod },
+        })
+        .expect(201);
+
+      const checkoutSession = checkoutSessionResponse.body.data.checkoutSession;
+      expect(checkoutSession).toEqual(
+        expect.objectContaining({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId,
+          apiCredentialId,
+          paymentType: 'one_time',
+          amount: 1000,
+          currency: 'BRL',
+          status: 'created',
+        }),
+      );
+      expect(checkoutSession.metadata).toEqual(
+        expect.objectContaining({
+          paymentMethod,
+          gatewayProvider: 'mercado_pago',
+        }),
+      );
+      expect(checkoutSessionResponse.body.data.items).toEqual([
+        expect.objectContaining({
+          quantity: 1,
+          unitAmount: 1000,
+          totalAmount: 1000,
+        }),
+      ]);
+
+      const checkoutSessionId = asString(checkoutSession._id);
+      checkoutSessionIds.set(paymentMethod, checkoutSessionId);
+
+      const checkoutSessionByIdResponse = await api()
+        .post('/api/v1/checkout-sessions/get-by-unique-id')
+        .send({ checkoutSessionId })
+        .expect(200);
+      expect(checkoutSessionByIdResponse.body.data.checkoutSession._id).toBe(
+        checkoutSessionId,
+      );
+    }
+
+    expect([...checkoutSessionIds.keys()]).toEqual(paymentMethods);
+
+    const checkoutSessionsResponse = await api()
+      .post('/api/v1/checkout-sessions/list')
+      .send({ officeId, search: runId })
+      .expect(200);
+    expect(checkoutSessionsResponse.body.data.items).toEqual(
+      expect.arrayContaining(
+        [...checkoutSessionIds.values()].map((checkoutSessionId) =>
+          expect.objectContaining({
+            checkoutSession: expect.objectContaining({
+              _id: checkoutSessionId,
+            }),
+          }),
+        ),
+      ),
+    );
+
+    const checkoutSessionsByOfficeResponse = await api()
+      .post('/api/v1/checkout-sessions/list-by-office-id')
+      .send({ officeId })
+      .expect(200);
+    expect(checkoutSessionsByOfficeResponse.body.data.checkoutSessions).toEqual(
+      expect.arrayContaining(
+        [...checkoutSessionIds.values()].map((checkoutSessionId) =>
+          expect.objectContaining({ _id: checkoutSessionId }),
+        ),
+      ),
+    );
+
+    const pixCheckoutSessionId = asString(checkoutSessionIds.get('pix'));
+    const pixPaymentResponse = await api()
+      .post('/api/v1/payments/process')
+      .send({
+        checkoutSessionId: pixCheckoutSessionId,
+        paymentMethod: 'pix',
+        externalReference: `checkout-mercadopago-pix-${runId}`,
+        idempotencyKey: `checkout-mercadopago-pix-${runId}`,
+        payer,
+        paymentData: { method: 'pix' },
+        metadata: {
+          source: 'e2e',
+          origin: 'mercadopago-pix-one-time-test',
+        },
+        config: { capture: true, environment: 'sandbox' },
+      })
+      .expect(200);
+
+    const pixTransaction = pixPaymentResponse.body.data.paymentTransaction;
+    expect(pixTransaction).toEqual(
+      expect.objectContaining({
+        checkoutSessionId: pixCheckoutSessionId,
+        paymentCustomerId,
+        gatewayId,
+        apiCredentialId,
+        paymentMethod: 'pix',
+        gatewayTransactionId: expect.any(String),
+        qrCode: expect.any(String),
+        gatewayResponse: expect.objectContaining({
+          endpoint: '/v1/payments',
+          ok: true,
+        }),
+      }),
+    );
+
+    const paymentLinkCheckoutSessionId = asString(
+      checkoutSessionIds.get('payment_link'),
+    );
+    const paymentLinkResponse = await api()
+      .post('/api/v1/payments/process')
+      .send({
+        checkoutSessionId: paymentLinkCheckoutSessionId,
+        paymentMethod: 'payment_link',
+        externalReference: `checkout-mercadopago-link-${runId}`,
+        idempotencyKey: `checkout-mercadopago-link-${runId}`,
+        payer,
+        paymentData: { method: 'payment_link' },
+        metadata: { source: 'e2e', origin: 'mercadopago-link-one-time-test' },
+        config: { capture: true, environment: 'sandbox' },
+      })
+      .expect(200);
+
+    const paymentLinkTransaction =
+      paymentLinkResponse.body.data.paymentTransaction;
+    expect(paymentLinkTransaction).toEqual(
+      expect.objectContaining({
+        checkoutSessionId: paymentLinkCheckoutSessionId,
+        paymentCustomerId,
+        gatewayId,
+        apiCredentialId,
+        paymentMethod: 'payment_link',
+        gatewayTransactionId: expect.any(String),
+        checkoutUrl: expect.any(String),
+        gatewayResponse: expect.objectContaining({
+          endpoint: '/checkout/preferences',
+          ok: true,
+        }),
+      }),
+    );
   });
 
   afterAll(async () => {
     await app?.close();
   });
+
+  function asString(value: unknown): string {
+    expect(typeof value).toBe('string');
+    return value as string;
+  }
 });

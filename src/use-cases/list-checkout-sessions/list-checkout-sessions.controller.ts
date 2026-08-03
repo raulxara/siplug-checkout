@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { ListCheckoutSessionsDtoIn } from './dtos/list-checkout-sessions.dto-in';
@@ -16,15 +18,14 @@ export class ListCheckoutSessionsController {
   ) {}
 
   @Post('list')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: ListCheckoutSessionsRequest,
     @Headers('authorization') authorization?: string,
   ) {
     try {
       const token =
-        body.token ??
-        authorization?.replace(/^Bearer\s+/i, '').trim() ??
-        '';
+        body.token ?? authorization?.replace(/^Bearer\s+/i, '').trim() ?? '';
 
       const dtoOut = await this.listCheckoutSessionsUseCase.exec(
         new ListCheckoutSessionsDtoIn({

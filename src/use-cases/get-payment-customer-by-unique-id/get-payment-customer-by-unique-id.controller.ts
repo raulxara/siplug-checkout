@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { GetPaymentCustomerByUniqueIdDtoIn } from './dtos/get-payment-customer-by-unique-id.dto-in';
@@ -16,15 +18,14 @@ export class GetPaymentCustomerByUniqueIdController {
   ) {}
 
   @Post('get-by-unique-id')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: GetPaymentCustomerByUniqueIdRequest,
     @Headers('authorization') authorization?: string,
   ) {
     try {
       const token =
-        body.token ??
-        authorization?.replace(/^Bearer\s+/i, '').trim() ??
-        '';
+        body.token ?? authorization?.replace(/^Bearer\s+/i, '').trim() ?? '';
 
       const dtoOut = await this.getPaymentCustomerByUniqueIdUseCase.exec(
         new GetPaymentCustomerByUniqueIdDtoIn({

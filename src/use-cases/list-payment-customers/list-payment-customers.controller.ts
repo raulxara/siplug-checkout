@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { ListPaymentCustomersDtoIn } from './dtos/list-payment-customers.dto-in';
@@ -16,15 +18,14 @@ export class ListPaymentCustomersController {
   ) {}
 
   @Post('list')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: ListPaymentCustomersRequest,
     @Headers('authorization') authorization?: string,
   ) {
     try {
       const token =
-        body.token ??
-        authorization?.replace(/^Bearer\s+/i, '').trim() ??
-        '';
+        body.token ?? authorization?.replace(/^Bearer\s+/i, '').trim() ?? '';
 
       const dtoOut = await this.listPaymentCustomersUseCase.exec(
         new ListPaymentCustomersDtoIn({

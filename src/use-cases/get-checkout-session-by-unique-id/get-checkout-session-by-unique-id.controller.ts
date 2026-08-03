@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { GetCheckoutSessionByUniqueIdDtoIn } from './dtos/get-checkout-session-by-unique-id.dto-in';
@@ -16,15 +18,14 @@ export class GetCheckoutSessionByUniqueIdController {
   ) {}
 
   @Post('get-by-unique-id')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: GetCheckoutSessionByUniqueIdRequest,
     @Headers('authorization') authorization?: string,
   ) {
     try {
       const token =
-        body.token ??
-        authorization?.replace(/^Bearer\s+/i, '').trim() ??
-        '';
+        body.token ?? authorization?.replace(/^Bearer\s+/i, '').trim() ?? '';
 
       const dtoOut = await this.getCheckoutSessionByUniqueIdUseCase.exec(
         new GetCheckoutSessionByUniqueIdDtoIn({
