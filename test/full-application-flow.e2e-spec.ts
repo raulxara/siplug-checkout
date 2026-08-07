@@ -38,6 +38,8 @@ describe('Full application flow (steps 1 to 4)', () => {
   let infinitePayApiCredentialId: string;
   let stripeGatewayId: string;
   let stripeApiCredentialId: string;
+  let payPalGatewayId: string;
+  let payPalApiCredentialId: string;
   let pagSeguroGatewayId: string;
   let pagSeguroApiCredentialId: string;
   let permissionId: string;
@@ -942,6 +944,139 @@ describe('Full application flow (steps 1 to 4)', () => {
       );
     }
 
+    const payPalConfig = {
+      locale: 'pt-BR',
+      baseUrl: 'https://api-m.sandbox.paypal.com',
+      clientId:
+        'Ae5tufmOUCmziXrbTsebg-RjninDjCq6CnBH57v6djLsX_Y_aDCSN0nUqiRLkfmLXbxYcyu2hS8iWG7Z',
+      priority: 5,
+      provider: 'paypal',
+      brandName: 'SiPlug',
+      cancelUrl:
+        'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/paypal/checkout/cancel/72e03f9b-298c-414e-aa9d-1879aed3e137',
+      isDefault: true,
+      returnUrl:
+        'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/paypal/checkout/return/72e03f9b-298c-414e-aa9d-1879aed3e137',
+      successUrl: 'https://siplug.com/payment/success',
+      webhookUrl:
+        'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/paypal/72e03f9b-298c-414e-aa9d-1879aed3e137',
+      environment: 'sandbox',
+      paymentFlow: 'hosted_checkout',
+      paymentTypes: ['one_time', 'recurring'],
+      recurringFlow: 'approval_url',
+      recurringMode: 'gateway_native',
+      paymentMethods: ['payment_link', 'credit_card'],
+      paypalWebhookId: '5TB94554A3207893N',
+      webhookAuthMode: 'required',
+      paypalCaptureMode: 'return_capture',
+      paypalCancelBaseUrl:
+        'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/paypal/checkout/cancel',
+      paypalReturnBaseUrl:
+        'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/paypal/checkout/return',
+      supportsInstallments: false,
+      supportsSplitPayment: false,
+      supportsOneTimePayment: true,
+      supportedPaymentMethods: ['payment_link', 'credit_card'],
+      supportsRecurringPayment: true,
+      supportedRecurringMethods: ['payment_link', 'credit_card'],
+      testRun: tag,
+    };
+
+    const payPalGatewayResponse = await api()
+      .post('/api/v1/gateways/register')
+      .send({
+        name: 'PayPal Checkout',
+        slug: `paypal-checkout-${runId}`,
+        provider: 'paypal',
+        config: payPalConfig,
+      })
+      .expect(201);
+    payPalGatewayId = payPalGatewayResponse.body.data._id;
+
+    const payPalCredentialResponse = await api()
+      .post('/api/v1/api-credentials/register')
+      .send({
+        officeId,
+        gatewayId: payPalGatewayId,
+        name: 'PayPal Checkout',
+        slug: 'paypal-checkout',
+        provider: 'paypal',
+        providerType: 'gateway_provider',
+        providerToken:
+          'EBR_InU4hE87bSy9pgS75g2BlWdp1jK8gpZickZI54wgLtJtsuyIi_JfCujuk-ovvkSkqvAKYd-eyIra',
+        environment: 'local',
+        config: payPalConfig,
+      })
+      .expect(201);
+    payPalApiCredentialId = payPalCredentialResponse.body.data._id;
+
+    for (const paymentMethod of ['payment_link', 'credit_card']) {
+      const checkoutSessionResponse = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: payPalGatewayId,
+          apiCredentialId: payPalApiCredentialId,
+          code: `paypal-${paymentMethod}-${runId}`,
+          externalReference: `paypal-${paymentMethod}-${runId}`,
+          idempotencyKey: `paypal-${paymentMethod}-${runId}`,
+          paymentType: 'one_time',
+          amount: 1000,
+          currency: 'BRL',
+          description: `PayPal one-time ${paymentMethod} checkout`,
+          successUrl: payPalConfig.successUrl,
+          cancelUrl: payPalConfig.cancelUrl,
+          items: [
+            {
+              itemRef: `paypal-item-${paymentMethod}-${runId}`,
+              itemType: 'product',
+              name: `PayPal ${paymentMethod} E2E item`,
+              quantity: 1,
+              unitAmount: 1000,
+              totalAmount: 1000,
+            },
+          ],
+          metadata: { paymentMethod, testRun: tag },
+          config: { paymentMethod, environment: 'sandbox' },
+        })
+        .expect(201);
+
+      const checkoutSessionId = asString(
+        checkoutSessionResponse.body.data.checkoutSession._id,
+      );
+      const paymentResponse = await api()
+        .post('/api/v1/payments/process')
+        .send({
+          checkoutSessionId,
+          paymentMethod,
+          externalReference: `paypal-${paymentMethod}-${runId}`,
+          idempotencyKey: `paypal-${paymentMethod}-${runId}`,
+          payer,
+          paymentData: { method: paymentMethod },
+          metadata: { source: 'e2e', origin: 'paypal-one-time-test' },
+          config: { capture: true, environment: 'sandbox' },
+        })
+        .expect(200);
+
+      expect(paymentResponse.body.data.paymentTransaction).toEqual(
+        expect.objectContaining({
+          checkoutSessionId,
+          paymentCustomerId,
+          gatewayId: payPalGatewayId,
+          apiCredentialId: payPalApiCredentialId,
+          paymentMethod,
+          gatewayTransactionId: expect.any(String),
+          checkoutUrl: expect.any(String),
+          gatewayResponse: expect.objectContaining({
+            endpoint: '/v2/checkout/orders',
+            ok: true,
+          }),
+        }),
+      );
+    }
+
     const pagSeguroGatewayResponse = await api()
       .post('/api/v1/gateways/register')
       .send({
@@ -1110,7 +1245,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'XC4gNM/hbN8C1dv+YStcEKYzZA9u7bXc8Ji3vFXZd72+OyGPsBuUu65KIk00ZyphJGQvDJjLH21/V/Ri4AuqMecxiFY3oeVhJutxanCYaQH9fRWawLo5qU9/beSou53IkOwBDliFTrzRy5JCG0V5Hye+k578644ZiLRvoVE/FbP/OwaQ8+iasT81N1USqZpLCBKHfFQ+UtgKObV/P/C+uwnh8gB2ybm0bkLH3nOKmcZkJM43fwD8U+KCfGxPPi4jYK6aoxXfsOhCBSfRqPklbBixyM19YvVUNGkln4OWxh/jPJhrmqwa7dEoBOfNhnqEkJVm5zdsHcVjMwKGMRvbpQ==',
+                'aGRPbE4/ggOWpnJLZQ5sZEPYidzuG+YW7EAd7/DE/cHWUyKwE9LABHfKYrzLtW+1ukunohaY1ahLvzRBQHXJ5XsNCSY+UyE9UPXrLKEMEg/xAM1Y1ytHMmACZxVxnYKQiaU/UQbXNuY4qoH36LrbwTB365JXuH3PXJITTzS8eWa95Ghg1K7l6Ibw8X6KtTtX9bBUgfvqiCz5WQkw3Z2eVoVWRmOqjLRRwM+/zXmyzI0BQeDedTVNR/8bDmNb0Zi0nMUfz3shfixhd1porMNH/1Ne9Jv5Eju9yQzINKO8i+3VzJKBJtChmTB/ufXYnpTYONmguSZcnvzs/IZOWWWr+Q==',
             }
           : { method: paymentMethod };
 
@@ -1176,6 +1311,7 @@ describe('Full application flow (steps 1 to 4)', () => {
       gatewayId,
       infinitePayGatewayId,
       stripeGatewayId,
+      payPalGatewayId,
       pagSeguroGatewayId,
     ].filter((value): value is string => Boolean(value));
     const profileIds = [adminProfileId, userProfileId].filter(
