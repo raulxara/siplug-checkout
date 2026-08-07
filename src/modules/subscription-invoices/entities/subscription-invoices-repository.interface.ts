@@ -41,13 +41,17 @@ export interface ISubscriptionInvoicesRepository {
 
   findByUniqueId(_id: string): Promise<SubscriptionInvoiceRow | null>;
 
-  getAll(): Promise<SubscriptionInvoiceEntity[]>;
+  getAll(): Promise<SubscriptionInvoiceRow[]>;
 
-  getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceEntity[]>;
+  getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceRow[]>;
 
-  findByInvoiceNumber(invoiceNumber: string): Promise<SubscriptionInvoiceRow | null>;
+  findByInvoiceNumber(
+    invoiceNumber: string,
+  ): Promise<SubscriptionInvoiceRow | null>;
 
-  getAllBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow[]>;
+  getAllBySubscriptionId(
+    subscriptionId: string,
+  ): Promise<SubscriptionInvoiceRow[]>;
 
   findByPaymentTransactionId(
     paymentTransactionId: string,

@@ -50,6 +50,9 @@ describe('Full application flow (steps 1 to 4)', () => {
   let userProfileId: string;
   let userClientId: string;
   let paymentCustomerId: string;
+  let subscriptionPlanId: string;
+  let subscriptionId: string;
+  let subscriptionInvoiceId: string;
 
   const api = () => {
     const client = request(app.getHttpServer());
@@ -484,6 +487,198 @@ describe('Full application flow (steps 1 to 4)', () => {
       .expect(200);
     expect(paymentCustomerByIdResponse.body.data.paymentCustomer).toEqual(
       expect.objectContaining({ _id: paymentCustomerId }),
+    );
+
+    const subscriptionPlanResponse = await api()
+      .post('/api/v1/subscription-plans/register')
+      .send({
+        officeId,
+        clientId: userClientId,
+        gatewayId,
+        apiCredentialId,
+        name: 'E2E Monthly Plan',
+        slug: `e2e-monthly-plan-${runId}`,
+        description: 'Initial subscription plan description',
+        billingInterval: 'month',
+        billingIntervalCount: 1,
+        amount: 2990,
+        currency: 'BRL',
+        trialDays: 0,
+        maxBillingCycles: 12,
+        paymentMethods: ['payment_link', 'credit_card'],
+        metadata: { testRun: tag, source: 'e2e' },
+        config: { billingAnchor: 'calendar_month' },
+        status: 'active',
+      })
+      .expect(201);
+    subscriptionPlanId =
+      subscriptionPlanResponse.body.data.subscriptionPlan._id;
+    expect(subscriptionPlanResponse.body.data.subscriptionPlan).toEqual(
+      expect.objectContaining({
+        _id: subscriptionPlanId,
+        officeId,
+        clientId: userClientId,
+        gatewayId,
+        apiCredentialId,
+        billingInterval: 'month',
+        billingIntervalCount: 1,
+        amount: 2990,
+        currency: 'BRL',
+        status: 'active',
+      }),
+    );
+
+    const subscriptionPlanByIdResponse = await api()
+      .post('/api/v1/subscription-plans/get-by-unique-id')
+      .send({ subscriptionPlanId })
+      .expect(201);
+    expect(subscriptionPlanByIdResponse.body.data.subscriptionPlan).toEqual(
+      expect.objectContaining({ _id: subscriptionPlanId }),
+    );
+
+    const subscriptionPlansByOfficeResponse = await api()
+      .post('/api/v1/subscription-plans/list-by-office-id')
+      .send({ officeId })
+      .expect(201);
+    expect(
+      subscriptionPlansByOfficeResponse.body.data.subscriptionPlans,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ _id: subscriptionPlanId }),
+      ]),
+    );
+
+    const updatedSubscriptionPlanResponse = await api()
+      .put('/api/v1/subscription-plans/update')
+      .send({
+        subscriptionPlanId,
+        description: 'Updated subscription plan description',
+      })
+      .expect(200);
+    expect(updatedSubscriptionPlanResponse.body.data.subscriptionPlan).toEqual(
+      expect.objectContaining({
+        _id: subscriptionPlanId,
+        description: 'Updated subscription plan description',
+      }),
+    );
+
+    const subscriptionResponse = await api()
+      .post('/api/v1/subscriptions/register')
+      .send({
+        officeId,
+        clientId: userClientId,
+        subscriptionPlanId,
+        paymentCustomerId,
+        gatewayId,
+        apiCredentialId,
+        externalReference: `subscription-${runId}`,
+        nextBillingAt: '2026-08-01T00:00:00.000Z',
+        metadata: { testRun: tag, source: 'e2e' },
+        config: { source: 'full-application-flow' },
+        status: 'created',
+      })
+      .expect(201);
+    subscriptionId = subscriptionResponse.body.data.subscription._id;
+    expect(subscriptionResponse.body.data.subscription).toEqual(
+      expect.objectContaining({
+        _id: subscriptionId,
+        subscriptionPlanId,
+        paymentCustomerId,
+        amount: 2990,
+        currency: 'BRL',
+        currentCycle: 0,
+        status: 'created',
+      }),
+    );
+
+    const subscriptionByIdResponse = await api()
+      .post('/api/v1/subscriptions/get-by-unique-id')
+      .send({ subscriptionId })
+      .expect(201);
+    expect(subscriptionByIdResponse.body.data.subscription).toEqual(
+      expect.objectContaining({ _id: subscriptionId }),
+    );
+
+    const subscriptionsByOfficeResponse = await api()
+      .post('/api/v1/subscriptions/list-by-office-id')
+      .send({ officeId })
+      .expect(201);
+    expect(subscriptionsByOfficeResponse.body.data.subscriptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ _id: subscriptionId }),
+      ]),
+    );
+
+    const updatedSubscriptionResponse = await api()
+      .put('/api/v1/subscriptions/update')
+      .send({
+        subscriptionId,
+        nextBillingAt: '2026-08-01T00:00:00.000Z',
+        metadata: { testRun: tag, updated: true },
+      })
+      .expect(200);
+    expect(updatedSubscriptionResponse.body.data.subscription).toEqual(
+      expect.objectContaining({
+        _id: subscriptionId,
+        currentCycle: 0,
+        status: 'created',
+      }),
+    );
+
+    const generatedInvoiceResponse = await api()
+      .post('/api/v1/subscription-invoices/generate')
+      .send({
+        subscriptionId,
+        scheduledAt: '2026-08-01T00:00:00.000Z',
+        dueAt: '2026-08-01T00:00:00.000Z',
+      })
+      .expect(201);
+    subscriptionInvoiceId =
+      generatedInvoiceResponse.body.data.subscriptionInvoice._id;
+    expect(generatedInvoiceResponse.body.data.subscription).toEqual(
+      expect.objectContaining({
+        _id: subscriptionId,
+        currentCycle: 1,
+        status: 'active',
+      }),
+    );
+    expect(generatedInvoiceResponse.body.data.subscriptionCycle).toEqual(
+      expect.objectContaining({
+        subscriptionId,
+        cycleNumber: 1,
+        amount: 2990,
+        currency: 'BRL',
+        status: 'scheduled',
+      }),
+    );
+    expect(generatedInvoiceResponse.body.data.subscriptionInvoice).toEqual(
+      expect.objectContaining({
+        _id: subscriptionInvoiceId,
+        subscriptionId,
+        amount: 2990,
+        currency: 'BRL',
+        status: 'created',
+      }),
+    );
+
+    const subscriptionInvoiceByIdResponse = await api()
+      .post('/api/v1/subscription-invoices/get-by-unique-id')
+      .send({ subscriptionInvoiceId })
+      .expect(201);
+    expect(
+      subscriptionInvoiceByIdResponse.body.data.subscriptionInvoice,
+    ).toEqual(expect.objectContaining({ _id: subscriptionInvoiceId }));
+
+    const subscriptionInvoicesByOfficeResponse = await api()
+      .post('/api/v1/subscription-invoices/list-by-office-id')
+      .send({ officeId })
+      .expect(201);
+    expect(
+      subscriptionInvoicesByOfficeResponse.body.data.subscriptionInvoices,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ _id: subscriptionInvoiceId }),
+      ]),
     );
 
     const paymentMethods = ['pix', 'payment_link', 'credit_card', 'boleto'];
@@ -1390,7 +1585,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'CD1pdMLh6L8GSxwzaL/zz3fuLA3oHTJfnML9YIR/Kx5dysfqBnw3QxgqyP0lCP8OqjxAwYfFNWPXWGPD8qWgg7dToJZP/E5yGAhAPG4OmqeF9fQl1vexwk8wHdD8+jf4GW0OaoIpISME6B5T40dkk+3Lnw8KEHrcuw9ABhIYpozx7rVszXG3k2CDLqahK/zlt+65+/8QiJLwwsUUFeWAIN0dSU7NMjmjBSgOSpZr4TufRTQf4eXbDM3AqnTvoNhc1oieTMuZZKpTXPKIaEeLO6DrEgwHEPOazy3haoKLKzx9CvpuL4GXT7sQPAO+7x8FgO7iwBTwmcLx3ji/LgZOdw==',
+                'DGLPKARe4Wd11pngatIPSQ0rQFiCGI81Gisw70kdjMD7lGMMOJELQg5ZIwh9VXFd9ZbCE07TaOM2eOBJTYbysJs77z9Yv602cWHTi3qT84carTJvrWx5iZag5mFQFbQ0hgjIHVloDWSfFuN+KF/olNGh/xBZtaQHKSNbecB1TymPlPP9eiXGL3mCCN+efTpMU3wovrLTmuqLnVxL6zwrZGRqlY6oqyWel/cKFb8KZYQpXkiT00u0c8TSVDiXk6tfa2+/jxXK9vyowCKWczJIBEen/UtXo5FDIRHieWO7VZ4fx+9W8fhwa9cQyd2Ib/PO4Zg7TxMbtiABbV5ecpCCbA==',
             }
           : { method: paymentMethod };
 
@@ -1478,6 +1673,19 @@ describe('Full application flow (steps 1 to 4)', () => {
       where: { office_id: officeId },
     });
     await prisma.paymentRequest.deleteMany({ where: { office_id: officeId } });
+    await prisma.subscriptionInvoice.deleteMany({
+      where: { subscription: { office_id: officeId } },
+    });
+    await prisma.subscriptionCycle.deleteMany({
+      where: { subscription: { office_id: officeId } },
+    });
+    await prisma.subscriptionEvent.deleteMany({
+      where: { subscription: { office_id: officeId } },
+    });
+    await prisma.subscription.deleteMany({ where: { office_id: officeId } });
+    await prisma.subscriptionPlan.deleteMany({
+      where: { office_id: officeId },
+    });
     await prisma.paymentTransaction.deleteMany({
       where: { office_id: officeId },
     });
