@@ -45,12 +45,9 @@ export class StripeGatewayPaymentProvider implements IGatewayPaymentProvider {
   ): Promise<GatewayPaymentDtoOut> {
     try {
       if (
-        ![
-          'payment_link',
-          'credit_card',
-          'pix',
-          'boleto',
-        ].includes(dtoIn.paymentTransaction.paymentMethod)
+        !['payment_link', 'credit_card', 'pix', 'boleto'].includes(
+          dtoIn.paymentTransaction.paymentMethod,
+        )
       ) {
         return new GatewayPaymentDtoOut({
           success: false,
@@ -250,8 +247,9 @@ export class StripeGatewayPaymentProvider implements IGatewayPaymentProvider {
       payload[`line_items[${index}][quantity]`] = String(item.quantity);
 
       if (item.referenceId !== null) {
-        payload[`line_items[${index}][price_data][product_data][metadata][reference_id]`] =
-          item.referenceId;
+        payload[
+          `line_items[${index}][price_data][product_data][metadata][reference_id]`
+        ] = item.referenceId;
       }
     });
 
@@ -290,10 +288,16 @@ export class StripeGatewayPaymentProvider implements IGatewayPaymentProvider {
     return payload;
   }
 
-  private resolveStripePaymentMethodTypes(dtoIn: GatewayPaymentDtoIn): string[] {
+  private resolveStripePaymentMethodTypes(
+    dtoIn: GatewayPaymentDtoIn,
+  ): string[] {
     const config = dtoIn.config ?? {};
     const transactionConfig = this.asObject(config.transactionConfig);
     const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+
+    if (dtoIn.paymentTransaction.paymentMethod === 'payment_link') {
+      return ['card'];
+    }
 
     if (dtoIn.paymentTransaction.paymentMethod === 'credit_card') {
       return ['card'];
@@ -317,9 +321,7 @@ export class StripeGatewayPaymentProvider implements IGatewayPaymentProvider {
     return ['card', 'boleto'];
   }
 
-  private buildStripeLineItems(
-    dtoIn: GatewayPaymentDtoIn,
-  ): Array<{
+  private buildStripeLineItems(dtoIn: GatewayPaymentDtoIn): Array<{
     referenceId: string | null;
     name: string;
     quantity: number;
@@ -645,6 +647,14 @@ export class StripeGatewayPaymentProvider implements IGatewayPaymentProvider {
 
   private toNullableString(value: unknown): string | null {
     if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (
+      typeof value !== 'string' &&
+      typeof value !== 'number' &&
+      typeof value !== 'boolean'
+    ) {
       return null;
     }
 

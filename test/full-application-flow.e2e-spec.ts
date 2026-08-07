@@ -36,6 +36,8 @@ describe('Full application flow (steps 1 to 4)', () => {
   let apiCredentialId: string;
   let infinitePayGatewayId: string;
   let infinitePayApiCredentialId: string;
+  let stripeGatewayId: string;
+  let stripeApiCredentialId: string;
   let pagSeguroGatewayId: string;
   let pagSeguroApiCredentialId: string;
   let permissionId: string;
@@ -798,6 +800,148 @@ describe('Full application flow (steps 1 to 4)', () => {
       }),
     );
 
+    const stripeGatewayResponse = await api()
+      .post('/api/v1/gateways/register')
+      .send({
+        name: 'Stripe Checkout',
+        slug: `stripe-checkout-${runId}`,
+        provider: 'stripe',
+        config: {
+          baseUrl: 'https://api.stripe.com',
+          priority: 4,
+          provider: 'stripe',
+          cancelUrl: 'https://siplug.com/payment/cancel',
+          isDefault: true,
+          publicKey:
+            'pk_test_51NyFKeI5wJUsAQoVuiYxNAXIjh1keapjn7PdmgL0bbu6bBXe8a4OK4rqfh8Q5wsVoMIVT6YQsOpxfBk0mz2w3IkE00mxA2js0r',
+          successUrl:
+            'https://siplug.com/payment/success?session_id={CHECKOUT_SESSION_ID}',
+          environment: 'sandbox',
+          paymentFlow: 'hosted_checkout',
+          paymentTypes: ['one_time', 'recurring'],
+          recurringFlow: 'checkout_session',
+          recurringMode: 'gateway_native',
+          paymentMethods: ['payment_link', 'credit_card', 'boleto'],
+          stripePaymentMethods: ['card', 'payment_link', 'boleto'],
+          supportsInstallments: false,
+          supportsSplitPayment: false,
+          supportsOneTimePayment: true,
+          supportedPaymentMethods: ['payment_link', 'credit_card', 'boleto'],
+          supportsRecurringPayment: true,
+          testRun: tag,
+        },
+      })
+      .expect(201);
+    stripeGatewayId = stripeGatewayResponse.body.data._id;
+
+    const stripeCredentialResponse = await api()
+      .post('/api/v1/api-credentials/register')
+      .send({
+        officeId,
+        gatewayId: stripeGatewayId,
+        name: 'Stripe Checkout',
+        slug: 'stripe-checkout',
+        provider: 'stripe',
+        providerType: 'gateway_provider',
+        providerToken:
+          'sk_test_51NyFKeI5wJUsAQoVamvVRk9U3LCf9F081cEnGhCWrpLCM0qYv83zhgOn4mgWOFqcg4wOhWNbB9I6nekcgafBNM3L004g6kuTdL',
+        environment: 'local',
+        config: {
+          baseUrl: 'https://api.stripe.com',
+          priority: 4,
+          provider: 'stripe',
+          cancelUrl: 'https://siplug.com/payment/cancel',
+          isDefault: true,
+          publicKey:
+            'pk_test_51NyFKeI5wJUsAQoVuiYxNAXIjh1keapjn7PdmgL0bbu6bBXe8a4OK4rqfh8Q5wsVoMIVT6YQsOpxfBk0mz2w3IkE00mxA2js0r',
+          successUrl:
+            'https://siplug.com/payment/success?session_id={CHECKOUT_SESSION_ID}',
+          environment: 'sandbox',
+          paymentFlow: 'hosted_checkout',
+          paymentTypes: ['one_time', 'recurring'],
+          recurringFlow: 'checkout_session',
+          recurringMode: 'gateway_native',
+          paymentMethods: ['payment_link', 'credit_card', 'boleto'],
+          stripePaymentMethods: ['card', 'payment_link', 'boleto'],
+          supportsInstallments: false,
+          supportsSplitPayment: false,
+          supportsOneTimePayment: true,
+          supportedPaymentMethods: ['payment_link', 'credit_card', 'boleto'],
+          supportsRecurringPayment: true,
+          testRun: tag,
+        },
+      })
+      .expect(201);
+    stripeApiCredentialId = stripeCredentialResponse.body.data._id;
+
+    for (const paymentMethod of ['payment_link', 'credit_card', 'boleto']) {
+      const checkoutSessionResponse = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          code: `stripe-${paymentMethod}-${runId}`,
+          externalReference: `stripe-${paymentMethod}-${runId}`,
+          idempotencyKey: `stripe-${paymentMethod}-${runId}`,
+          paymentType: 'one_time',
+          amount: 1000,
+          currency: 'BRL',
+          description: `Stripe one-time ${paymentMethod} checkout`,
+          successUrl:
+            'https://siplug.com/payment/success?session_id={CHECKOUT_SESSION_ID}',
+          cancelUrl: 'https://siplug.com/payment/cancel',
+          items: [
+            {
+              itemRef: `stripe-item-${paymentMethod}-${runId}`,
+              itemType: 'product',
+              name: `Stripe ${paymentMethod} E2E item`,
+              quantity: 1,
+              unitAmount: 1000,
+              totalAmount: 1000,
+            },
+          ],
+          metadata: { paymentMethod, testRun: tag },
+          config: { paymentMethod, environment: 'sandbox' },
+        })
+        .expect(201);
+
+      const checkoutSessionId = asString(
+        checkoutSessionResponse.body.data.checkoutSession._id,
+      );
+      const paymentResponse = await api()
+        .post('/api/v1/payments/process')
+        .send({
+          checkoutSessionId,
+          paymentMethod,
+          externalReference: `stripe-${paymentMethod}-${runId}`,
+          idempotencyKey: `stripe-${paymentMethod}-${runId}`,
+          payer,
+          paymentData: { method: paymentMethod },
+          metadata: { source: 'e2e', origin: 'stripe-one-time-test' },
+          config: { capture: true, environment: 'sandbox' },
+        })
+        .expect(200);
+
+      expect(paymentResponse.body.data.paymentTransaction).toEqual(
+        expect.objectContaining({
+          checkoutSessionId,
+          paymentCustomerId,
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          paymentMethod,
+          gatewayTransactionId: expect.any(String),
+          checkoutUrl: expect.any(String),
+          gatewayResponse: expect.objectContaining({
+            endpoint: '/v1/checkout/sessions',
+            ok: true,
+          }),
+        }),
+      );
+    }
+
     const pagSeguroGatewayResponse = await api()
       .post('/api/v1/gateways/register')
       .send({
@@ -966,7 +1110,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'K2mIqPDw3uQETNZpyNpD9qkY8r8bscY8uNboLuopeUL1aZjvqqiWKomdLDzqYTEGVEIosRvjCHOnvEXWWnOue/E6MA5mJHFUmLmOyyFuTbUaa8Pa5akQpI1qxq3iMUJXFL4OCO+/LIyt0rmgh7siCejbG6mch33vudgV+msyCXNdT4RSxfJCqVogar53nrkavW2cX1GnAiSY1+oAHeBl+0bELDD5aWGRErXlwcRBRvWZhAKMLOv+caRmcentDhChciYdbdNmCfkmvU/tbBFmbkTjM45PE6VDvfsNFzbVIQOoY/ihmlA5T/NdiohBKfR7CJw/Zk0Lf0rMuB8VQ9HF2g==',
+                'XC4gNM/hbN8C1dv+YStcEKYzZA9u7bXc8Ji3vFXZd72+OyGPsBuUu65KIk00ZyphJGQvDJjLH21/V/Ri4AuqMecxiFY3oeVhJutxanCYaQH9fRWawLo5qU9/beSou53IkOwBDliFTrzRy5JCG0V5Hye+k578644ZiLRvoVE/FbP/OwaQ8+iasT81N1USqZpLCBKHfFQ+UtgKObV/P/C+uwnh8gB2ybm0bkLH3nOKmcZkJM43fwD8U+KCfGxPPi4jYK6aoxXfsOhCBSfRqPklbBixyM19YvVUNGkln4OWxh/jPJhrmqwa7dEoBOfNhnqEkJVm5zdsHcVjMwKGMRvbpQ==',
             }
           : { method: paymentMethod };
 
@@ -1016,8 +1160,74 @@ describe('Full application flow (steps 1 to 4)', () => {
   }, 180_000);
 
   afterAll(async () => {
-    await app?.close();
+    try {
+      await removeE2eData();
+    } finally {
+      await app?.close();
+    }
   });
+
+  async function removeE2eData(): Promise<void> {
+    if (!prisma || !officeId) {
+      return;
+    }
+
+    const gatewayIds = [
+      gatewayId,
+      infinitePayGatewayId,
+      stripeGatewayId,
+      pagSeguroGatewayId,
+    ].filter((value): value is string => Boolean(value));
+    const profileIds = [adminProfileId, userProfileId].filter(
+      (value): value is string => Boolean(value),
+    );
+
+    await prisma.paymentWebhook.deleteMany({
+      where: { gateway_id: { in: gatewayIds } },
+    });
+    await prisma.paymentTransactionEvent.deleteMany({
+      where: { payment_transaction: { office_id: officeId } },
+    });
+    await prisma.paymentRefund.deleteMany({ where: { office_id: officeId } });
+    await prisma.paymentSplitRecipient.deleteMany({
+      where: { payment_split: { office_id: officeId } },
+    });
+    await prisma.paymentIdempotencyKey.deleteMany({
+      where: { office_id: officeId },
+    });
+    await prisma.paymentRequest.deleteMany({ where: { office_id: officeId } });
+    await prisma.paymentTransaction.deleteMany({
+      where: { office_id: officeId },
+    });
+    await prisma.checkoutSessionItem.deleteMany({
+      where: { checkout_session: { office_id: officeId } },
+    });
+    await prisma.checkoutSession.deleteMany({ where: { office_id: officeId } });
+    await prisma.paymentCustomer.deleteMany({ where: { office_id: officeId } });
+    await prisma.apiCredential.deleteMany({ where: { office_id: officeId } });
+    await prisma.positionPermission.deleteMany({
+      where: { position: { office_id: officeId } },
+    });
+    await prisma.userPosition.deleteMany({
+      where: { user_customer: { client: { office_id: officeId } } },
+    });
+    await prisma.userAccessCode.deleteMany({
+      where: { user_customer: { client: { office_id: officeId } } },
+    });
+    await prisma.userCustomer.deleteMany({
+      where: { client: { office_id: officeId } },
+    });
+    await prisma.profile.deleteMany({
+      where: { unique_id: { in: profileIds } },
+    });
+    await prisma.client.deleteMany({ where: { office_id: officeId } });
+    await prisma.permission.deleteMany({ where: { office_id: officeId } });
+    await prisma.position.deleteMany({ where: { office_id: officeId } });
+    await prisma.gateway.deleteMany({
+      where: { unique_id: { in: gatewayIds } },
+    });
+    await prisma.office.deleteMany({ where: { unique_id: officeId } });
+  }
 
   function asString(value: unknown): string {
     expect(typeof value).toBe('string');
