@@ -36,6 +36,8 @@ describe('Full application flow (steps 1 to 4)', () => {
   let apiCredentialId: string;
   let infinitePayGatewayId: string;
   let infinitePayApiCredentialId: string;
+  let pagSeguroGatewayId: string;
+  let pagSeguroApiCredentialId: string;
   let permissionId: string;
   let positionId: string;
   let userId: string;
@@ -795,7 +797,223 @@ describe('Full application flow (steps 1 to 4)', () => {
         }),
       }),
     );
-  });
+
+    const pagSeguroGatewayResponse = await api()
+      .post('/api/v1/gateways/register')
+      .send({
+        name: 'PagSeguro Checkout',
+        slug: `pagseguro-checkout-${runId}`,
+        provider: 'pagseguro',
+        config: {
+          baseUrl: 'https://sandbox.api.pagseguro.com',
+          priority: 3,
+          provider: 'pagseguro',
+          isDefault: true,
+          publicKey:
+            'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr+ZqgD892U9/HXsa7XqBZUayPquAfh9xx4iwUbTSUAvTlmiXFQNTp0Bvt/5vK2FhMj39qSv1zi2OuBjvW38q1E374nzx6NNBL5JosV0+SDINTlCG0cmigHuBOyWzYmjgca+mtQu4WczCaApNaSuVqgb8u7Bd9GCOL4YJotvV5+81frlSwQXralhwRzGhj/A57CGPgGKiuPT+AOGmykIGEZsSD9RKkyoKIoc0OS8CPIzdBOtTQCIwrLn2FxI83Clcg55W8gkFSOS6rWNbG5qFZWMll6yl02HtunalHmUlRUL66YeGXdMDC2PuRcmZbGO5a/2tbVppW6mfSWG3NPRpgwIDAQAB',
+          environment: 'sandbox',
+          paymentFlow: 'recurring_api',
+          redirectUrl: 'https://siplug.com/payment/success',
+          paymentTypes: ['one_time', 'recurring'],
+          recurringFlow: 'subscription_api',
+          recurringMode: 'gateway_native',
+          paymentMethods: ['payment_link', 'pix', 'credit_card', 'boleto'],
+          notificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          recurringBaseUrl: 'https://sandbox.api.assinaturas.pagseguro.com',
+          supportsInstallments: false,
+          supportsSplitPayment: true,
+          webhookSignatureMode: 'optional',
+          paymentNotificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportsOneTimePayment: true,
+          checkoutNotificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/w/p/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportedPaymentMethods: [
+            'payment_link',
+            'pix',
+            'credit_card',
+            'boleto',
+          ],
+          payment_notification_url:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/w/p/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          recurringNotificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportsRecurringPayment: true,
+          checkout_notification_url:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/w/p/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportedRecurringMethods: ['credit_card', 'boleto'],
+          testRun: tag,
+        },
+      })
+      .expect(201);
+    pagSeguroGatewayId = pagSeguroGatewayResponse.body.data._id;
+
+    const pagSeguroCredentialResponse = await api()
+      .post('/api/v1/api-credentials/register')
+      .send({
+        officeId,
+        gatewayId: pagSeguroGatewayId,
+        name: 'PagSeguro Checkout',
+        slug: 'pagseguro-checkout',
+        provider: 'pagseguro',
+        providerType: 'gateway_provider',
+        providerToken:
+          'd288d37a-78d4-4829-a939-5ab19efe32c9967a02854ae680c5ee3a4a76c8095b2e764f-89a2-4359-b420-2adf3b98f5a1',
+        environment: 'local',
+        config: {
+          baseUrl: 'https://sandbox.api.pagseguro.com',
+          priority: 3,
+          provider: 'pagseguro',
+          isDefault: true,
+          publicKey:
+            'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr+ZqgD892U9/HXsa7XqBZUayPquAfh9xx4iwUbTSUAvTlmiXFQNTp0Bvt/5vK2FhMj39qSv1zi2OuBjvW38q1E374nzx6NNBL5JosV0+SDINTlCG0cmigHuBOyWzYmjgca+mtQu4WczCaApNaSuVqgb8u7Bd9GCOL4YJotvV5+81frlSwQXralhwRzGhj/A57CGPgGKiuPT+AOGmykIGEZsSD9RKkyoKIoc0OS8CPIzdBOtTQCIwrLn2FxI83Clcg55W8gkFSOS6rWNbG5qFZWMll6yl02HtunalHmUlRUL66YeGXdMDC2PuRcmZbGO5a/2tbVppW6mfSWG3NPRpgwIDAQAB',
+          environment: 'sandbox',
+          paymentFlow: 'recurring_api',
+          redirectUrl: 'https://siplug.com/payment/success',
+          paymentTypes: ['one_time', 'recurring'],
+          recurringFlow: 'subscription_api',
+          recurringMode: 'gateway_native',
+          paymentMethods: ['payment_link', 'pix', 'credit_card', 'boleto'],
+          notificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          recurringBaseUrl: 'https://sandbox.api.assinaturas.pagseguro.com',
+          supportsInstallments: false,
+          supportsSplitPayment: true,
+          webhookSignatureMode: 'optional',
+          paymentNotificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportsOneTimePayment: true,
+          checkoutNotificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/w/p/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportedPaymentMethods: [
+            'payment_link',
+            'pix',
+            'credit_card',
+            'boleto',
+          ],
+          payment_notification_url:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/w/p/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          recurringNotificationUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportsRecurringPayment: true,
+          checkout_notification_url:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/w/p/84df07fe-3c59-4f76-b63a-dc0f7afd3d59',
+          supportedRecurringMethods: ['credit_card', 'boleto'],
+          testRun: tag,
+        },
+      })
+      .expect(201);
+    pagSeguroApiCredentialId = pagSeguroCredentialResponse.body.data._id;
+
+    const pagSeguroPaymentMethods = [
+      'payment_link',
+      'pix',
+      'boleto',
+      'credit_card',
+    ];
+    const pagSeguroPayer = {
+      ...payer,
+      email: 'buyer-e2e@example.com',
+    };
+
+    for (const paymentMethod of pagSeguroPaymentMethods) {
+      const checkoutSessionResponse = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          code: `pagseguro-${paymentMethod}-${runId}`,
+          externalReference: `pagseguro-${paymentMethod}-${runId}`,
+          idempotencyKey: `pagseguro-${paymentMethod}-${runId}`,
+          paymentType: 'one_time',
+          amount: 1000,
+          currency: 'BRL',
+          description: `PagSeguro one-time ${paymentMethod} checkout`,
+          successUrl: 'https://siplug.com/payment/success',
+          cancelUrl: 'https://siplug.com/payment/cancel',
+          items: [
+            {
+              itemRef: `pagseguro-item-${paymentMethod}-${runId}`,
+              itemType: 'product',
+              name: `PagSeguro ${paymentMethod} E2E item`,
+              quantity: 1,
+              unitAmount: 1000,
+              totalAmount: 1000,
+            },
+          ],
+          metadata: { paymentMethod, testRun: tag },
+          config: { paymentMethod, environment: 'sandbox' },
+        })
+        .expect(201);
+
+      const checkoutSession = checkoutSessionResponse.body.data.checkoutSession;
+      expect(checkoutSession).toEqual(
+        expect.objectContaining({
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          paymentType: 'one_time',
+        }),
+      );
+
+      const checkoutSessionId = asString(checkoutSession._id);
+      const paymentData =
+        paymentMethod === 'credit_card'
+          ? {
+              method: 'credit_card',
+              encryptedCard:
+                'K2mIqPDw3uQETNZpyNpD9qkY8r8bscY8uNboLuopeUL1aZjvqqiWKomdLDzqYTEGVEIosRvjCHOnvEXWWnOue/E6MA5mJHFUmLmOyyFuTbUaa8Pa5akQpI1qxq3iMUJXFL4OCO+/LIyt0rmgh7siCejbG6mch33vudgV+msyCXNdT4RSxfJCqVogar53nrkavW2cX1GnAiSY1+oAHeBl+0bELDD5aWGRErXlwcRBRvWZhAKMLOv+caRmcentDhChciYdbdNmCfkmvU/tbBFmbkTjM45PE6VDvfsNFzbVIQOoY/ihmlA5T/NdiohBKfR7CJw/Zk0Lf0rMuB8VQ9HF2g==',
+            }
+          : { method: paymentMethod };
+
+      const paymentResponse = await api()
+        .post('/api/v1/payments/process')
+        .send({
+          checkoutSessionId,
+          paymentMethod,
+          externalReference: `pagseguro-${paymentMethod}-${runId}`,
+          idempotencyKey: `pagseguro-${paymentMethod}-${runId}`,
+          payer: pagSeguroPayer,
+          paymentData,
+          metadata: { source: 'e2e', origin: 'pagseguro-one-time-test' },
+          config: { capture: true, environment: 'sandbox' },
+        })
+        .expect(200);
+
+      const paymentTransaction = paymentResponse.body.data.paymentTransaction;
+      expect(paymentTransaction).toEqual(
+        expect.objectContaining({
+          checkoutSessionId,
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          paymentMethod,
+          gatewayTransactionId: expect.any(String),
+          gatewayResponse: expect.objectContaining({
+            endpoint:
+              paymentMethod === 'payment_link' ? '/checkouts' : '/orders',
+            ok: true,
+          }),
+        }),
+      );
+
+      if (paymentMethod === 'payment_link') {
+        expect(paymentTransaction.checkoutUrl).toEqual(expect.any(String));
+      }
+
+      if (paymentMethod === 'pix') {
+        expect(paymentTransaction.qrCode).toEqual(expect.any(String));
+      }
+
+      if (paymentMethod === 'boleto') {
+        expect(paymentTransaction.boletoUrl).toEqual(expect.any(String));
+      }
+    }
+  }, 180_000);
 
   afterAll(async () => {
     await app?.close();

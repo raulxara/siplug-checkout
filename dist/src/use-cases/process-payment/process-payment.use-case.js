@@ -372,25 +372,47 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         if (data === null) {
             return null;
         }
-        const sanitized = this.sanitizeUnknownGatewayValue(data);
-        if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+        const sanitized = this.sanitizeUnknownGatewayValue(data, new WeakSet());
+        if (!sanitized ||
+            typeof sanitized !== 'object' ||
+            Array.isArray(sanitized)) {
             return null;
         }
         return sanitized;
     }
-    sanitizeUnknownGatewayValue(value) {
+    sanitizeUnknownGatewayValue(value, seen, depth = 0) {
+        if (depth > 32) {
+            return '[TRUNCATED]';
+        }
+        if (typeof value === 'bigint') {
+            return value.toString();
+        }
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
         if (Array.isArray(value)) {
-            return value.map((item) => this.sanitizeUnknownGatewayValue(item));
+            if (seen.has(value)) {
+                return '[CIRCULAR]';
+            }
+            seen.add(value);
+            const sanitizedArray = value.map((item) => this.sanitizeUnknownGatewayValue(item, seen, depth + 1));
+            seen.delete(value);
+            return sanitizedArray;
         }
         if (value && typeof value === 'object') {
+            if (seen.has(value)) {
+                return '[CIRCULAR]';
+            }
+            seen.add(value);
             const sanitizedObject = {};
             for (const [key, itemValue] of Object.entries(value)) {
                 if (this.isSensitiveGatewayKey(key)) {
                     sanitizedObject[key] = '[REDACTED]';
                     continue;
                 }
-                sanitizedObject[key] = this.sanitizeUnknownGatewayValue(itemValue);
+                sanitizedObject[key] = this.sanitizeUnknownGatewayValue(itemValue, seen, depth + 1);
             }
+            seen.delete(value);
             return sanitizedObject;
         }
         return value;
@@ -399,7 +421,7 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         const normalizedKey = key
             .toLowerCase()
             .trim()
-            .replace(/[\s_\-]/g, '');
+            .replace(/[\s_-]/g, '');
         const sensitiveKeys = [
             'token',
             'cardtoken',
@@ -549,6 +571,11 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         if (value === undefined || value === null) {
             return null;
         }
+        if (typeof value !== 'string' &&
+            typeof value !== 'number' &&
+            typeof value !== 'boolean') {
+            return null;
+        }
         const stringValue = String(value).trim();
         return stringValue === '' ? null : stringValue;
     }
@@ -602,6 +629,9 @@ let ProcessPaymentUseCase = class ProcessPaymentUseCase {
         }
         if (typeof value === 'boolean') {
             return value;
+        }
+        if (typeof value !== 'string' && typeof value !== 'number') {
+            return null;
         }
         const normalized = String(value).trim().toLowerCase();
         if (['true', '1', 'yes', 'sim'].includes(normalized)) {
