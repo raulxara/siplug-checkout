@@ -40,6 +40,8 @@ describe('Full application flow (steps 1 to 4)', () => {
   let stripeApiCredentialId: string;
   let payPalGatewayId: string;
   let payPalApiCredentialId: string;
+  let picPayGatewayId: string;
+  let picPayApiCredentialId: string;
   let pagSeguroGatewayId: string;
   let pagSeguroApiCredentialId: string;
   let permissionId: string;
@@ -1077,6 +1079,149 @@ describe('Full application flow (steps 1 to 4)', () => {
       );
     }
 
+    const picPayConfig = {
+      sdkUrl: 'https://checkout.picpay.com/cdn/pp-transparent-v1.0.0.js',
+      apiPath: '/sandbox/v1',
+      baseUrl: 'https://api.ms.qa.limbo.work',
+      clientId: 'bc3d001b-5f20-4e96-b500-f52426f31750',
+      priority: 6,
+      provider: 'picpay',
+      tokenUrl: 'https://api.ms.qa.limbo.work/oauth2/token',
+      cancelUrl: 'https://siplug.com/payment/cancel',
+      isDefault: true,
+      returnUrl: 'https://siplug.com/payment/success',
+      authBaseUrl: 'https://api.ms.qa.limbo.work',
+      environment: 'sandbox',
+      paymentFlow: 'recurring_api',
+      paymentTypes: ['one_time', 'recurring'],
+      recurringFlow: 'subscription_api',
+      recurringMode: 'gateway_native',
+      paymentMethods: ['payment_link', 'pix', 'credit_card'],
+      notificationUrl:
+        'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/picpay/54226dcd-7766-409e-85c7-b60a00053d07',
+      webhookAuthMode: 'optional',
+      recurringBaseUrl: 'https://ecommerce-api.svcp.ppay.me/sandbox/v1',
+      transparentToken: 'card_ZVHmBRSw3EjkJ7s93Vm4S5FiZwuQjgTi',
+      merchantCredential: '51461116000169',
+      supportsInstallments: true,
+      supportsSplitPayment: false,
+      supportsOneTimePayment: true,
+      supportedPaymentMethods: ['payment_link', 'pix', 'credit_card'],
+      supportsRecurringPayment: true,
+      testRun: tag,
+    };
+
+    const picPayGatewayResponse = await api()
+      .post('/api/v1/gateways/register')
+      .send({
+        name: 'PicPay Checkout',
+        slug: `picpay-checkout-${runId}`,
+        provider: 'picpay',
+        config: picPayConfig,
+      })
+      .expect(201);
+    picPayGatewayId = picPayGatewayResponse.body.data._id;
+
+    const picPayCredentialResponse = await api()
+      .post('/api/v1/api-credentials/register')
+      .send({
+        officeId,
+        gatewayId: picPayGatewayId,
+        name: 'PicPay Checkout',
+        slug: 'picpay-checkout',
+        provider: 'picpay',
+        providerType: 'gateway_provider',
+        providerToken: 'L4ncXaitkazaQRZMFzAoZ1XhZ9umQmQS',
+        environment: 'local',
+        config: picPayConfig,
+      })
+      .expect(201);
+    picPayApiCredentialId = picPayCredentialResponse.body.data._id;
+
+    for (const paymentMethod of ['payment_link', 'pix']) {
+      const checkoutSessionResponse = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: picPayGatewayId,
+          apiCredentialId: picPayApiCredentialId,
+          code: `picpay-${paymentMethod}-${runId}`,
+          externalReference: `picpay-${paymentMethod}-${runId}`,
+          idempotencyKey: `picpay-${paymentMethod}-${runId}`,
+          paymentType: 'one_time',
+          amount: 1000,
+          currency: 'BRL',
+          description: `PicPay one-time ${paymentMethod} checkout`,
+          successUrl: picPayConfig.returnUrl,
+          cancelUrl: picPayConfig.cancelUrl,
+          items: [
+            {
+              itemRef: `picpay-item-${paymentMethod}-${runId}`,
+              itemType: 'product',
+              name: `PicPay ${paymentMethod} E2E item`,
+              quantity: 1,
+              unitAmount: 1000,
+              totalAmount: 1000,
+            },
+          ],
+          metadata: { paymentMethod, testRun: tag },
+          config: { paymentMethod, environment: 'sandbox' },
+        })
+        .expect(201);
+
+      const checkoutSessionId = asString(
+        checkoutSessionResponse.body.data.checkoutSession._id,
+      );
+      const paymentResponse = await api()
+        .post('/api/v1/payments/process')
+        .send({
+          checkoutSessionId,
+          paymentMethod,
+          externalReference: `picpay-${paymentMethod}-${runId}`,
+          idempotencyKey: `picpay-${paymentMethod}-${runId}`,
+          payer,
+          paymentData: { method: paymentMethod },
+          metadata: { source: 'e2e', origin: 'picpay-one-time-test' },
+          config: { capture: true, environment: 'sandbox' },
+        })
+        .expect(200);
+
+      const paymentTransaction = paymentResponse.body.data.paymentTransaction;
+      expect(paymentTransaction).toEqual(
+        expect.objectContaining({
+          checkoutSessionId,
+          paymentCustomerId,
+          gatewayId: picPayGatewayId,
+          apiCredentialId: picPayApiCredentialId,
+          paymentMethod,
+          gatewayTransactionId: expect.any(String),
+          checkoutUrl: expect.any(String),
+          gatewayResponse: expect.objectContaining({
+            endpoint: '/sandbox/v1/paymentlink/create',
+            ok: true,
+          }),
+        }),
+      );
+
+      if (paymentMethod === 'pix') {
+        expect(paymentTransaction.qrCode).toEqual(expect.any(String));
+      }
+
+      if (paymentMethod === 'payment_link') {
+        expect(paymentTransaction.providerPayload).toEqual(
+          expect.objectContaining({
+            charge: expect.objectContaining({
+              payment: expect.objectContaining({
+                methods: expect.arrayContaining(['BRCODE', 'CREDIT_CARD']),
+              }),
+            }),
+          }),
+        );
+      }
+    }
+
     const pagSeguroGatewayResponse = await api()
       .post('/api/v1/gateways/register')
       .send({
@@ -1245,7 +1390,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'aGRPbE4/ggOWpnJLZQ5sZEPYidzuG+YW7EAd7/DE/cHWUyKwE9LABHfKYrzLtW+1ukunohaY1ahLvzRBQHXJ5XsNCSY+UyE9UPXrLKEMEg/xAM1Y1ytHMmACZxVxnYKQiaU/UQbXNuY4qoH36LrbwTB365JXuH3PXJITTzS8eWa95Ghg1K7l6Ibw8X6KtTtX9bBUgfvqiCz5WQkw3Z2eVoVWRmOqjLRRwM+/zXmyzI0BQeDedTVNR/8bDmNb0Zi0nMUfz3shfixhd1porMNH/1Ne9Jv5Eju9yQzINKO8i+3VzJKBJtChmTB/ufXYnpTYONmguSZcnvzs/IZOWWWr+Q==',
+                'CD1pdMLh6L8GSxwzaL/zz3fuLA3oHTJfnML9YIR/Kx5dysfqBnw3QxgqyP0lCP8OqjxAwYfFNWPXWGPD8qWgg7dToJZP/E5yGAhAPG4OmqeF9fQl1vexwk8wHdD8+jf4GW0OaoIpISME6B5T40dkk+3Lnw8KEHrcuw9ABhIYpozx7rVszXG3k2CDLqahK/zlt+65+/8QiJLwwsUUFeWAIN0dSU7NMjmjBSgOSpZr4TufRTQf4eXbDM3AqnTvoNhc1oieTMuZZKpTXPKIaEeLO6DrEgwHEPOazy3haoKLKzx9CvpuL4GXT7sQPAO+7x8FgO7iwBTwmcLx3ji/LgZOdw==',
             }
           : { method: paymentMethod };
 
@@ -1312,6 +1457,7 @@ describe('Full application flow (steps 1 to 4)', () => {
       infinitePayGatewayId,
       stripeGatewayId,
       payPalGatewayId,
+      picPayGatewayId,
       pagSeguroGatewayId,
     ].filter((value): value is string => Boolean(value));
     const profileIds = [adminProfileId, userProfileId].filter(
