@@ -681,6 +681,119 @@ describe('Full application flow (steps 1 to 4)', () => {
       ]),
     );
 
+    const recurringCheckoutSessionResponse = await api()
+      .post('/api/v1/checkout-sessions/register')
+      .send({
+        officeId,
+        clientId: userClientId,
+        paymentCustomerId,
+        gatewayId,
+        apiCredentialId,
+        code: `mercado-pago-recurring-${runId}`,
+        externalReference: `mercado-pago-recurring-${runId}`,
+        idempotencyKey: `mercado-pago-recurring-${runId}`,
+        paymentType: 'recurring',
+        amount: 2990,
+        currency: 'BRL',
+        description: 'Mercado Pago recurring subscription checkout',
+        successUrl: 'https://siplug.com/payment/success',
+        cancelUrl: 'https://siplug.com/payment/cancel',
+        items: [
+          {
+            itemRef: `mercado-pago-recurring-item-${runId}`,
+            itemType: 'subscription_plan',
+            name: 'E2E Monthly Plan',
+            quantity: 1,
+            unitAmount: 2990,
+            totalAmount: 2990,
+          },
+        ],
+        metadata: { testRun: tag, paymentType: 'recurring' },
+        config: {
+          environment: 'sandbox',
+          subscription: {
+            subscriptionPlanId,
+            recurringMode: 'gateway_native',
+          },
+        },
+      })
+      .expect(201);
+    const recurringCheckoutSession =
+      recurringCheckoutSessionResponse.body.data.checkoutSession;
+    const recurringCheckoutSessionId = asString(recurringCheckoutSession._id);
+    expect(recurringCheckoutSession).toEqual(
+      expect.objectContaining({
+        _id: recurringCheckoutSessionId,
+        paymentType: 'recurring',
+        paymentCustomerId,
+        gatewayId,
+        apiCredentialId,
+      }),
+    );
+
+    const mercadoPagoRecurringResponse = await api()
+      .post('/api/v1/payments/process-recurring')
+      .send({
+        checkoutSessionId: recurringCheckoutSessionId,
+        paymentMethod: 'payment_link',
+        gatewayProvider: 'mercado_pago',
+        gatewayId,
+        apiCredentialId,
+        payer,
+        paymentData: { method: 'payment_link' },
+        metadata: {
+          source: 'e2e',
+          origin: 'mercado-pago-recurring-test',
+        },
+        config: { environment: 'sandbox' },
+      })
+      .expect(200);
+
+    expect(mercadoPagoRecurringResponse.body.data.subscription).toEqual(
+      expect.objectContaining({
+        subscriptionPlanId,
+        paymentCustomerId,
+        gatewayId,
+        apiCredentialId,
+        status: 'pending',
+        gatewaySubscriptionId: expect.any(String),
+      }),
+    );
+    expect(mercadoPagoRecurringResponse.body.data.subscriptionCycle).toEqual(
+      expect.objectContaining({
+        cycleNumber: 1,
+        amount: 2990,
+        currency: 'BRL',
+      }),
+    );
+    expect(mercadoPagoRecurringResponse.body.data.subscriptionInvoice).toEqual(
+      expect.objectContaining({
+        amount: 2990,
+        currency: 'BRL',
+        status: 'processing',
+      }),
+    );
+    expect(mercadoPagoRecurringResponse.body.data.paymentTransaction).toEqual(
+      expect.objectContaining({
+        paymentType: 'recurring',
+        paymentMethod: 'payment_link',
+        gatewayId,
+        apiCredentialId,
+        gatewayTransactionId: expect.any(String),
+        checkoutUrl: expect.any(String),
+        gatewayResponse: expect.objectContaining({
+          endpoint: '/preapproval',
+          ok: true,
+        }),
+      }),
+    );
+    expect(mercadoPagoRecurringResponse.body.data.checkoutSession).toEqual(
+      expect.objectContaining({
+        _id: recurringCheckoutSessionId,
+        status: 'processing',
+      }),
+    );
+
     const paymentMethods = ['pix', 'payment_link', 'credit_card', 'boleto'];
     const checkoutSessionIds = new Map<string, string>();
 
@@ -1141,6 +1254,138 @@ describe('Full application flow (steps 1 to 4)', () => {
       );
     }
 
+    for (const paymentMethod of ['payment_link', 'credit_card', 'boleto']) {
+      const stripeRecurringCheckoutSessionResponse = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          code: `stripe-recurring-${paymentMethod}-${runId}`,
+          externalReference: `stripe-recurring-${paymentMethod}-${runId}`,
+          idempotencyKey: `stripe-recurring-${paymentMethod}-${runId}`,
+          paymentType: 'recurring',
+          amount: 2990,
+          currency: 'BRL',
+          description: `Stripe recurring ${paymentMethod} subscription checkout`,
+          successUrl:
+            'https://siplug.com/payment/success?session_id={CHECKOUT_SESSION_ID}',
+          cancelUrl: 'https://siplug.com/payment/cancel',
+          items: [
+            {
+              itemRef: `stripe-recurring-item-${paymentMethod}-${runId}`,
+              itemType: 'subscription_plan',
+              name: `Stripe recurring ${paymentMethod} E2E plan`,
+              quantity: 1,
+              unitAmount: 2990,
+              totalAmount: 2990,
+            },
+          ],
+          metadata: {
+            testRun: tag,
+            paymentMethod,
+            paymentType: 'recurring',
+          },
+          config: {
+            environment: 'sandbox',
+            subscription: {
+              subscriptionPlanId,
+              recurringMode: 'gateway_native',
+            },
+          },
+        })
+        .expect(201);
+
+      const stripeRecurringCheckoutSession =
+        stripeRecurringCheckoutSessionResponse.body.data.checkoutSession;
+      const stripeRecurringCheckoutSessionId = asString(
+        stripeRecurringCheckoutSession._id,
+      );
+      expect(stripeRecurringCheckoutSession).toEqual(
+        expect.objectContaining({
+          _id: stripeRecurringCheckoutSessionId,
+          paymentType: 'recurring',
+          paymentCustomerId,
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+        }),
+      );
+
+      const stripeRecurringResponse = await api()
+        .post('/api/v1/payments/process-recurring')
+        .send({
+          checkoutSessionId: stripeRecurringCheckoutSessionId,
+          paymentMethod,
+          gatewayProvider: 'stripe',
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          payer,
+          paymentData: { method: paymentMethod },
+          metadata: {
+            source: 'e2e',
+            origin: 'stripe-recurring-test',
+          },
+          config: { environment: 'sandbox' },
+        })
+        .expect(200);
+
+      expect(stripeRecurringResponse.body.data.subscription).toEqual(
+        expect.objectContaining({
+          subscriptionPlanId,
+          paymentCustomerId,
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          status: 'pending',
+          gatewaySubscriptionId: null,
+        }),
+      );
+      expect(stripeRecurringResponse.body.data.subscriptionCycle).toEqual(
+        expect.objectContaining({
+          cycleNumber: 1,
+          amount: 2990,
+          currency: 'BRL',
+          status: 'scheduled',
+        }),
+      );
+      expect(stripeRecurringResponse.body.data.subscriptionInvoice).toEqual(
+        expect.objectContaining({
+          amount: 2990,
+          currency: 'BRL',
+          status: 'processing',
+        }),
+      );
+      expect(stripeRecurringResponse.body.data.paymentTransaction).toEqual(
+        expect.objectContaining({
+          checkoutSessionId: stripeRecurringCheckoutSessionId,
+          paymentCustomerId,
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          paymentType: 'recurring',
+          paymentMethod,
+          gatewayTransactionId: expect.any(String),
+          checkoutUrl: expect.any(String),
+          gatewayResponse: expect.objectContaining({
+            endpoint: '/checkout/sessions',
+            ok: true,
+          }),
+        }),
+      );
+      expect(stripeRecurringResponse.body.data.checkoutSession).toEqual(
+        expect.objectContaining({
+          _id: stripeRecurringCheckoutSessionId,
+          status: 'processing',
+          config: expect.objectContaining({
+            subscription: expect.objectContaining({
+              subscriptionPlanId,
+              checkoutUrl: expect.any(String),
+            }),
+          }),
+        }),
+      );
+    }
+
     const payPalConfig = {
       locale: 'pt-BR',
       baseUrl: 'https://api-m.sandbox.paypal.com',
@@ -1585,7 +1830,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'DGLPKARe4Wd11pngatIPSQ0rQFiCGI81Gisw70kdjMD7lGMMOJELQg5ZIwh9VXFd9ZbCE07TaOM2eOBJTYbysJs77z9Yv602cWHTi3qT84carTJvrWx5iZag5mFQFbQ0hgjIHVloDWSfFuN+KF/olNGh/xBZtaQHKSNbecB1TymPlPP9eiXGL3mCCN+efTpMU3wovrLTmuqLnVxL6zwrZGRqlY6oqyWel/cKFb8KZYQpXkiT00u0c8TSVDiXk6tfa2+/jxXK9vyowCKWczJIBEen/UtXo5FDIRHieWO7VZ4fx+9W8fhwa9cQyd2Ib/PO4Zg7TxMbtiABbV5ecpCCbA==',
+                'CwCE9Y5crNTLB/R61h6b7/Hjn8QZdGE8JSwxRuRfJ7vR4pmuOka0AzKLlf9/AepHS/P0P17lvJt0UtW8iIkMpyo2IIPuh/4twcBKvwQdc+a+RXrSav3zm0nb646B3zoH7nqUjq9o5V30k8LzF1KNaprXF3s2V7+HYiiZ+SBnDxD3AF2RiNdIQmzjcovNNSCKVF9O24DWaSW0iU7O5dDF2teoQokjApjCZ/sxmfxLQZCjhKnna49VD3WsG9M4HpDgBc2r8Lqwi6nWcgH4lUDM0XbR3tLNCRx4L5x5LUOXmig64LaGjrNTwq6aVuzpcCWg/zErI3kLF/DuV6va+RNc7Q==',
             }
           : { method: paymentMethod };
 
