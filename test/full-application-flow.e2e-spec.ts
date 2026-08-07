@@ -1519,6 +1519,136 @@ describe('Full application flow (steps 1 to 4)', () => {
       );
     }
 
+    const payPalRecurringCheckoutSessionResponse = await api()
+      .post('/api/v1/checkout-sessions/register')
+      .send({
+        officeId,
+        clientId: userClientId,
+        paymentCustomerId,
+        gatewayId: payPalGatewayId,
+        apiCredentialId: payPalApiCredentialId,
+        code: `paypal-recurring-payment-link-${runId}`,
+        externalReference: `paypal-recurring-payment-link-${runId}`,
+        idempotencyKey: `paypal-recurring-payment-link-${runId}`,
+        paymentType: 'recurring',
+        amount: 2990,
+        currency: 'BRL',
+        description: 'PayPal recurring subscription checkout',
+        successUrl: payPalConfig.successUrl,
+        cancelUrl: payPalConfig.cancelUrl,
+        items: [
+          {
+            itemRef: `paypal-recurring-item-${runId}`,
+            itemType: 'subscription_plan',
+            name: 'PayPal recurring E2E plan',
+            quantity: 1,
+            unitAmount: 2990,
+            totalAmount: 2990,
+          },
+        ],
+        metadata: {
+          testRun: tag,
+          paymentMethod: 'payment_link',
+          paymentType: 'recurring',
+        },
+        config: {
+          environment: 'sandbox',
+          subscription: {
+            subscriptionPlanId,
+            recurringMode: 'gateway_native',
+          },
+        },
+      })
+      .expect(201);
+
+    const payPalRecurringCheckoutSession =
+      payPalRecurringCheckoutSessionResponse.body.data.checkoutSession;
+    const payPalRecurringCheckoutSessionId = asString(
+      payPalRecurringCheckoutSession._id,
+    );
+    expect(payPalRecurringCheckoutSession).toEqual(
+      expect.objectContaining({
+        _id: payPalRecurringCheckoutSessionId,
+        paymentType: 'recurring',
+        paymentCustomerId,
+        gatewayId: payPalGatewayId,
+        apiCredentialId: payPalApiCredentialId,
+      }),
+    );
+
+    const payPalRecurringResponse = await api()
+      .post('/api/v1/payments/process-recurring')
+      .send({
+        checkoutSessionId: payPalRecurringCheckoutSessionId,
+        paymentMethod: 'payment_link',
+        gatewayProvider: 'paypal',
+        gatewayId: payPalGatewayId,
+        apiCredentialId: payPalApiCredentialId,
+        payer,
+        paymentData: { method: 'payment_link' },
+        metadata: {
+          source: 'e2e',
+          origin: 'paypal-recurring-test',
+        },
+        config: { environment: 'sandbox' },
+      })
+      .expect(200);
+
+    expect(payPalRecurringResponse.body.data.subscription).toEqual(
+      expect.objectContaining({
+        subscriptionPlanId,
+        paymentCustomerId,
+        gatewayId: payPalGatewayId,
+        apiCredentialId: payPalApiCredentialId,
+        status: 'pending',
+        gatewaySubscriptionId: expect.any(String),
+      }),
+    );
+    expect(payPalRecurringResponse.body.data.subscriptionCycle).toEqual(
+      expect.objectContaining({
+        cycleNumber: 1,
+        amount: 2990,
+        currency: 'BRL',
+        status: 'scheduled',
+      }),
+    );
+    expect(payPalRecurringResponse.body.data.subscriptionInvoice).toEqual(
+      expect.objectContaining({
+        amount: 2990,
+        currency: 'BRL',
+        status: 'processing',
+      }),
+    );
+    expect(payPalRecurringResponse.body.data.paymentTransaction).toEqual(
+      expect.objectContaining({
+        checkoutSessionId: payPalRecurringCheckoutSessionId,
+        paymentCustomerId,
+        gatewayId: payPalGatewayId,
+        apiCredentialId: payPalApiCredentialId,
+        paymentType: 'recurring',
+        paymentMethod: 'payment_link',
+        gatewayTransactionId: expect.any(String),
+        checkoutUrl: expect.any(String),
+        gatewayResponse: expect.objectContaining({
+          endpoint: '/v1/billing/subscriptions',
+          ok: true,
+        }),
+      }),
+    );
+    expect(payPalRecurringResponse.body.data.checkoutSession).toEqual(
+      expect.objectContaining({
+        _id: payPalRecurringCheckoutSessionId,
+        status: 'processing',
+        config: expect.objectContaining({
+          subscription: expect.objectContaining({
+            subscriptionPlanId,
+            gatewaySubscriptionId: expect.any(String),
+            checkoutUrl: expect.any(String),
+          }),
+        }),
+      }),
+    );
+
     const picPayConfig = {
       sdkUrl: 'https://checkout.picpay.com/cdn/pp-transparent-v1.0.0.js',
       apiPath: '/sandbox/v1',
@@ -1830,7 +1960,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'CwCE9Y5crNTLB/R61h6b7/Hjn8QZdGE8JSwxRuRfJ7vR4pmuOka0AzKLlf9/AepHS/P0P17lvJt0UtW8iIkMpyo2IIPuh/4twcBKvwQdc+a+RXrSav3zm0nb646B3zoH7nqUjq9o5V30k8LzF1KNaprXF3s2V7+HYiiZ+SBnDxD3AF2RiNdIQmzjcovNNSCKVF9O24DWaSW0iU7O5dDF2teoQokjApjCZ/sxmfxLQZCjhKnna49VD3WsG9M4HpDgBc2r8Lqwi6nWcgH4lUDM0XbR3tLNCRx4L5x5LUOXmig64LaGjrNTwq6aVuzpcCWg/zErI3kLF/DuV6va+RNc7Q==',
+                'Nt3nh6xButFt59F1EDQ0mUEVkdYvG1Ry4GHfPkZqE6c1bmlK+8RCa/IsrQ8kEy8DpTdDMX7+dlenr/Piln6DdDD70uUEmskUnGoJQw+vTog+BSAshpy4WS39G3fGtX6dO9CtGNVCFPo0nTr0TRSFzYtR/qEAoiIiAU6zrah3Sx2HRDkorW+Cm43ZMHWpcsOP8pH6usq3X/O1EWR8spg5gBtxfzI3E6cqmBibN+l2eAg/m/X6v3f4p9oE2F3SiEPvmzywnpjiiYG3qGJRH3r2z9T2HyYHA8y/DXp61sTiaWz56tgVEz9/q+ObTHDvq2SqqKL2uDTH10jFeU0bOX8PSw==',
             }
           : { method: paymentMethod };
 
