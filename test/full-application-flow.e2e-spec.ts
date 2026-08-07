@@ -8,6 +8,12 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/infra/database/prisma/prisma.service';
 
+//comando para teste = TEST_DATABASE_URL='mariadb://root:root@db:3306/siplug_checkout' npm run test
+// :e2e -- --runInBand
+
+// pegar token da pagseguro : http://localhost:8085/api/v1/dev/pagseguro/encrypted-card-page/84df07fe-3c59-4f76-b63a-dc0f7afd3d59
+
+
 /* supertest exposes response.body as any; assertions below validate its runtime shape. */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 
@@ -1792,6 +1798,148 @@ describe('Full application flow (steps 1 to 4)', () => {
       }
     }
 
+    /*
+     * PicPay recurring credit card is intentionally paused until PicPay provides
+     * a sandbox transparentToken linked to this merchantCredential. The current
+     * card_ZVH... value is a 3DS test card token, not a transparent credential,
+     * so it cannot generate the short-lived temporaryCardToken required below.
+     */
+    /*
+    const picPayRecurringCheckoutSessionResponse = await api()
+      .post('/api/v1/checkout-sessions/register')
+      .send({
+        officeId,
+        clientId: userClientId,
+        paymentCustomerId,
+        gatewayId: picPayGatewayId,
+        apiCredentialId: picPayApiCredentialId,
+        code: `picpay-recurring-credit-card-${runId}`,
+        externalReference: `picpay-recurring-credit-card-${runId}`,
+        idempotencyKey: `picpay-recurring-credit-card-${runId}`,
+        paymentType: 'recurring',
+        amount: 2990,
+        currency: 'BRL',
+        description: 'PicPay recurring credit card subscription',
+        successUrl: picPayConfig.returnUrl,
+        cancelUrl: picPayConfig.cancelUrl,
+        items: [
+          {
+            itemRef: `picpay-recurring-item-${runId}`,
+            itemType: 'subscription_plan',
+            name: 'PicPay recurring credit card E2E plan',
+            quantity: 1,
+            unitAmount: 2990,
+            totalAmount: 2990,
+          },
+        ],
+        metadata: {
+          testRun: tag,
+          paymentMethod: 'credit_card',
+          paymentType: 'recurring',
+        },
+        config: {
+          environment: 'sandbox',
+          subscription: {
+            subscriptionPlanId,
+            recurringMode: 'gateway_native',
+          },
+        },
+      })
+      .expect(201);
+
+    const picPayRecurringCheckoutSession =
+      picPayRecurringCheckoutSessionResponse.body.data.checkoutSession;
+    const picPayRecurringCheckoutSessionId = asString(
+      picPayRecurringCheckoutSession._id,
+    );
+    expect(picPayRecurringCheckoutSession).toEqual(
+      expect.objectContaining({
+        _id: picPayRecurringCheckoutSessionId,
+        paymentType: 'recurring',
+        paymentCustomerId,
+        gatewayId: picPayGatewayId,
+        apiCredentialId: picPayApiCredentialId,
+      }),
+    );
+
+    const picPayRecurringResponse = await api()
+      .post('/api/v1/payments/process-recurring')
+      .send({
+        checkoutSessionId: picPayRecurringCheckoutSessionId,
+        paymentMethod: 'credit_card',
+        gatewayProvider: 'picpay',
+        gatewayId: picPayGatewayId,
+        apiCredentialId: picPayApiCredentialId,
+        payer,
+        paymentData: {
+          method: 'credit_card',
+          temporaryCardToken: picPayConfig.transparentToken,
+          cardholderDocument: payer.documentValue,
+          cardholderName: payer.name,
+          brand: 'Visa',
+        },
+        metadata: {
+          source: 'e2e',
+          origin: 'picpay-recurring-test',
+        },
+        config: { environment: 'sandbox' },
+      })
+      .expect(200);
+
+    expect(picPayRecurringResponse.body.data.subscription).toEqual(
+      expect.objectContaining({
+        subscriptionPlanId,
+        paymentCustomerId,
+        gatewayId: picPayGatewayId,
+        apiCredentialId: picPayApiCredentialId,
+        status: expect.stringMatching(/^(pending|active)$/),
+        gatewaySubscriptionId: expect.any(String),
+      }),
+    );
+    expect(picPayRecurringResponse.body.data.subscriptionCycle).toEqual(
+      expect.objectContaining({
+        cycleNumber: 1,
+        amount: 2990,
+        currency: 'BRL',
+        status: 'scheduled',
+      }),
+    );
+    expect(picPayRecurringResponse.body.data.subscriptionInvoice).toEqual(
+      expect.objectContaining({
+        amount: 2990,
+        currency: 'BRL',
+        status: 'processing',
+      }),
+    );
+    expect(picPayRecurringResponse.body.data.paymentTransaction).toEqual(
+      expect.objectContaining({
+        checkoutSessionId: picPayRecurringCheckoutSessionId,
+        paymentCustomerId,
+        gatewayId: picPayGatewayId,
+        apiCredentialId: picPayApiCredentialId,
+        paymentType: 'recurring',
+        paymentMethod: 'credit_card',
+        gatewayTransactionId: expect.any(String),
+        gatewayResponse: expect.objectContaining({
+          endpoint: '/recurrency/subscriptions',
+          ok: true,
+        }),
+      }),
+    );
+    expect(picPayRecurringResponse.body.data.checkoutSession).toEqual(
+      expect.objectContaining({
+        _id: picPayRecurringCheckoutSessionId,
+        status: expect.stringMatching(/^(processing|paid)$/),
+        config: expect.objectContaining({
+          subscription: expect.objectContaining({
+            subscriptionPlanId,
+            gatewaySubscriptionId: expect.any(String),
+          }),
+        }),
+      }),
+    );
+    */
+
     const pagSeguroGatewayResponse = await api()
       .post('/api/v1/gateways/register')
       .send({
@@ -1960,7 +2108,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'i1ZL74C2B4r6Bp/hfSKAqienpT21j427J8JDb4T+fHnGNKMgl4bLf74DQTBBaz59+w3e8ArfBP8Dn57hRKIBVCMkb9hfhsDOUyHgCVfvlfN36TGlWWmAm/pKUf9b8uukUhBF3c/DLjQW7CRtIOsoCs0TcLEYoeimUxRsz15nbUxh6i/IzB7iFZA7DBtF9qhJmJBtc4RMJJE8vfPorVHDAwdU6XtpWL1rJotyDi+lJc6PIL1//PvRp2KpQEj8cFEogb/+PjhPB8nvMo4dgsOxCegdmA+XGHsDBCuFriwrY25FQyxFPN7HSIOLi3h70ssBL1QX91225I3GAjUomC8gFg==',
+                'Fqxx7e4FGa8zpQq4bCNi+qCdmcbseT/IIVYbWhYRONW3pRcJlw6DFx6Ra87aFbr2mZ37tKc6GwS+P+v4GzWExOn1bUSAi5gPmervL/DyezmAaOYPWu28f2FaQTzgmpXw+eBgFgmIxx/gPZtbfW7GpcBvWOjWwk0YgMd9oBGuSr/sp/wP2NpBjj8ugDepH/3yZeBsJ2yKzIzMVWBVlfNxX+ti9cKmQGI1aeRsTiUolgZ3ZSbx0FugiW4Je5Jt7EPELelM0TunT6Zr3X3y1rSjyj4LVryeaVa9dnUES9t/gshlvVG4KUGvpNGdKF+aoSAg5jtccGWBZylaSAL+kUHJZg==',
             }
           : { method: paymentMethod };
 
@@ -2071,7 +2219,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'qtfCMA6lkh0sIoUHT/x9cQzJuSEYNxKS9b5Wyg5T6rJ8pH+M6//9abhie6Axoj36+E0S4SsFkS0V6B1ZG9QkBSuVde6/DeV9lHH6fau570FxddjRjfVb95iA6cOSFs77lK2KElT8UOEaSAJfjU6JwOwOrk2p4DRhxRCSPTpMbLedfJGn2Yblh7IovCYgfZ37W4Aaxj9st230JKcHqdRoGX5QIQ+KYHLvOlkJHzE0km14XNTI7y39CtGCz7vrEUb/KsV6WCDLvV90SCzrkTlSb5F8PuNb8SndCcMk3kk8QmDdYIPI1QSiomD7iFvSkxjvFZHOezFfbiWuso03/IA66w==',
+                'kJAf0DSo9IFkDSDi4FjiFw+nMMGF45FrKATCFYkzl1waxL7S/BLIEQGTzG23ZjmJ1qs5An/lHTPpdwEgsIihV/KfSXf2C77e5iGjyWcSPnwawz9wBI5ydXRS6QV+RNvfQZG5qU8ihVZb7WlylBxBBGkRKuLU+Lssq6xLEl8ww56HZ3bOKvkp98H90vUWBf69TSIcfuBH2jTR7JOLsQtG8LQJo3Nd1B2ZIgsPFS44t3KrowRa65hyZN9P5DeO8nIdKG5C9DLM0dh3CFiovtwQIR/xbwmStbcGEhOQM6m/2JUJdpQMy09uYhD6VNSmyRr7q1aEpF4LRXU6JDFJ+jnMCg==',
               securityCode: '123',
             }
           : { method: 'boleto' };

@@ -38,9 +38,7 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
     ensureNonProductionEnvironment() {
         const nodeEnv = String(process.env.NODE_ENV ?? '').toLowerCase();
         const appEnv = String(process.env.APP_ENV ?? '').toLowerCase();
-        const isProduction = nodeEnv === 'production' ||
-            appEnv === 'production' ||
-            appEnv === 'prod';
+        const isProduction = nodeEnv === 'production' || appEnv === 'production' || appEnv === 'prod';
         if (isProduction) {
             throw new Error('temporary PicPay card token page is not allowed in production');
         }
@@ -91,10 +89,13 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
             this.toNullableString(config?.transparentCheckoutSdkUrl) ??
             this.toNullableString(config?.transparent_checkout_sdk_url);
         const configuredSdkUrls = this.resolveConfiguredSdkUrls(config);
+        const isSandbox = ['sandbox', 'test', 'qa', 'local'].includes(environment);
+        if (isSandbox) {
+            return [sandboxSdkUrl, configuredSdkUrl, ...configuredSdkUrls].filter((value) => value !== null && value.includes('checkout-qa.picpay.com'));
+        }
         const urls = [
             configuredSdkUrl,
             ...configuredSdkUrls,
-            sandboxSdkUrl,
             productionSdkUrl,
         ].filter((value) => value !== null);
         return [...new Set(urls)];
@@ -330,9 +331,10 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
       element.className = 'status ' + (type || '');
     }
 
-    function setSdkButtonsEnabled(enabled) {
-      document.getElementById('brandButton').disabled = !enabled;
-      document.getElementById('tokenButton').disabled = !enabled;
+    function setSdkButtonsEnabled(sdkIsReady, credentialsAreValidated) {
+      document.getElementById('brandButton').disabled = !sdkIsReady;
+      document.getElementById('tokenButton').disabled =
+        !sdkIsReady || !credentialsAreValidated;
     }
 
     function formatError(error) {
@@ -391,7 +393,7 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
     }
 
     async function bootstrap() {
-      setSdkButtonsEnabled(false);
+      setSdkButtonsEnabled(false, false);
 
       const errors = [];
 
@@ -414,11 +416,12 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
 
           sdkReady = true;
           loadedSdkUrl = sdkUrl;
-          setSdkButtonsEnabled(true);
+          setSdkButtonsEnabled(true, false);
 
           setStatus(
             'sdkStatus',
-            'SDK carregado e credenciais registradas com sucesso.\\nURL carregada: ' + loadedSdkUrl,
+            'SDK carregado e credenciais aplicadas localmente.\\nURL carregada: ' + loadedSdkUrl +
+            '\\n\\nClique em "Obter bandeira pelo BIN" para validar as credenciais no PicPay. A geração do token ficará disponível somente após essa validação.',
             'success'
           );
 
@@ -466,6 +469,8 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
               document.getElementById('brand').value = body.brand;
             }
 
+            setSdkButtonsEnabled(true, true);
+
             setStatus(
               'tokenStatus',
               'Bandeira retornada:\\n' + JSON.stringify(body, null, 2),
@@ -473,6 +478,8 @@ let DevPicPayTemporaryCardTokenPageUseCase = class DevPicPayTemporaryCardTokenPa
             );
           },
           error: function(body) {
+            setSdkButtonsEnabled(true, false);
+
             setStatus(
               'tokenStatus',
               'Erro ao obter bandeira:\\n' + JSON.stringify(body, null, 2),
