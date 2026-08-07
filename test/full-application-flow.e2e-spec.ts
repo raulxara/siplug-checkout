@@ -34,6 +34,8 @@ describe('Full application flow (steps 1 to 4)', () => {
   let administratorPositionId: string;
   let gatewayId: string;
   let apiCredentialId: string;
+  let infinitePayGatewayId: string;
+  let infinitePayApiCredentialId: string;
   let permissionId: string;
   let positionId: string;
   let userId: string;
@@ -647,6 +649,148 @@ describe('Full application flow (steps 1 to 4)', () => {
         checkoutUrl: expect.any(String),
         gatewayResponse: expect.objectContaining({
           endpoint: '/checkout/preferences',
+          ok: true,
+        }),
+      }),
+    );
+
+    const infinitePayGatewayResponse = await api()
+      .post('/api/v1/gateways/register')
+      .send({
+        name: 'InfinitePay',
+        slug: `infinitepay-${runId}`,
+        provider: 'infinitepay',
+        config: {
+          handle: 'raul-nascimento-007',
+          priority: 2,
+          provider: 'infinitepay',
+          isDefault: true,
+          webhookUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/infinitepay',
+          environment: 'sandbox',
+          paymentFlow: 'hosted_checkout',
+          redirectUrl: 'https://siplug.com/payment/success',
+          paymentTypes: ['one_time', 'recurring'],
+          recurringMode: 'gateway_native',
+          paymentMethods: ['payment_link', 'pix', 'credit_card'],
+          supportsInstallments: true,
+          supportsSplitPayment: false,
+          supportsOneTimePayment: true,
+          supportedPaymentMethods: ['payment_link', 'pix', 'credit_card'],
+          supportsRecurringPayment: true,
+          testRun: tag,
+        },
+      })
+      .expect(201);
+    infinitePayGatewayId = infinitePayGatewayResponse.body.data._id;
+
+    const infinitePayCredentialResponse = await api()
+      .post('/api/v1/api-credentials/register')
+      .send({
+        officeId,
+        gatewayId: infinitePayGatewayId,
+        name: 'InfinitePay',
+        slug: 'infinitepay',
+        provider: 'infinitepay',
+        providerType: 'gateway_provider',
+        providerToken:
+          'APP_USR-4985143340013564-052714-90b535818da26bcceb0011fcc4a0fd7a-3431138232',
+        environment: 'local',
+        config: {
+          handle: 'raul-nascimento-007',
+          priority: 2,
+          provider: 'infinitepay',
+          isDefault: true,
+          webhookUrl:
+            'https://entrappingly-irreproachable-randal.ngrok-free.dev/api/v1/webhooks/gateways/infinitepay',
+          environment: 'sandbox',
+          paymentFlow: 'hosted_checkout',
+          redirectUrl: 'https://siplug.com/payment/success',
+          paymentTypes: ['one_time', 'recurring'],
+          recurringMode: 'gateway_native',
+          paymentMethods: ['payment_link', 'pix', 'credit_card'],
+          supportsInstallments: true,
+          supportsSplitPayment: false,
+          supportsOneTimePayment: true,
+          supportedPaymentMethods: ['payment_link', 'pix', 'credit_card'],
+          supportsRecurringPayment: true,
+          testRun: tag,
+        },
+      })
+      .expect(201);
+    infinitePayApiCredentialId = infinitePayCredentialResponse.body.data._id;
+
+    const infinitePayCheckoutSessionResponse = await api()
+      .post('/api/v1/checkout-sessions/register')
+      .send({
+        officeId,
+        clientId: userClientId,
+        paymentCustomerId,
+        gatewayId: infinitePayGatewayId,
+        apiCredentialId: infinitePayApiCredentialId,
+        code: `infinitepay-payment-link-${runId}`,
+        externalReference: `infinitepay-payment-link-${runId}`,
+        idempotencyKey: `infinitepay-payment-link-${runId}`,
+        paymentType: 'one_time',
+        amount: 1000,
+        currency: 'BRL',
+        description: 'InfinitePay one-time payment link checkout',
+        successUrl: 'https://siplug.com/payment/success',
+        cancelUrl: 'https://siplug.com/payment/cancel',
+        items: [
+          {
+            itemRef: `infinitepay-item-${runId}`,
+            itemType: 'product',
+            name: 'InfinitePay E2E item',
+            quantity: 1,
+            unitAmount: 1000,
+            totalAmount: 1000,
+          },
+        ],
+        metadata: { paymentMethod: 'payment_link', testRun: tag },
+        config: { paymentMethod: 'payment_link', environment: 'sandbox' },
+      })
+      .expect(201);
+
+    const infinitePayCheckoutSessionId = asString(
+      infinitePayCheckoutSessionResponse.body.data.checkoutSession._id,
+    );
+    expect(
+      infinitePayCheckoutSessionResponse.body.data.checkoutSession,
+    ).toEqual(
+      expect.objectContaining({
+        paymentCustomerId,
+        gatewayId: infinitePayGatewayId,
+        apiCredentialId: infinitePayApiCredentialId,
+        paymentType: 'one_time',
+      }),
+    );
+
+    const infinitePayPaymentResponse = await api()
+      .post('/api/v1/payments/process')
+      .send({
+        checkoutSessionId: infinitePayCheckoutSessionId,
+        paymentMethod: 'payment_link',
+        externalReference: `infinitepay-payment-link-${runId}`,
+        idempotencyKey: `infinitepay-payment-link-${runId}`,
+        payer,
+        paymentData: { method: 'payment_link' },
+        metadata: { source: 'e2e', origin: 'infinitepay-one-time-test' },
+        config: { environment: 'sandbox' },
+      })
+      .expect(200);
+
+    expect(infinitePayPaymentResponse.body.data.paymentTransaction).toEqual(
+      expect.objectContaining({
+        checkoutSessionId: infinitePayCheckoutSessionId,
+        paymentCustomerId,
+        gatewayId: infinitePayGatewayId,
+        apiCredentialId: infinitePayApiCredentialId,
+        paymentMethod: 'payment_link',
+        gatewayTransactionId: expect.any(String),
+        checkoutUrl: expect.any(String),
+        gatewayResponse: expect.objectContaining({
+          endpoint: '/links',
           ok: true,
         }),
       }),
