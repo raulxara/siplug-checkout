@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { GetUserDtoIn } from './dtos/get-user.dto-in';
@@ -14,6 +16,7 @@ export class GetUserController {
   constructor(private readonly getUserUseCase: GetUserUseCase) {}
 
   @Post('get')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: GetUserRequest,
     @Headers('authorization') authorization?: string,

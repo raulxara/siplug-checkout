@@ -39,9 +39,14 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
             });
         }
         const accessToken = this.toRequiredString(tokenDtoOut.body.access_token, 'PicPay access_token was not returned');
+        const sellerAcquirerId = this.resolveSellerAcquirerId({
+            dtoIn,
+            oauthResponse: tokenDtoOut.body,
+        });
         const planDtoOut = await this.resolveOrCreatePlan({
             dtoIn,
             accessToken,
+            sellerAcquirerId,
         });
         if (!planDtoOut.ok) {
             return this.buildFailedResponse({
@@ -60,6 +65,7 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
         const subscriptionResponse = await this.executePicPayJsonRequest({
             dtoIn,
             accessToken,
+            sellerAcquirerId,
             path: '/recurrency/subscriptions',
             method: 'POST',
             requestPayload: subscriptionRequest,
@@ -78,8 +84,7 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
         const gatewaySubscriptionId = this.toNullableString(subscriptionResponse.body.id) ??
             this.toNullableString(subscriptionResponse.body.subscriptionId);
         const gatewayInvoiceId = this.extractFirstChargeId(subscriptionResponse.body);
-        const gatewayStatus = this.toNullableString(subscriptionResponse.body.status) ??
-            'CREATED';
+        const gatewayStatus = this.toNullableString(subscriptionResponse.body.status) ?? 'CREATED';
         const mappedStatus = this.mapPicPaySubscriptionStatus(gatewayStatus);
         return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(true, 'picpay', gatewaySubscriptionId, planDtoOut.planId, gatewayInvoiceId, gatewaySubscriptionId, gatewayStatus, mappedStatus.status, mappedStatus.processStatus, mappedStatus.processMessage, this.sanitizePayload({
             planRequest: planDtoOut.planRequestPayload,
@@ -110,6 +115,7 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
         const planResponse = await this.executePicPayJsonRequest({
             dtoIn: params.dtoIn,
             accessToken: params.accessToken,
+            sellerAcquirerId: params.sellerAcquirerId,
             path: '/recurrency/plans',
             method: 'POST',
             requestPayload: planRequest,
@@ -243,6 +249,7 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
             headers: {
                 Accept: 'application/json',
                 Authorization: `Bearer ${params.accessToken}`,
+                'seller-acquirer-id': params.sellerAcquirerId,
                 'Content-Type': 'application/json',
                 'x-idempotency-key': this.normalizeIdempotencyKey(`${params.dtoIn.idempotencyKey ??
                     params.dtoIn.paymentTransaction.idempotencyKey ??
@@ -290,8 +297,7 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
     }
     normalizePicPayRecurringBaseUrl(params) {
         const cleanBaseUrl = params.baseUrl.replace(/\/+$/, '');
-        if (cleanBaseUrl.endsWith('/v1') ||
-            cleanBaseUrl.includes('/sandbox/v1')) {
+        if (cleanBaseUrl.endsWith('/v1') || cleanBaseUrl.includes('/sandbox/v1')) {
             return cleanBaseUrl;
         }
         if (params.apiPath === null) {
@@ -319,6 +325,20 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
             this.toNullableString(apiCredentialConfig.base_url) ??
             'https://api.ms.qa.limbo.work';
         return `${authBaseUrl.replace(/\/+$/, '')}/oauth2/token`;
+    }
+    resolveSellerAcquirerId(params) {
+        const apiCredentialConfig = this.asObject(params.dtoIn.apiCredential.config);
+        const gatewayConfig = this.asObject(params.dtoIn.config.gatewayConfig);
+        const sellerAcquirerId = this.toNullableString(params.oauthResponse['seller-acquirer-id']) ??
+            this.toNullableString(params.oauthResponse.seller_acquirer_id) ??
+            this.toNullableString(apiCredentialConfig.sellerAcquirerId) ??
+            this.toNullableString(apiCredentialConfig.seller_acquirer_id) ??
+            this.toNullableString(gatewayConfig.sellerAcquirerId) ??
+            this.toNullableString(gatewayConfig.seller_acquirer_id);
+        if (sellerAcquirerId === null) {
+            throw new Error('PicPay seller-acquirer-id is required for recurring payment');
+        }
+        return sellerAcquirerId;
     }
     resolvePicPayPlanId(dtoIn) {
         const planConfig = this.asObject(dtoIn.subscriptionPlan.config);
@@ -489,7 +509,9 @@ let PicPayRecurringPaymentProvider = class PicPayRecurringPaymentProvider {
             return null;
         }
         const sanitized = this.sanitizeUnknownValue(payload);
-        if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+        if (!sanitized ||
+            typeof sanitized !== 'object' ||
+            Array.isArray(sanitized)) {
             return null;
         }
         return sanitized;

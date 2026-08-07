@@ -21,7 +21,7 @@ let PayPalGatewayPaymentProvider = class PayPalGatewayPaymentProvider {
     }
     async processPayment(dtoIn) {
         try {
-            if (dtoIn.paymentTransaction.paymentMethod !== 'payment_link') {
+            if (!['payment_link', 'credit_card'].includes(dtoIn.paymentTransaction.paymentMethod)) {
                 return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                     success: false,
                     provider: this.getProviderName(),
@@ -66,7 +66,8 @@ let PayPalGatewayPaymentProvider = class PayPalGatewayPaymentProvider {
                     gatewayTransactionId: this.toNullableString(responseBody.id) ??
                         dtoIn.paymentTransaction.externalReference ??
                         dtoIn.paymentTransaction._id,
-                    gatewayStatus: this.toNullableString(responseBody.status) ?? String(response.status),
+                    gatewayStatus: this.toNullableString(responseBody.status) ??
+                        String(response.status),
                     status: 'failed',
                     processStatus: 'gateway_dispatch_failed',
                     processMessage: this.extractPayPalErrorMessage(responseBody) ??
@@ -380,7 +381,8 @@ let PayPalGatewayPaymentProvider = class PayPalGatewayPaymentProvider {
             null);
     }
     extractPayPalErrorMessage(responseBody) {
-        if (Array.isArray(responseBody.details) && responseBody.details.length > 0) {
+        if (Array.isArray(responseBody.details) &&
+            responseBody.details.length > 0) {
             const firstDetail = responseBody.details[0];
             return (this.toNullableString(firstDetail.description) ??
                 this.toNullableString(firstDetail.issue) ??
@@ -394,7 +396,9 @@ let PayPalGatewayPaymentProvider = class PayPalGatewayPaymentProvider {
         if (status === 'completed') {
             return 'paid';
         }
-        if (status === 'approved' || status === 'created' || status === 'payer_action_required') {
+        if (status === 'approved' ||
+            status === 'created' ||
+            status === 'payer_action_required') {
             return 'pending';
         }
         if (status === 'voided') {
@@ -429,6 +433,11 @@ let PayPalGatewayPaymentProvider = class PayPalGatewayPaymentProvider {
     }
     toNullableString(value) {
         if (value === undefined || value === null) {
+            return null;
+        }
+        if (typeof value !== 'string' &&
+            typeof value !== 'number' &&
+            typeof value !== 'boolean') {
             return null;
         }
         const stringValue = String(value).trim();

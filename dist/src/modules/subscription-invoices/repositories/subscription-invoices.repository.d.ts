@@ -9,8 +9,8 @@ export declare class SubscriptionInvoicesRepository implements ISubscriptionInvo
     findByPaymentTransactionId(paymentTransactionId: string): Promise<SubscriptionInvoiceRow | null>;
     findByGatewayInvoiceId(gatewayInvoiceId: string): Promise<SubscriptionInvoiceRow | null>;
     findLatestBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow | null>;
-    getAll(): Promise<SubscriptionInvoiceEntity[]>;
-    getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceEntity[]>;
+    getAll(): Promise<SubscriptionInvoiceRow[]>;
+    getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceRow[]>;
     findByUniqueId(_id: string): Promise<SubscriptionInvoiceRow | null>;
     findByInvoiceNumber(invoiceNumber: string): Promise<SubscriptionInvoiceRow | null>;
     getAllBySubscriptionId(subscriptionId: string): Promise<SubscriptionInvoiceRow[]>;

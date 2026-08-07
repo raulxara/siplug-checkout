@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { PrismaModule } from './infra/database/prisma/prisma.module';
 import { HealthModule } from './modules/health/health.module';
 import { OfficesModule } from './modules/offices/offices.module';
@@ -103,6 +105,8 @@ import { ListPermissionPositionByPositionIdModule } from './use-cases/list-permi
 import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module';
 
 @Module({
+  controllers: [AppController],
+  providers: [AppService],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,

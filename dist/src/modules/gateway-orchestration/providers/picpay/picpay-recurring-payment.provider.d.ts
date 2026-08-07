@@ -11,6 +11,7 @@ export declare class PicPayRecurringPaymentProvider {
     private resolveRecurringApiPath;
     private normalizePicPayRecurringBaseUrl;
     private resolveTokenUrl;
+    private resolveSellerAcquirerId;
     private resolvePicPayPlanId;
     private mapPicPayBillingCycle;
     private resolveInitialGraceCycles;

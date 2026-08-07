@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { GetAllUsersByOfficeIdDtoIn } from './dtos/get-all-users-by-office-id.dto-in';
@@ -16,6 +18,7 @@ export class GetAllUsersByOfficeIdController {
   ) {}
 
   @Post('get-all-by-office-id')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: GetAllUsersByOfficeIdRequest,
     @Headers('authorization') authorization?: string,

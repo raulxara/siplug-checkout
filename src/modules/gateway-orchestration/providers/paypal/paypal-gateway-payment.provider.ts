@@ -52,7 +52,10 @@ type PayPalOrderRequest = {
         brand_name?: string;
         locale?: string;
         landing_page?: 'LOGIN' | 'GUEST_CHECKOUT' | 'NO_PREFERENCE';
-        shipping_preference?: 'GET_FROM_FILE' | 'NO_SHIPPING' | 'SET_PROVIDED_ADDRESS';
+        shipping_preference?:
+          | 'GET_FROM_FILE'
+          | 'NO_SHIPPING'
+          | 'SET_PROVIDED_ADDRESS';
         user_action?: 'CONTINUE' | 'PAY_NOW';
         return_url: string;
         cancel_url: string;
@@ -98,7 +101,11 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
     dtoIn: GatewayPaymentDtoIn,
   ): Promise<GatewayPaymentDtoOut> {
     try {
-      if (dtoIn.paymentTransaction.paymentMethod !== 'payment_link') {
+      if (
+        !['payment_link', 'credit_card'].includes(
+          dtoIn.paymentTransaction.paymentMethod,
+        )
+      ) {
         return new GatewayPaymentDtoOut({
           success: false,
           provider: this.getProviderName(),
@@ -157,7 +164,8 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
             dtoIn.paymentTransaction._id,
 
           gatewayStatus:
-            this.toNullableString(responseBody.status) ?? String(response.status),
+            this.toNullableString(responseBody.status) ??
+            String(response.status),
 
           status: 'failed',
           processStatus: 'gateway_dispatch_failed',
@@ -285,9 +293,7 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
     }
   }
 
-  private async createAccessToken(
-    dtoIn: GatewayPaymentDtoIn,
-  ): Promise<string> {
+  private async createAccessToken(dtoIn: GatewayPaymentDtoIn): Promise<string> {
     const baseUrl = this.resolveBaseUrl(dtoIn);
     const clientId = this.resolveClientId(dtoIn);
     const clientSecret = this.resolveClientSecret(dtoIn);
@@ -579,7 +585,10 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
   private extractPayPalErrorMessage(
     responseBody: PayPalOrderResponse,
   ): string | null {
-    if (Array.isArray(responseBody.details) && responseBody.details.length > 0) {
+    if (
+      Array.isArray(responseBody.details) &&
+      responseBody.details.length > 0
+    ) {
       const firstDetail = responseBody.details[0];
 
       return (
@@ -602,7 +611,11 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
       return 'paid';
     }
 
-    if (status === 'approved' || status === 'created' || status === 'payer_action_required') {
+    if (
+      status === 'approved' ||
+      status === 'created' ||
+      status === 'payer_action_required'
+    ) {
       return 'pending';
     }
 
@@ -649,6 +662,14 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
 
   private toNullableString(value: unknown): string | null {
     if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (
+      typeof value !== 'string' &&
+      typeof value !== 'number' &&
+      typeof value !== 'boolean'
+    ) {
       return null;
     }
 

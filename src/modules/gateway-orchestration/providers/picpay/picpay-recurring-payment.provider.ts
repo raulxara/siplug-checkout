@@ -17,8 +17,7 @@ export class PicPayRecurringPaymentProvider {
       return this.buildFailedResponse({
         dtoIn,
         gatewayStatus: 'unsupported_payment_method',
-        processMessage:
-          `PicPay recurring API supports only credit_card. Received: ${dtoIn.paymentTransaction.paymentMethod}`,
+        processMessage: `PicPay recurring API supports only credit_card. Received: ${dtoIn.paymentTransaction.paymentMethod}`,
         providerRequest: {
           paymentMethod: dtoIn.paymentTransaction.paymentMethod,
         },
@@ -51,10 +50,15 @@ export class PicPayRecurringPaymentProvider {
       tokenDtoOut.body.access_token,
       'PicPay access_token was not returned',
     );
+    const sellerAcquirerId = this.resolveSellerAcquirerId({
+      dtoIn,
+      oauthResponse: tokenDtoOut.body,
+    });
 
     const planDtoOut = await this.resolveOrCreatePlan({
       dtoIn,
       accessToken,
+      sellerAcquirerId,
     });
 
     if (!planDtoOut.ok) {
@@ -79,6 +83,7 @@ export class PicPayRecurringPaymentProvider {
     const subscriptionResponse = await this.executePicPayJsonRequest({
       dtoIn,
       accessToken,
+      sellerAcquirerId,
       path: '/recurrency/subscriptions',
       method: 'POST',
       requestPayload: subscriptionRequest,
@@ -103,11 +108,12 @@ export class PicPayRecurringPaymentProvider {
       this.toNullableString(subscriptionResponse.body.id) ??
       this.toNullableString(subscriptionResponse.body.subscriptionId);
 
-    const gatewayInvoiceId = this.extractFirstChargeId(subscriptionResponse.body);
+    const gatewayInvoiceId = this.extractFirstChargeId(
+      subscriptionResponse.body,
+    );
 
     const gatewayStatus =
-      this.toNullableString(subscriptionResponse.body.status) ??
-      'CREATED';
+      this.toNullableString(subscriptionResponse.body.status) ?? 'CREATED';
 
     const mappedStatus = this.mapPicPaySubscriptionStatus(gatewayStatus);
 
@@ -157,6 +163,7 @@ export class PicPayRecurringPaymentProvider {
   private async resolveOrCreatePlan(params: {
     dtoIn: GatewayRecurringPaymentDtoIn;
     accessToken: string;
+    sellerAcquirerId: string;
   }): Promise<{
     ok: boolean;
     status: number;
@@ -185,6 +192,7 @@ export class PicPayRecurringPaymentProvider {
     const planResponse = await this.executePicPayJsonRequest({
       dtoIn: params.dtoIn,
       accessToken: params.accessToken,
+      sellerAcquirerId: params.sellerAcquirerId,
       path: '/recurrency/plans',
       method: 'POST',
       requestPayload: planRequest,
@@ -388,6 +396,7 @@ export class PicPayRecurringPaymentProvider {
   private async executePicPayJsonRequest(params: {
     dtoIn: GatewayRecurringPaymentDtoIn;
     accessToken: string;
+    sellerAcquirerId: string;
     path: string;
     method: 'POST' | 'GET' | 'PUT' | 'PATCH';
     requestPayload: Record<string, unknown>;
@@ -400,6 +409,7 @@ export class PicPayRecurringPaymentProvider {
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${params.accessToken}`,
+        'seller-acquirer-id': params.sellerAcquirerId,
         'Content-Type': 'application/json',
         'x-idempotency-key': this.normalizeIdempotencyKey(
           `${
@@ -472,10 +482,7 @@ export class PicPayRecurringPaymentProvider {
   }): string {
     const cleanBaseUrl = params.baseUrl.replace(/\/+$/, '');
 
-    if (
-      cleanBaseUrl.endsWith('/v1') ||
-      cleanBaseUrl.includes('/sandbox/v1')
-    ) {
+    if (cleanBaseUrl.endsWith('/v1') || cleanBaseUrl.includes('/sandbox/v1')) {
       return cleanBaseUrl;
     }
 
@@ -514,7 +521,35 @@ export class PicPayRecurringPaymentProvider {
     return `${authBaseUrl.replace(/\/+$/, '')}/oauth2/token`;
   }
 
-  private resolvePicPayPlanId(dtoIn: GatewayRecurringPaymentDtoIn): string | null {
+  private resolveSellerAcquirerId(params: {
+    dtoIn: GatewayRecurringPaymentDtoIn;
+    oauthResponse: Record<string, unknown>;
+  }): string {
+    const apiCredentialConfig = this.asObject(
+      params.dtoIn.apiCredential.config,
+    );
+    const gatewayConfig = this.asObject(params.dtoIn.config.gatewayConfig);
+
+    const sellerAcquirerId =
+      this.toNullableString(params.oauthResponse['seller-acquirer-id']) ??
+      this.toNullableString(params.oauthResponse.seller_acquirer_id) ??
+      this.toNullableString(apiCredentialConfig.sellerAcquirerId) ??
+      this.toNullableString(apiCredentialConfig.seller_acquirer_id) ??
+      this.toNullableString(gatewayConfig.sellerAcquirerId) ??
+      this.toNullableString(gatewayConfig.seller_acquirer_id);
+
+    if (sellerAcquirerId === null) {
+      throw new Error(
+        'PicPay seller-acquirer-id is required for recurring payment',
+      );
+    }
+
+    return sellerAcquirerId;
+  }
+
+  private resolvePicPayPlanId(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+  ): string | null {
     const planConfig = this.asObject(dtoIn.subscriptionPlan.config);
     const gatewayMappings = this.asObject(planConfig.gatewayMappings);
     const picpayMapping = this.asObject(gatewayMappings.picpay);
@@ -560,7 +595,9 @@ export class PicPayRecurringPaymentProvider {
     );
   }
 
-  private resolveInitialGraceCycles(dtoIn: GatewayRecurringPaymentDtoIn): number {
+  private resolveInitialGraceCycles(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+  ): number {
     const planConfig = this.asObject(dtoIn.subscriptionPlan.config);
     const picpayConfig = this.asObject(planConfig.picpay);
 
@@ -789,7 +826,11 @@ export class PicPayRecurringPaymentProvider {
 
     const sanitized = this.sanitizeUnknownValue(payload);
 
-    if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+    if (
+      !sanitized ||
+      typeof sanitized !== 'object' ||
+      Array.isArray(sanitized)
+    ) {
       return null;
     }
 

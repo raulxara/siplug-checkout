@@ -155,7 +155,7 @@ let SubscriptionInvoicesRepository = class SubscriptionInvoicesRepository {
                 created_at: 'desc',
             },
         });
-        return rows;
+        return rows.map((row) => this.toRow(row));
     }
     async getAllByOfficeId(officeId) {
         const rows = await this.prisma.subscriptionInvoice.findMany({
@@ -168,7 +168,7 @@ let SubscriptionInvoicesRepository = class SubscriptionInvoicesRepository {
                 created_at: 'desc',
             },
         });
-        return rows;
+        return rows.map((row) => this.toRow(row));
     }
     async findByUniqueId(_id) {
         const model = await this.prisma.subscriptionInvoice.findUnique({

@@ -10,9 +10,7 @@ import type {
 } from '../entities/subscription-invoices-repository.interface';
 
 @Injectable()
-export class SubscriptionInvoicesRepository
-  implements ISubscriptionInvoicesRepository
-{
+export class SubscriptionInvoicesRepository implements ISubscriptionInvoicesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(
@@ -204,19 +202,17 @@ export class SubscriptionInvoicesRepository
     return model ? this.toRow(model) : null;
   }
 
-  async getAll(): Promise<SubscriptionInvoiceEntity[]> {
+  async getAll(): Promise<SubscriptionInvoiceRow[]> {
     const rows = await this.prisma.subscriptionInvoice.findMany({
       orderBy: {
         created_at: 'desc',
       },
     });
 
-    return rows as unknown as SubscriptionInvoiceEntity[];
+    return rows.map((row) => this.toRow(row));
   }
 
-  async getAllByOfficeId(
-    officeId: string,
-  ): Promise<SubscriptionInvoiceEntity[]> {
+  async getAllByOfficeId(officeId: string): Promise<SubscriptionInvoiceRow[]> {
     const rows = await this.prisma.subscriptionInvoice.findMany({
       where: {
         subscription: {
@@ -228,7 +224,7 @@ export class SubscriptionInvoicesRepository
       },
     });
 
-    return rows as unknown as SubscriptionInvoiceEntity[];
+    return rows.map((row) => this.toRow(row));
   }
 
   async findByUniqueId(_id: string): Promise<SubscriptionInvoiceRow | null> {
