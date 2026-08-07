@@ -1960,7 +1960,7 @@ describe('Full application flow (steps 1 to 4)', () => {
           ? {
               method: 'credit_card',
               encryptedCard:
-                'Nt3nh6xButFt59F1EDQ0mUEVkdYvG1Ry4GHfPkZqE6c1bmlK+8RCa/IsrQ8kEy8DpTdDMX7+dlenr/Piln6DdDD70uUEmskUnGoJQw+vTog+BSAshpy4WS39G3fGtX6dO9CtGNVCFPo0nTr0TRSFzYtR/qEAoiIiAU6zrah3Sx2HRDkorW+Cm43ZMHWpcsOP8pH6usq3X/O1EWR8spg5gBtxfzI3E6cqmBibN+l2eAg/m/X6v3f4p9oE2F3SiEPvmzywnpjiiYG3qGJRH3r2z9T2HyYHA8y/DXp61sTiaWz56tgVEz9/q+ObTHDvq2SqqKL2uDTH10jFeU0bOX8PSw==',
+                'i1ZL74C2B4r6Bp/hfSKAqienpT21j427J8JDb4T+fHnGNKMgl4bLf74DQTBBaz59+w3e8ArfBP8Dn57hRKIBVCMkb9hfhsDOUyHgCVfvlfN36TGlWWmAm/pKUf9b8uukUhBF3c/DLjQW7CRtIOsoCs0TcLEYoeimUxRsz15nbUxh6i/IzB7iFZA7DBtF9qhJmJBtc4RMJJE8vfPorVHDAwdU6XtpWL1rJotyDi+lJc6PIL1//PvRp2KpQEj8cFEogb/+PjhPB8nvMo4dgsOxCegdmA+XGHsDBCuFriwrY25FQyxFPN7HSIOLi3h70ssBL1QX91225I3GAjUomC8gFg==',
             }
           : { method: paymentMethod };
 
@@ -2006,6 +2006,146 @@ describe('Full application flow (steps 1 to 4)', () => {
       if (paymentMethod === 'boleto') {
         expect(paymentTransaction.boletoUrl).toEqual(expect.any(String));
       }
+    }
+
+    for (const paymentMethod of ['boleto', 'credit_card']) {
+      const pagSeguroRecurringCheckoutSessionResponse = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          code: `pagseguro-recurring-${paymentMethod}-${runId}`,
+          externalReference: `pagseguro-recurring-${paymentMethod}-${runId}`,
+          idempotencyKey: `pagseguro-recurring-${paymentMethod}-${runId}`,
+          paymentType: 'recurring',
+          amount: 2990,
+          currency: 'BRL',
+          description: `PagSeguro recurring ${paymentMethod} subscription`,
+          successUrl: 'https://siplug.com/payment/success',
+          cancelUrl: 'https://siplug.com/payment/cancel',
+          items: [
+            {
+              itemRef: `pagseguro-recurring-item-${paymentMethod}-${runId}`,
+              itemType: 'subscription_plan',
+              name: `PagSeguro recurring ${paymentMethod} E2E plan`,
+              quantity: 1,
+              unitAmount: 2990,
+              totalAmount: 2990,
+            },
+          ],
+          metadata: {
+            testRun: tag,
+            paymentMethod,
+            paymentType: 'recurring',
+          },
+          config: {
+            environment: 'sandbox',
+            subscription: {
+              subscriptionPlanId,
+              recurringMode: 'gateway_native',
+            },
+          },
+        })
+        .expect(201);
+
+      const pagSeguroRecurringCheckoutSession =
+        pagSeguroRecurringCheckoutSessionResponse.body.data.checkoutSession;
+      const pagSeguroRecurringCheckoutSessionId = asString(
+        pagSeguroRecurringCheckoutSession._id,
+      );
+      expect(pagSeguroRecurringCheckoutSession).toEqual(
+        expect.objectContaining({
+          _id: pagSeguroRecurringCheckoutSessionId,
+          paymentType: 'recurring',
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+        }),
+      );
+
+      const paymentData =
+        paymentMethod === 'credit_card'
+          ? {
+              method: 'credit_card',
+              encryptedCard:
+                'qtfCMA6lkh0sIoUHT/x9cQzJuSEYNxKS9b5Wyg5T6rJ8pH+M6//9abhie6Axoj36+E0S4SsFkS0V6B1ZG9QkBSuVde6/DeV9lHH6fau570FxddjRjfVb95iA6cOSFs77lK2KElT8UOEaSAJfjU6JwOwOrk2p4DRhxRCSPTpMbLedfJGn2Yblh7IovCYgfZ37W4Aaxj9st230JKcHqdRoGX5QIQ+KYHLvOlkJHzE0km14XNTI7y39CtGCz7vrEUb/KsV6WCDLvV90SCzrkTlSb5F8PuNb8SndCcMk3kk8QmDdYIPI1QSiomD7iFvSkxjvFZHOezFfbiWuso03/IA66w==',
+              securityCode: '123',
+            }
+          : { method: 'boleto' };
+
+      const pagSeguroRecurringResponse = await api()
+        .post('/api/v1/payments/process-recurring')
+        .send({
+          checkoutSessionId: pagSeguroRecurringCheckoutSessionId,
+          paymentMethod,
+          gatewayProvider: 'pagseguro',
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          payer: pagSeguroPayer,
+          paymentData,
+          metadata: {
+            source: 'e2e',
+            origin: 'pagseguro-recurring-test',
+          },
+          config: { environment: 'sandbox' },
+        })
+        .expect(200);
+
+      expect(pagSeguroRecurringResponse.body.data.subscription).toEqual(
+        expect.objectContaining({
+          subscriptionPlanId,
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          status: expect.stringMatching(/^(pending|active)$/),
+          gatewaySubscriptionId: expect.any(String),
+        }),
+      );
+      expect(pagSeguroRecurringResponse.body.data.subscriptionCycle).toEqual(
+        expect.objectContaining({
+          cycleNumber: 1,
+          amount: 2990,
+          currency: 'BRL',
+          status: 'scheduled',
+        }),
+      );
+      expect(pagSeguroRecurringResponse.body.data.subscriptionInvoice).toEqual(
+        expect.objectContaining({
+          amount: 2990,
+          currency: 'BRL',
+          status: 'processing',
+        }),
+      );
+      expect(pagSeguroRecurringResponse.body.data.paymentTransaction).toEqual(
+        expect.objectContaining({
+          checkoutSessionId: pagSeguroRecurringCheckoutSessionId,
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          paymentType: 'recurring',
+          paymentMethod,
+          gatewayTransactionId: expect.any(String),
+          gatewayResponse: expect.objectContaining({
+            endpoint: '/subscriptions',
+            ok: true,
+          }),
+        }),
+      );
+      expect(pagSeguroRecurringResponse.body.data.checkoutSession).toEqual(
+        expect.objectContaining({
+          _id: pagSeguroRecurringCheckoutSessionId,
+          status: expect.stringMatching(/^(processing|paid)$/),
+          config: expect.objectContaining({
+            subscription: expect.objectContaining({
+              subscriptionPlanId,
+              gatewaySubscriptionId: expect.any(String),
+            }),
+          }),
+        }),
+      );
     }
   }, 180_000);
 
