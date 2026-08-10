@@ -103,7 +103,8 @@ import { GetPermissionByUniqueIdModule } from './use-cases/get-permission-by-uni
 import { UpdatePermissionByUniqueIdModule } from './use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module';
 import { ListPermissionPositionByPositionIdModule } from './use-cases/list-permission-position-by-position-id/list-permission-position-by-position-id.module';
 import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module';
-
+import { RetryPaymentSplitDispatchModule } from './use-cases/retry-payment-split-dispatch/retry-payment-split-dispatch.module';
+import { ReconcilePaymentSplitWithGatewayModule } from './use-cases/reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module';
 @Module({
   controllers: [AppController],
   providers: [AppService],
@@ -212,6 +213,8 @@ import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-
     UpdatePermissionByUniqueIdModule,
     ListPermissionPositionByPositionIdModule,
     ListCheckoutSessionsByOfficeIdModule,
+    RetryPaymentSplitDispatchModule,
+    ReconcilePaymentSplitWithGatewayModule,
   ],
 })
 export class AppModule {}

@@ -111,6 +111,8 @@ const get_permission_by_unique_id_module_1 = require("./use-cases/get-permission
 const update_permission_by_unique_id_module_1 = require("./use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module");
 const list_permission_position_by_position_id_module_1 = require("./use-cases/list-permission-position-by-position-id/list-permission-position-by-position-id.module");
 const list_checkout_sessions_by_office_id_module_1 = require("./use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module");
+const retry_payment_split_dispatch_module_1 = require("./use-cases/retry-payment-split-dispatch/retry-payment-split-dispatch.module");
+const reconcile_payment_split_with_gateway_module_1 = require("./use-cases/reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -222,6 +224,8 @@ exports.AppModule = AppModule = __decorate([
             update_permission_by_unique_id_module_1.UpdatePermissionByUniqueIdModule,
             list_permission_position_by_position_id_module_1.ListPermissionPositionByPositionIdModule,
             list_checkout_sessions_by_office_id_module_1.ListCheckoutSessionsByOfficeIdModule,
+            retry_payment_split_dispatch_module_1.RetryPaymentSplitDispatchModule,
+            reconcile_payment_split_with_gateway_module_1.ReconcilePaymentSplitWithGatewayModule,
         ],
     })
 ], AppModule);

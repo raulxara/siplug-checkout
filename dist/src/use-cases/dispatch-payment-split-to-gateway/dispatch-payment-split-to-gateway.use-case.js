@@ -62,11 +62,20 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                     reason: 'payment split already transferred',
                 });
             }
-            if (!['created', 'pending_gateway', 'processing_gateway'].includes(currentStatus)) {
+            const dispatchableStatuses = [
+                'created',
+                'pending_gateway',
+                'processing_gateway',
+                'failed',
+                'partially_transferred',
+                'gateway_failed_retryable',
+            ];
+            if (!dispatchableStatuses.includes(currentStatus)) {
                 return new dispatch_payment_split_to_gateway_dto_out_1.DispatchPaymentSplitToGatewayDtoOut(false, `payment split status does not allow gateway dispatch: ${currentStatus}`, paymentSplit, [], {
                     skipped: true,
                     reason: 'payment split status does not allow gateway dispatch',
                     currentStatus,
+                    dispatchableStatuses,
                 });
             }
             if (String(paymentSplit.gatewayProvider ?? '').trim() !== dtoIn.provider) {
@@ -95,6 +104,10 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
             if (paymentSplitRecipients.length === 0) {
                 throw new Error('payment split must have at least one recipient');
             }
+            const retainedRecipients = await this.markRetainedRecipientsBeforeGatewayDispatch({
+                currentRecipients: paymentSplitRecipients,
+                provider: dtoIn.provider,
+            });
             const recipientsForGateway = this.buildRecipientsForGateway(paymentSplitRecipients);
             await this.updatePaymentSplitService.exec(new update_payment_split_dto_in_1.UpdatePaymentSplitDtoIn({
                 _id: dtoIn.paymentSplitId,
@@ -105,6 +118,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                     paymentTransactionId: dtoIn.paymentTransactionId,
                     paymentWebhookEventId: dtoIn.paymentWebhookEventId,
                     recipients: recipientsForGateway,
+                    retainedRecipients,
                 },
                 metadata: {
                     ...(this.toObject(paymentSplit.metadata) ?? {}),
@@ -121,6 +135,56 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                 },
                 source: 'DispatchPaymentSplitToGatewayUseCase.processingGateway',
             }));
+            if (recipientsForGateway.length === 0) {
+                const retainedOnlyGatewayResponse = {
+                    provider: dtoIn.provider,
+                    status: 'transferred',
+                    transfers: [],
+                    retainedRecipients,
+                    successCount: 0,
+                    failedCount: 0,
+                    retainedCount: retainedRecipients.length,
+                };
+                const finalSplitDtoOut = await this.updatePaymentSplitService.exec(new update_payment_split_dto_in_1.UpdatePaymentSplitDtoIn({
+                    _id: dtoIn.paymentSplitId,
+                    gatewaySplitId: null,
+                    providerResponse: {
+                        provider: dtoIn.provider,
+                        transfers: [],
+                        retainedRecipients,
+                    },
+                    gatewayResponse: retainedOnlyGatewayResponse,
+                    metadata: {
+                        ...(this.toObject(paymentSplit.metadata) ?? {}),
+                        lastGatewayDispatch: {
+                            provider: dtoIn.provider,
+                            sourceTransactionId: dtoIn.sourceTransactionId,
+                            paymentWebhookEventId: dtoIn.paymentWebhookEventId,
+                            eventId: dtoIn.eventId,
+                            eventType: dtoIn.eventType,
+                            eventAction: dtoIn.eventAction,
+                            canonicalStatus: dtoIn.canonicalStatus,
+                            finishedAt: new Date().toISOString(),
+                            status: 'transferred',
+                            dispatched: false,
+                            completed: true,
+                            retainedOnly: true,
+                            errorMessage: null,
+                        },
+                    },
+                    status: 'transferred',
+                    source: 'DispatchPaymentSplitToGatewayUseCase.retainedOnly',
+                }));
+                return new dispatch_payment_split_to_gateway_dto_out_1.DispatchPaymentSplitToGatewayDtoOut(true, 'payment split completed with retained recipients only', finalSplitDtoOut.paymentSplit, retainedRecipients, {
+                    dispatched: false,
+                    completed: true,
+                    status: 'transferred',
+                    gatewayProvider: dtoIn.provider,
+                    retainedOnly: true,
+                    retainedRecipients,
+                    transfers: [],
+                });
+            }
             const gatewayDtoOut = await this.dispatchGatewaySplitTransferService.exec(new gateway_split_transfer_dto_in_1.GatewaySplitTransferDtoIn({
                 gatewayProvider: dtoIn.provider,
                 providerToken,
@@ -139,15 +203,27 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                 },
                 config: null,
             }));
-            const updatedRecipients = await this.updateRecipientsAfterGatewayDispatch({
+            const gatewayUpdatedRecipients = await this.updateRecipientsAfterGatewayDispatch({
                 currentRecipients: paymentSplitRecipients,
                 transfers: gatewayDtoOut.transfers,
+            });
+            const updatedRecipients = [
+                ...retainedRecipients,
+                ...gatewayUpdatedRecipients,
+            ];
+            const finalProviderResponse = this.mergeProviderResponseWithRetainedRecipients({
+                providerResponse: gatewayDtoOut.providerResponse,
+                retainedRecipients,
+            });
+            const finalGatewayResponse = this.mergeGatewayResponseWithRetainedRecipients({
+                gatewayResponse: gatewayDtoOut.gatewayResponse,
+                retainedRecipients,
             });
             const finalSplitDtoOut = await this.updatePaymentSplitService.exec(new update_payment_split_dto_in_1.UpdatePaymentSplitDtoIn({
                 _id: dtoIn.paymentSplitId,
                 gatewaySplitId: gatewayDtoOut.gatewaySplitId,
-                providerResponse: gatewayDtoOut.providerResponse,
-                gatewayResponse: gatewayDtoOut.gatewayResponse,
+                providerResponse: finalProviderResponse,
+                gatewayResponse: finalGatewayResponse,
                 metadata: {
                     ...(this.toObject(paymentSplit.metadata) ?? {}),
                     lastGatewayDispatch: {
@@ -241,7 +317,13 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
     }
     buildRecipientsForGateway(recipients) {
         return recipients
-            .filter((recipient) => String(recipient.status ?? '') !== 'transferred')
+            .filter((recipient) => {
+            const status = String(recipient.status ?? '').trim();
+            if (['transferred', 'retained'].includes(status)) {
+                return false;
+            }
+            return !this.shouldRetainRecipientOnPlatform(recipient);
+        })
             .map((recipient) => {
             const paymentSplitRecipientId = String(recipient._id ?? '').trim();
             const splitRecipientId = String(recipient.splitRecipientId ?? '').trim();
@@ -297,6 +379,149 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
             this.extractString(metadata, 'gateway_recipient_id') ??
             this.extractString(metadata, 'gatewayAccountId') ??
             this.extractString(metadata, 'gateway_account_id'));
+    }
+    async markRetainedRecipientsBeforeGatewayDispatch(params) {
+        const retainedRecipients = [];
+        for (const recipient of params.currentRecipients) {
+            if (!this.shouldRetainRecipientOnPlatform(recipient)) {
+                continue;
+            }
+            const retainedData = this.buildRetainedRecipientData(recipient);
+            const currentStatus = String(recipient.status ?? '').trim();
+            if (currentStatus === 'retained') {
+                retainedRecipients.push(retainedData);
+                continue;
+            }
+            const updatedDtoOut = await this.updatePaymentSplitRecipientService.exec(new update_payment_split_recipient_dto_in_1.UpdatePaymentSplitRecipientDtoIn({
+                _id: retainedData.paymentSplitRecipientId,
+                gatewayRecipientId: this.resolveDestinationAccountId(recipient),
+                gatewayTransferId: null,
+                providerResponse: {
+                    provider: params.provider,
+                    transfer: null,
+                    retainedOnPlatform: true,
+                    retainedRecipient: retainedData,
+                },
+                gatewayResponse: {
+                    provider: params.provider,
+                    status: 'retained',
+                    transfer: null,
+                    retainedOnPlatform: true,
+                    retainedRecipient: retainedData,
+                },
+                metadata: {
+                    ...(this.toObject(recipient.metadata) ?? {}),
+                    retainOnPlatform: true,
+                    gatewayTransferMode: 'retained_on_platform',
+                    lastGatewayTransfer: {
+                        provider: params.provider,
+                        gatewayTransferId: null,
+                        success: true,
+                        statusCode: null,
+                        retainedOnPlatform: true,
+                        processedAt: new Date().toISOString(),
+                    },
+                },
+                status: 'retained',
+                source: 'DispatchPaymentSplitToGatewayUseCase.retainedOnPlatform',
+            }));
+            retainedRecipients.push(this.buildRetainedRecipientData(updatedDtoOut.paymentSplitRecipient));
+        }
+        return retainedRecipients;
+    }
+    buildRetainedRecipientData(recipient) {
+        const paymentSplitRecipientId = String(recipient._id ?? '').trim();
+        const splitRecipientId = String(recipient.splitRecipientId ?? '').trim();
+        const amount = Number(recipient.amount ?? 0);
+        const currency = String(recipient.currency ?? 'BRL').trim();
+        if (paymentSplitRecipientId === '') {
+            throw new Error('retained paymentSplitRecipient._id is required');
+        }
+        if (splitRecipientId === '') {
+            throw new Error('retained paymentSplitRecipient.splitRecipientId is required');
+        }
+        if (!Number.isInteger(amount) || amount <= 0) {
+            throw new Error(`retained payment split recipient amount must be greater than zero: ${paymentSplitRecipientId}`);
+        }
+        if (currency === '') {
+            throw new Error(`retained payment split recipient currency is required: ${paymentSplitRecipientId}`);
+        }
+        return {
+            paymentSplitRecipientId,
+            splitRecipientId,
+            amount,
+            currency,
+            role: String(recipient.role ?? 'platform'),
+            retainedOnPlatform: true,
+            metadata: this.toObject(recipient.metadata),
+            config: this.toObject(recipient.config),
+        };
+    }
+    shouldRetainRecipientOnPlatform(recipient) {
+        const config = this.toObject(recipient.config);
+        const metadata = this.toObject(recipient.metadata);
+        const explicitTransferToGateway = this.extractBoolean(config, 'transferToGateway') ??
+            this.extractBoolean(config, 'transfer_to_gateway') ??
+            this.extractBoolean(metadata, 'transferToGateway') ??
+            this.extractBoolean(metadata, 'transfer_to_gateway');
+        if (explicitTransferToGateway === true) {
+            return false;
+        }
+        const explicitRetainOnPlatform = this.extractBoolean(config, 'retainOnPlatform') ??
+            this.extractBoolean(config, 'retain_on_platform') ??
+            this.extractBoolean(metadata, 'retainOnPlatform') ??
+            this.extractBoolean(metadata, 'retain_on_platform');
+        if (explicitRetainOnPlatform !== null) {
+            return explicitRetainOnPlatform;
+        }
+        const role = String(recipient.role ?? '').trim().toLowerCase();
+        return ['platform', 'commission', 'application_fee'].includes(role);
+    }
+    mergeProviderResponseWithRetainedRecipients(params) {
+        return {
+            ...(this.toObject(params.providerResponse) ?? {}),
+            retainedRecipients: params.retainedRecipients,
+            retainedCount: params.retainedRecipients.length,
+        };
+    }
+    mergeGatewayResponseWithRetainedRecipients(params) {
+        const gatewayResponse = this.toObject(params.gatewayResponse) ?? {};
+        const currentSuccessCount = Number(gatewayResponse.successCount ?? 0);
+        const currentFailedCount = Number(gatewayResponse.failedCount ?? 0);
+        return {
+            ...gatewayResponse,
+            retainedRecipients: params.retainedRecipients,
+            retainedCount: params.retainedRecipients.length,
+            successCount: currentSuccessCount,
+            failedCount: currentFailedCount,
+        };
+    }
+    extractBoolean(object, key) {
+        if (object === null) {
+            return null;
+        }
+        const value = object[key];
+        if (value === true || value === false) {
+            return value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+                return true;
+            }
+            if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+                return false;
+            }
+        }
+        if (typeof value === 'number') {
+            if (value === 1) {
+                return true;
+            }
+            if (value === 0) {
+                return false;
+            }
+        }
+        return null;
     }
     async updateRecipientsAfterGatewayDispatch(params) {
         const updatedRecipients = [];

@@ -10,6 +10,7 @@ exports.GatewaySplitTransfersModule = void 0;
 const common_1 = require("@nestjs/common");
 const dispatch_gateway_split_transfer_service_1 = require("./services/dispatch-gateway-split-transfer/dispatch-gateway-split-transfer.service");
 const dispatch_stripe_split_transfer_service_1 = require("./stripe/services/dispatch-stripe-split-transfer/dispatch-stripe-split-transfer.service");
+const retrieve_stripe_transfer_service_1 = require("./stripe/services/retrieve-stripe-transfer/retrieve-stripe-transfer.service");
 let GatewaySplitTransfersModule = class GatewaySplitTransfersModule {
 };
 exports.GatewaySplitTransfersModule = GatewaySplitTransfersModule;
@@ -18,8 +19,13 @@ exports.GatewaySplitTransfersModule = GatewaySplitTransfersModule = __decorate([
         providers: [
             dispatch_gateway_split_transfer_service_1.DispatchGatewaySplitTransferService,
             dispatch_stripe_split_transfer_service_1.DispatchStripeSplitTransferService,
+            retrieve_stripe_transfer_service_1.RetrieveStripeTransferService,
         ],
-        exports: [dispatch_gateway_split_transfer_service_1.DispatchGatewaySplitTransferService],
+        exports: [
+            dispatch_gateway_split_transfer_service_1.DispatchGatewaySplitTransferService,
+            dispatch_stripe_split_transfer_service_1.DispatchStripeSplitTransferService,
+            retrieve_stripe_transfer_service_1.RetrieveStripeTransferService,
+        ],
     })
 ], GatewaySplitTransfersModule);
 //# sourceMappingURL=gateway-split-transfers.module.js.map
