@@ -10,6 +10,7 @@ exports.GatewaySplitTransfersModule = void 0;
 const common_1 = require("@nestjs/common");
 const dispatch_gateway_split_transfer_service_1 = require("./services/dispatch-gateway-split-transfer/dispatch-gateway-split-transfer.service");
 const dispatch_stripe_split_transfer_service_1 = require("./stripe/services/dispatch-stripe-split-transfer/dispatch-stripe-split-transfer.service");
+const create_stripe_transfer_reversal_service_1 = require("./stripe/services/create-stripe-transfer-reversal/create-stripe-transfer-reversal.service");
 const retrieve_stripe_transfer_service_1 = require("./stripe/services/retrieve-stripe-transfer/retrieve-stripe-transfer.service");
 let GatewaySplitTransfersModule = class GatewaySplitTransfersModule {
 };
@@ -20,11 +21,13 @@ exports.GatewaySplitTransfersModule = GatewaySplitTransfersModule = __decorate([
             dispatch_gateway_split_transfer_service_1.DispatchGatewaySplitTransferService,
             dispatch_stripe_split_transfer_service_1.DispatchStripeSplitTransferService,
             retrieve_stripe_transfer_service_1.RetrieveStripeTransferService,
+            create_stripe_transfer_reversal_service_1.CreateStripeTransferReversalService,
         ],
         exports: [
             dispatch_gateway_split_transfer_service_1.DispatchGatewaySplitTransferService,
             dispatch_stripe_split_transfer_service_1.DispatchStripeSplitTransferService,
             retrieve_stripe_transfer_service_1.RetrieveStripeTransferService,
+            create_stripe_transfer_reversal_service_1.CreateStripeTransferReversalService,
         ],
     })
 ], GatewaySplitTransfersModule);

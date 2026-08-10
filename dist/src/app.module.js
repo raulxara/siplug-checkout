@@ -113,6 +113,7 @@ const list_permission_position_by_position_id_module_1 = require("./use-cases/li
 const list_checkout_sessions_by_office_id_module_1 = require("./use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module");
 const retry_payment_split_dispatch_module_1 = require("./use-cases/retry-payment-split-dispatch/retry-payment-split-dispatch.module");
 const reconcile_payment_split_with_gateway_module_1 = require("./use-cases/reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module");
+const reverse_payment_split_with_gateway_module_1 = require("./use-cases/reverse-payment-split-with-gateway/reverse-payment-split-with-gateway.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -226,6 +227,7 @@ exports.AppModule = AppModule = __decorate([
             list_checkout_sessions_by_office_id_module_1.ListCheckoutSessionsByOfficeIdModule,
             retry_payment_split_dispatch_module_1.RetryPaymentSplitDispatchModule,
             reconcile_payment_split_with_gateway_module_1.ReconcilePaymentSplitWithGatewayModule,
+            reverse_payment_split_with_gateway_module_1.ReversePaymentSplitWithGatewayModule,
         ],
     })
 ], AppModule);

@@ -105,6 +105,8 @@ import { ListPermissionPositionByPositionIdModule } from './use-cases/list-permi
 import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module';
 import { RetryPaymentSplitDispatchModule } from './use-cases/retry-payment-split-dispatch/retry-payment-split-dispatch.module';
 import { ReconcilePaymentSplitWithGatewayModule } from './use-cases/reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module';
+import { ReversePaymentSplitWithGatewayModule } from './use-cases/reverse-payment-split-with-gateway/reverse-payment-split-with-gateway.module';
+
 @Module({
   controllers: [AppController],
   providers: [AppService],
@@ -215,6 +217,7 @@ import { ReconcilePaymentSplitWithGatewayModule } from './use-cases/reconcile-pa
     ListCheckoutSessionsByOfficeIdModule,
     RetryPaymentSplitDispatchModule,
     ReconcilePaymentSplitWithGatewayModule,
+    ReversePaymentSplitWithGatewayModule,
   ],
 })
 export class AppModule {}

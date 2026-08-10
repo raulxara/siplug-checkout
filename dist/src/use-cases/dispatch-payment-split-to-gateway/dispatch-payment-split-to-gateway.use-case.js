@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DispatchPaymentSplitToGatewayUseCase = void 0;
 const common_1 = require("@nestjs/common");
+const constants_1 = require("../../common/constants");
 const decrypt_api_credential_secret_dto_in_1 = require("../../common/services/crypto/decrypt-api-credential-secret/dtos/decrypt-api-credential-secret.dto-in");
 const decrypt_api_credential_secret_service_1 = require("../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
@@ -56,20 +57,13 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
             const paymentSplitDtoOut = await this.findPaymentSplitByUniqueIdService.exec(new find_payment_split_by_unique_id_dto_in_1.FindPaymentSplitByUniqueIdDtoIn(dtoIn.paymentSplitId));
             const paymentSplit = paymentSplitDtoOut.paymentSplit;
             const currentStatus = String(paymentSplit.status ?? '').trim();
-            if (currentStatus === 'transferred') {
+            if (currentStatus === constants_1.PAYMENT_SPLIT_STATUS.TRANSFERRED) {
                 return new dispatch_payment_split_to_gateway_dto_out_1.DispatchPaymentSplitToGatewayDtoOut(false, 'payment split already transferred', paymentSplit, [], {
                     skipped: true,
                     reason: 'payment split already transferred',
                 });
             }
-            const dispatchableStatuses = [
-                'created',
-                'pending_gateway',
-                'processing_gateway',
-                'failed',
-                'partially_transferred',
-                'gateway_failed_retryable',
-            ];
+            const dispatchableStatuses = constants_1.PAYMENT_SPLIT_DISPATCHABLE_STATUSES;
             if (!dispatchableStatuses.includes(currentStatus)) {
                 return new dispatch_payment_split_to_gateway_dto_out_1.DispatchPaymentSplitToGatewayDtoOut(false, `payment split status does not allow gateway dispatch: ${currentStatus}`, paymentSplit, [], {
                     skipped: true,
@@ -81,6 +75,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
             if (String(paymentSplit.gatewayProvider ?? '').trim() !== dtoIn.provider) {
                 throw new Error('payment split gateway provider does not match webhook provider');
             }
+            (0, constants_1.assertGatewaySupportsSplit)(dtoIn.provider);
             if (String(paymentSplit.paymentTransactionId ?? '').trim() !==
                 dtoIn.paymentTransactionId) {
                 throw new Error('payment split does not belong to payment transaction');
@@ -111,7 +106,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
             const recipientsForGateway = this.buildRecipientsForGateway(paymentSplitRecipients);
             await this.updatePaymentSplitService.exec(new update_payment_split_dto_in_1.UpdatePaymentSplitDtoIn({
                 _id: dtoIn.paymentSplitId,
-                status: 'processing_gateway',
+                status: constants_1.PAYMENT_SPLIT_STATUS.PROCESSING_GATEWAY,
                 providerPayload: {
                     provider: dtoIn.provider,
                     sourceTransactionId: dtoIn.sourceTransactionId,
@@ -138,7 +133,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
             if (recipientsForGateway.length === 0) {
                 const retainedOnlyGatewayResponse = {
                     provider: dtoIn.provider,
-                    status: 'transferred',
+                    status: constants_1.PAYMENT_SPLIT_STATUS.TRANSFERRED,
                     transfers: [],
                     retainedRecipients,
                     successCount: 0,
@@ -165,20 +160,20 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                             eventAction: dtoIn.eventAction,
                             canonicalStatus: dtoIn.canonicalStatus,
                             finishedAt: new Date().toISOString(),
-                            status: 'transferred',
+                            status: constants_1.PAYMENT_SPLIT_STATUS.TRANSFERRED,
                             dispatched: false,
                             completed: true,
                             retainedOnly: true,
                             errorMessage: null,
                         },
                     },
-                    status: 'transferred',
+                    status: constants_1.PAYMENT_SPLIT_STATUS.TRANSFERRED,
                     source: 'DispatchPaymentSplitToGatewayUseCase.retainedOnly',
                 }));
                 return new dispatch_payment_split_to_gateway_dto_out_1.DispatchPaymentSplitToGatewayDtoOut(true, 'payment split completed with retained recipients only', finalSplitDtoOut.paymentSplit, retainedRecipients, {
                     dispatched: false,
                     completed: true,
-                    status: 'transferred',
+                    status: constants_1.PAYMENT_SPLIT_STATUS.TRANSFERRED,
                     gatewayProvider: dtoIn.provider,
                     retainedOnly: true,
                     retainedRecipients,
@@ -319,7 +314,8 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
         return recipients
             .filter((recipient) => {
             const status = String(recipient.status ?? '').trim();
-            if (['transferred', 'retained'].includes(status)) {
+            if (status === constants_1.PAYMENT_SPLIT_RECIPIENT_STATUS.TRANSFERRED ||
+                status === constants_1.PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED) {
                 return false;
             }
             return !this.shouldRetainRecipientOnPlatform(recipient);
@@ -388,7 +384,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
             }
             const retainedData = this.buildRetainedRecipientData(recipient);
             const currentStatus = String(recipient.status ?? '').trim();
-            if (currentStatus === 'retained') {
+            if (currentStatus === constants_1.PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED) {
                 retainedRecipients.push(retainedData);
                 continue;
             }
@@ -404,7 +400,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                 },
                 gatewayResponse: {
                     provider: params.provider,
-                    status: 'retained',
+                    status: constants_1.PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED,
                     transfer: null,
                     retainedOnPlatform: true,
                     retainedRecipient: retainedData,
@@ -422,7 +418,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                         processedAt: new Date().toISOString(),
                     },
                 },
-                status: 'retained',
+                status: constants_1.PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED,
                 source: 'DispatchPaymentSplitToGatewayUseCase.retainedOnPlatform',
             }));
             retainedRecipients.push(this.buildRetainedRecipientData(updatedDtoOut.paymentSplitRecipient));
@@ -531,7 +527,9 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                 continue;
             }
             const currentRecipient = params.currentRecipients.find((recipient) => String(recipient._id ?? '').trim() === paymentSplitRecipientId);
-            const status = transfer.success === true ? 'transferred' : 'failed';
+            const status = transfer.success === true
+                ? constants_1.PAYMENT_SPLIT_RECIPIENT_STATUS.TRANSFERRED
+                : constants_1.PAYMENT_SPLIT_RECIPIENT_STATUS.FAILED;
             const updatedDtoOut = await this.updatePaymentSplitRecipientService.exec(new update_payment_split_recipient_dto_in_1.UpdatePaymentSplitRecipientDtoIn({
                 _id: paymentSplitRecipientId,
                 gatewayRecipientId: this.toNullableString(transfer.destinationAccountId),
@@ -576,7 +574,7 @@ let DispatchPaymentSplitToGatewayUseCase = class DispatchPaymentSplitToGatewayUs
                     errorMessage: message,
                     failedAt: new Date().toISOString(),
                 },
-                status: 'failed',
+                status: constants_1.PAYMENT_SPLIT_STATUS.FAILED,
                 source: 'DispatchPaymentSplitToGatewayUseCase.failed',
             }));
         }

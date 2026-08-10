@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
+import {
+  PAYMENT_SPLIT_RECIPIENT_STATUS,
+  assertGatewaySupportsManualReconciliation,
+} from '../../common/constants';
+import type { PaymentSplitRecipientStatus } from '../../common/constants';
+
 import { DecryptApiCredentialSecretDtoIn } from '../../common/services/crypto/decrypt-api-credential-secret/dtos/decrypt-api-credential-secret.dto-in';
 import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
@@ -74,6 +80,8 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
         paymentSplit.gatewayProvider,
         'paymentSplit.gatewayProvider',
       );
+
+      assertGatewaySupportsManualReconciliation(provider);
 
       if (provider !== 'stripe') {
         throw new Error(`gateway reconciliation not implemented for: ${provider}`);
@@ -272,7 +280,7 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
 
     if (this.shouldTreatAsRetainedRecipient(recipient)) {
       const retainedMatched =
-        status === 'retained' &&
+        status === PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED &&
         this.toNullableString(recipient.gatewayTransferId) === null;
 
       return {
@@ -284,7 +292,7 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
         matched: retainedMatched,
         checkedAt: params.checkedAt,
         expected: {
-          status: 'retained',
+          status: PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED,
           gatewayTransferId: null,
           retainedOnPlatform: true,
           amount,
@@ -298,7 +306,7 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
           currency,
         },
         checks: {
-          statusMatched: status === 'retained',
+          statusMatched: status === PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED,
           noGatewayTransferId: this.toNullableString(recipient.gatewayTransferId) === null,
         },
       };
@@ -536,7 +544,11 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
     const config = this.toObject(recipient.config);
     const metadata = this.toObject(recipient.metadata);
 
-    if (status === 'retained') {
+    if (
+      status === PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED ||
+      status === PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED_REVERSED ||
+      status === PAYMENT_SPLIT_RECIPIENT_STATUS.RETAINED_PARTIALLY_REVERSED
+    ) {
       return true;
     }
 
