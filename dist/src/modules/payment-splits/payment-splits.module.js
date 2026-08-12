@@ -20,12 +20,14 @@ const update_payment_split_status_service_1 = require("./services/update-payment
 const resolve_payment_split_dispatch_eligibility_service_1 = require("./services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service");
 const reserve_payment_split_dispatch_service_1 = require("./services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service");
 const update_payment_split_service_1 = require("./services/update-payment-split/update-payment-split.service");
+const payment_split_recipients_module_1 = require("../payment-split-recipients/payment-split-recipients.module");
+const mark_native_payment_split_as_transferred_service_1 = require("./services/mark-native-payment-split-as-transferred/mark-native-payment-split-as-transferred.service");
 let PaymentSplitsModule = class PaymentSplitsModule {
 };
 exports.PaymentSplitsModule = PaymentSplitsModule;
 exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [prisma_module_1.PrismaModule, payment_split_recipients_module_1.PaymentSplitRecipientsModule],
         providers: [
             {
                 provide: payment_splits_tokens_1.PAYMENT_SPLITS_REPOSITORY,
@@ -40,6 +42,7 @@ exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
             resolve_payment_split_dispatch_eligibility_service_1.ResolvePaymentSplitDispatchEligibilityService,
             reserve_payment_split_dispatch_service_1.ReservePaymentSplitDispatchService,
             update_payment_split_service_1.UpdatePaymentSplitService,
+            mark_native_payment_split_as_transferred_service_1.MarkNativePaymentSplitAsTransferredService,
         ],
         exports: [
             payment_splits_tokens_1.PAYMENT_SPLITS_REPOSITORY,
@@ -51,6 +54,7 @@ exports.PaymentSplitsModule = PaymentSplitsModule = __decorate([
             resolve_payment_split_dispatch_eligibility_service_1.ResolvePaymentSplitDispatchEligibilityService,
             reserve_payment_split_dispatch_service_1.ReservePaymentSplitDispatchService,
             update_payment_split_service_1.UpdatePaymentSplitService,
+            mark_native_payment_split_as_transferred_service_1.MarkNativePaymentSplitAsTransferredService,
         ],
     })
 ], PaymentSplitsModule);

@@ -10,6 +10,10 @@ export declare class MercadoPagoGatewayPaymentProvider implements IGatewayPaymen
     private buildCreditCardPaymentRequestPayload;
     private buildBoletoPaymentRequestPayload;
     private buildPaymentLinkPreferenceRequestPayload;
+    private buildPreferencePaymentMethods;
+    private firstNonEmptyObject;
+    private buildExcludedPaymentItems;
+    private toPositiveIntegerOrNull;
     private applyMercadoPagoNativeSplitToPaymentPayload;
     private applyMercadoPagoNativeSplitToPreferencePayload;
     private resolveMercadoPagoNativeSplitData;

@@ -114,6 +114,7 @@ const list_checkout_sessions_by_office_id_module_1 = require("./use-cases/list-c
 const retry_payment_split_dispatch_module_1 = require("./use-cases/retry-payment-split-dispatch/retry-payment-split-dispatch.module");
 const reconcile_payment_split_with_gateway_module_1 = require("./use-cases/reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module");
 const reverse_payment_split_with_gateway_module_1 = require("./use-cases/reverse-payment-split-with-gateway/reverse-payment-split-with-gateway.module");
+const simulate_mercado_pago_payment_webhook_module_1 = require("./use-cases/simulate-mercado-pago-payment-webhook/simulate-mercado-pago-payment-webhook.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -228,6 +229,7 @@ exports.AppModule = AppModule = __decorate([
             retry_payment_split_dispatch_module_1.RetryPaymentSplitDispatchModule,
             reconcile_payment_split_with_gateway_module_1.ReconcilePaymentSplitWithGatewayModule,
             reverse_payment_split_with_gateway_module_1.ReversePaymentSplitWithGatewayModule,
+            simulate_mercado_pago_payment_webhook_module_1.SimulateMercadoPagoPaymentWebhookModule,
         ],
     })
 ], AppModule);

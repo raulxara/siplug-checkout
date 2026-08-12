@@ -32,16 +32,10 @@ const resolve_payment_split_dispatch_eligibility_dto_in_1 = require("../../modul
 const resolve_payment_split_dispatch_eligibility_service_1 = require("../../modules/payment-splits/services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service");
 const reserve_payment_split_dispatch_dto_in_1 = require("../../modules/payment-splits/services/reserve-payment-split-dispatch/dtos/reserve-payment-split-dispatch.dto-in");
 const reserve_payment_split_dispatch_service_1 = require("../../modules/payment-splits/services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service");
-const find_payment_split_by_unique_id_dto_in_1 = require("../../modules/payment-splits/services/find-payment-split-by-unique-id/dtos/find-payment-split-by-unique-id.dto-in");
-const find_payment_split_by_unique_id_service_1 = require("../../modules/payment-splits/services/find-payment-split-by-unique-id/find-payment-split-by-unique-id.service");
-const update_payment_split_dto_in_1 = require("../../modules/payment-splits/services/update-payment-split/dtos/update-payment-split.dto-in");
-const update_payment_split_service_1 = require("../../modules/payment-splits/services/update-payment-split/update-payment-split.service");
-const get_all_payment_split_recipients_by_payment_split_id_dto_in_1 = require("../../modules/payment-split-recipients/services/get-all-payment-split-recipients-by-payment-split-id/dtos/get-all-payment-split-recipients-by-payment-split-id.dto-in");
-const get_all_payment_split_recipients_by_payment_split_id_service_1 = require("../../modules/payment-split-recipients/services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service");
-const update_payment_split_recipient_dto_in_1 = require("../../modules/payment-split-recipients/services/update-payment-split-recipient/dtos/update-payment-split-recipient.dto-in");
-const update_payment_split_recipient_service_1 = require("../../modules/payment-split-recipients/services/update-payment-split-recipient/update-payment-split-recipient.service");
 const dispatch_payment_split_to_gateway_dto_in_1 = require("../dispatch-payment-split-to-gateway/dtos/dispatch-payment-split-to-gateway.dto-in");
 const dispatch_payment_split_to_gateway_use_case_1 = require("../dispatch-payment-split-to-gateway/dispatch-payment-split-to-gateway.use-case");
+const mark_native_payment_split_as_transferred_dto_in_1 = require("../../modules/payment-splits/services/mark-native-payment-split-as-transferred/dtos/mark-native-payment-split-as-transferred.dto-in");
+const mark_native_payment_split_as_transferred_service_1 = require("../../modules/payment-splits/services/mark-native-payment-split-as-transferred/mark-native-payment-split-as-transferred.service");
 let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase {
     markPaymentWebhookEventAsProcessingService;
     markPaymentWebhookEventAsProcessedService;
@@ -50,15 +44,12 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
     findPaymentTransactionByGatewayTransactionIdService;
     getAllPaymentTransactionsByCheckoutSessionIdService;
     updatePaymentTransactionService;
-    findPaymentSplitByUniqueIdService;
-    updatePaymentSplitService;
-    getAllPaymentSplitRecipientsByPaymentSplitIdService;
-    updatePaymentSplitRecipientService;
     resolvePaymentSplitDispatchEligibilityService;
     reservePaymentSplitDispatchService;
     dispatchPaymentSplitToGatewayUseCase;
+    markNativePaymentSplitAsTransferredService;
     handleUseCaseExceptionService;
-    constructor(markPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService, findPaymentSplitByUniqueIdService, updatePaymentSplitService, getAllPaymentSplitRecipientsByPaymentSplitIdService, updatePaymentSplitRecipientService, resolvePaymentSplitDispatchEligibilityService, reservePaymentSplitDispatchService, dispatchPaymentSplitToGatewayUseCase, handleUseCaseExceptionService) {
+    constructor(markPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService, resolvePaymentSplitDispatchEligibilityService, reservePaymentSplitDispatchService, dispatchPaymentSplitToGatewayUseCase, markNativePaymentSplitAsTransferredService, handleUseCaseExceptionService) {
         this.markPaymentWebhookEventAsProcessingService = markPaymentWebhookEventAsProcessingService;
         this.markPaymentWebhookEventAsProcessedService = markPaymentWebhookEventAsProcessedService;
         this.markPaymentWebhookEventAsFailedService = markPaymentWebhookEventAsFailedService;
@@ -66,13 +57,10 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
         this.findPaymentTransactionByGatewayTransactionIdService = findPaymentTransactionByGatewayTransactionIdService;
         this.getAllPaymentTransactionsByCheckoutSessionIdService = getAllPaymentTransactionsByCheckoutSessionIdService;
         this.updatePaymentTransactionService = updatePaymentTransactionService;
-        this.findPaymentSplitByUniqueIdService = findPaymentSplitByUniqueIdService;
-        this.updatePaymentSplitService = updatePaymentSplitService;
-        this.getAllPaymentSplitRecipientsByPaymentSplitIdService = getAllPaymentSplitRecipientsByPaymentSplitIdService;
-        this.updatePaymentSplitRecipientService = updatePaymentSplitRecipientService;
         this.resolvePaymentSplitDispatchEligibilityService = resolvePaymentSplitDispatchEligibilityService;
         this.reservePaymentSplitDispatchService = reservePaymentSplitDispatchService;
         this.dispatchPaymentSplitToGatewayUseCase = dispatchPaymentSplitToGatewayUseCase;
+        this.markNativePaymentSplitAsTransferredService = markNativePaymentSplitAsTransferredService;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
     }
     async exec(dtoIn) {
@@ -197,9 +185,16 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
                 gatewayTransactionId: dtoIn.normalizedEvent.gatewayTransactionId,
                 rawPayload: dtoIn.normalizedEvent.rawPayload,
             });
+            const splitProcessingSummary = this.buildSplitProcessingSummary({
+                provider: dtoIn.normalizedEvent.provider,
+                splitDispatchRequired: finalSplitDispatchRequired,
+                splitDispatchDecision: finalSplitDispatchDecision,
+                splitGatewayDispatchResult,
+            });
             const processingResult = {
                 ignored: false,
                 transactionUpdated: true,
+                split: splitProcessingSummary,
                 splitDispatchRequired: finalSplitDispatchRequired,
                 splitDispatchDecision: finalSplitDispatchDecision,
                 splitGatewayDispatchResult,
@@ -280,20 +275,52 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
             return null;
         }
     }
+    toObject(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return null;
+        }
+        return value;
+    }
+    toNullableString(value) {
+        if (value === undefined || value === null) {
+            return null;
+        }
+        const stringValue = String(value).trim();
+        return stringValue === '' ? null : stringValue;
+    }
+    buildSplitProcessingSummary(params) {
+        const paymentSplit = this.toObject(params.splitGatewayDispatchResult.paymentSplit);
+        return {
+            provider: params.provider,
+            mode: this.isMercadoPagoProvider(params.provider)
+                ? 'native_split'
+                : 'external_gateway_dispatch',
+            required: params.splitDispatchRequired,
+            dispatched: params.splitGatewayDispatchResult.dispatched === true,
+            nativeSettled: params.splitGatewayDispatchResult.nativeSettled === true,
+            wasAlreadySettled: params.splitGatewayDispatchResult.wasAlreadySettled === true,
+            paymentSplitId: params.splitDispatchDecision.paymentSplitId,
+            sourceTransactionId: params.splitDispatchDecision.sourceTransactionId,
+            paymentSplitStatus: this.toNullableString(paymentSplit?.status) ?? null,
+            reason: this.toNullableString(params.splitGatewayDispatchResult.reason) ??
+                params.splitDispatchDecision.reason,
+            gatewayResult: this.toObject(params.splitGatewayDispatchResult.gatewayResult) ?? null,
+        };
+    }
     async dispatchPaymentSplitToGatewayFromWebhookSafe(params) {
         if (this.isMercadoPagoProvider(params.provider) &&
             this.isPaidWebhookStatus(params.canonicalStatus)) {
-            return this.settleMercadoPagoNativeSplitFromWebhookSafe({
+            return await this.settleNativeSplitFromWebhookSafe({
                 paymentSplitId: params.splitDispatchDecision.paymentSplitId,
                 paymentTransactionId: params.paymentTransactionId,
                 paymentWebhookEventId: params.paymentWebhookEventId,
-                provider: params.provider,
+                provider: 'mercado_pago',
                 eventId: params.eventId,
                 eventType: params.eventType,
                 eventAction: params.eventAction,
                 canonicalStatus: params.canonicalStatus,
-                gatewayTransactionId: params.gatewayTransactionId,
-                rawPayload: params.rawPayload,
+                sourceTransactionId: params.splitDispatchDecision.sourceTransactionId,
+                rawPayload: params.rawPayload ?? null,
             });
         }
         if (!params.splitDispatchRequired) {
@@ -352,272 +379,6 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
                 errorMessage: message,
             };
         }
-    }
-    async settleMercadoPagoNativeSplitFromWebhookSafe(params) {
-        if (params.paymentSplitId === null) {
-            return {
-                dispatched: false,
-                nativeSettled: false,
-                reason: 'paymentSplitId is required for mercado_pago native split settlement',
-                paymentSplitId: null,
-                sourceTransactionId: params.gatewayTransactionId,
-            };
-        }
-        try {
-            const paymentSplitDtoOut = await this.findPaymentSplitByUniqueIdService.exec(new find_payment_split_by_unique_id_dto_in_1.FindPaymentSplitByUniqueIdDtoIn(params.paymentSplitId));
-            const paymentSplit = paymentSplitDtoOut.paymentSplit;
-            const currentStatus = String(paymentSplit.status ?? '').trim();
-            if (currentStatus === 'transferred') {
-                return {
-                    dispatched: false,
-                    nativeSettled: false,
-                    reason: 'payment split already transferred',
-                    paymentSplit,
-                    paymentSplitRecipients: [],
-                    paymentSplitId: params.paymentSplitId,
-                    sourceTransactionId: params.gatewayTransactionId,
-                };
-            }
-            if (!this.isMercadoPagoProvider(paymentSplit.gatewayProvider)) {
-                return {
-                    dispatched: false,
-                    nativeSettled: false,
-                    reason: 'payment split gateway provider is not mercado_pago',
-                    paymentSplit,
-                    paymentSplitRecipients: [],
-                    paymentSplitId: params.paymentSplitId,
-                    sourceTransactionId: params.gatewayTransactionId,
-                };
-            }
-            if (String(paymentSplit.paymentTransactionId ?? '').trim() !==
-                params.paymentTransactionId) {
-                return {
-                    dispatched: false,
-                    nativeSettled: false,
-                    reason: 'payment split does not belong to payment transaction',
-                    paymentSplit,
-                    paymentSplitRecipients: [],
-                    paymentSplitId: params.paymentSplitId,
-                    sourceTransactionId: params.gatewayTransactionId,
-                };
-            }
-            const recipientsDtoOut = await this.getAllPaymentSplitRecipientsByPaymentSplitIdService.exec(new get_all_payment_split_recipients_by_payment_split_id_dto_in_1.GetAllPaymentSplitRecipientsByPaymentSplitIdDtoIn(params.paymentSplitId));
-            const currentRecipients = this.extractPaymentSplitRecipients(recipientsDtoOut);
-            if (currentRecipients.length === 0) {
-                return {
-                    dispatched: false,
-                    nativeSettled: false,
-                    reason: 'payment split must have at least one recipient',
-                    paymentSplit,
-                    paymentSplitRecipients: [],
-                    paymentSplitId: params.paymentSplitId,
-                    sourceTransactionId: params.gatewayTransactionId,
-                };
-            }
-            const settledAt = new Date().toISOString();
-            const nativeSettlement = this.buildMercadoPagoNativeSettlement({
-                paymentSplitId: params.paymentSplitId,
-                paymentTransactionId: params.paymentTransactionId,
-                paymentWebhookEventId: params.paymentWebhookEventId,
-                provider: params.provider,
-                eventId: params.eventId,
-                eventType: params.eventType,
-                eventAction: params.eventAction,
-                canonicalStatus: params.canonicalStatus,
-                gatewayTransactionId: params.gatewayTransactionId,
-                rawPayload: params.rawPayload,
-                settledAt,
-            });
-            const updatedRecipients = [];
-            for (const recipient of currentRecipients) {
-                const updatedRecipient = await this.settleMercadoPagoNativeSplitRecipient({
-                    recipient,
-                    settlement: nativeSettlement,
-                    settledAt,
-                });
-                updatedRecipients.push(updatedRecipient);
-            }
-            const finalSplitDtoOut = await this.updatePaymentSplitService.exec(new update_payment_split_dto_in_1.UpdatePaymentSplitDtoIn({
-                _id: params.paymentSplitId,
-                gatewaySplitId: params.gatewayTransactionId,
-                providerPayload: {
-                    ...(this.toRecordOrNull(paymentSplit.providerPayload) ?? {}),
-                    nativeSettlement,
-                },
-                providerResponse: {
-                    ...(this.toRecordOrNull(paymentSplit.providerResponse) ?? {}),
-                    nativeSettlement,
-                },
-                gatewayResponse: {
-                    ...(this.toRecordOrNull(paymentSplit.gatewayResponse) ?? {}),
-                    nativeSettlement,
-                },
-                metadata: {
-                    ...(this.toRecordOrNull(paymentSplit.metadata) ?? {}),
-                    lastNativeSplitSettlement: nativeSettlement,
-                },
-                status: 'transferred',
-                source: 'ProcessPaymentWebhookEventUseCase.mercadoPagoNativeSplitSettlement',
-            }));
-            return {
-                dispatched: false,
-                nativeSettled: true,
-                reason: 'mercado_pago native split settled internally from paid webhook',
-                paymentSplit: finalSplitDtoOut.paymentSplit,
-                paymentSplitRecipients: updatedRecipients,
-                paymentSplitId: params.paymentSplitId,
-                sourceTransactionId: params.gatewayTransactionId,
-                gatewayResult: {
-                    provider: 'mercado_pago',
-                    mode: 'native_split',
-                    status: 'transferred',
-                    gatewayTransactionId: params.gatewayTransactionId,
-                    settledAt,
-                },
-            };
-        }
-        catch (error) {
-            const message = error instanceof Error
-                ? error.message
-                : 'error on mercado_pago native split settlement from webhook';
-            return {
-                dispatched: false,
-                nativeSettled: false,
-                reason: message,
-                paymentSplitId: params.paymentSplitId,
-                sourceTransactionId: params.gatewayTransactionId,
-                errorMessage: message,
-            };
-        }
-    }
-    async settleMercadoPagoNativeSplitRecipient(params) {
-        const recipientId = this.toNullableString(params.recipient._id);
-        if (recipientId === null) {
-            throw new Error('paymentSplitRecipient._id is required');
-        }
-        const role = String(params.recipient.role ?? '').trim().toLowerCase();
-        const gatewayTransferId = this.buildMercadoPagoNativeRecipientReference({
-            recipient: params.recipient,
-            settlement: params.settlement,
-        });
-        const recipientSettlement = {
-            provider: 'mercado_pago',
-            mode: 'native_split',
-            role,
-            status: 'transferred',
-            gatewayTransferId,
-            settledAt: params.settledAt,
-            description: role === 'platform'
-                ? 'marketplace fee collected by Mercado Pago native split'
-                : 'recipient settled by Mercado Pago native split',
-        };
-        const updatedDtoOut = await this.updatePaymentSplitRecipientService.exec(new update_payment_split_recipient_dto_in_1.UpdatePaymentSplitRecipientDtoIn({
-            _id: recipientId,
-            gatewayTransferId,
-            providerResponse: {
-                ...(this.toRecordOrNull(params.recipient.providerResponse) ?? {}),
-                nativeSettlement: recipientSettlement,
-            },
-            gatewayResponse: {
-                ...(this.toRecordOrNull(params.recipient.gatewayResponse) ?? {}),
-                nativeSettlement: recipientSettlement,
-            },
-            metadata: {
-                ...(this.toRecordOrNull(params.recipient.metadata) ?? {}),
-                lastNativeSplitSettlement: recipientSettlement,
-            },
-            status: 'transferred',
-            source: 'ProcessPaymentWebhookEventUseCase.mercadoPagoNativeSplitRecipientSettlement',
-        }));
-        return updatedDtoOut.paymentSplitRecipient;
-    }
-    buildMercadoPagoNativeSettlement(params) {
-        return {
-            provider: 'mercado_pago',
-            mode: 'native_split',
-            status: 'transferred',
-            reason: 'Mercado Pago split was already executed by marketplace_fee/application_fee',
-            paymentSplitId: params.paymentSplitId,
-            paymentTransactionId: params.paymentTransactionId,
-            paymentWebhookEventId: params.paymentWebhookEventId,
-            eventId: params.eventId,
-            eventType: params.eventType,
-            eventAction: params.eventAction,
-            canonicalStatus: params.canonicalStatus,
-            gatewayTransactionId: params.gatewayTransactionId,
-            marketplaceFeeAmount: this.extractMercadoPagoMarketplaceFee(params.rawPayload),
-            collectorId: this.extractStringFromPath(params.rawPayload, [
-                'payment',
-                'collector_id',
-            ]),
-            marketplaceOwner: this.extractStringFromPath(params.rawPayload, [
-                'payment',
-                'marketplace_owner',
-            ]),
-            settledAt: params.settledAt,
-        };
-    }
-    buildMercadoPagoNativeRecipientReference(params) {
-        const role = String(params.recipient.role ?? 'recipient')
-            .trim()
-            .toLowerCase();
-        const gatewayTransactionId = this.toNullableString(params.settlement.gatewayTransactionId) ??
-            this.toNullableString(params.settlement.eventId) ??
-            'mercado-pago-native';
-        const recipientId = this.toNullableString(params.recipient._id) ?? 'unknown-recipient';
-        return [
-            'mercado-pago-native',
-            gatewayTransactionId,
-            role,
-            recipientId,
-        ].join(':');
-    }
-    extractMercadoPagoMarketplaceFee(rawPayload) {
-        const payment = this.extractObjectFromPath(rawPayload, ['payment']);
-        const feeDetails = payment?.fee_details;
-        if (Array.isArray(feeDetails)) {
-            const applicationFee = feeDetails.find((item) => {
-                if (!item || typeof item !== 'object' || Array.isArray(item)) {
-                    return false;
-                }
-                return String(item.type ?? '') === 'application_fee';
-            });
-            if (applicationFee !== undefined) {
-                const amount = Number(applicationFee.amount);
-                return Number.isFinite(amount) ? amount : null;
-            }
-        }
-        const chargesDetails = payment?.charges_details;
-        if (Array.isArray(chargesDetails)) {
-            const marketplaceCharge = chargesDetails.find((item) => {
-                if (!item || typeof item !== 'object' || Array.isArray(item)) {
-                    return false;
-                }
-                return String(item.name ?? '') === 'third_payment';
-            });
-            const originalAmount = this.extractNumberFromPath(marketplaceCharge ?? null, [
-                'amounts',
-                'original',
-            ]);
-            if (originalAmount !== null) {
-                return originalAmount;
-            }
-        }
-        return null;
-    }
-    extractPaymentSplitRecipients(dtoOut) {
-        const response = dtoOut;
-        return (response.paymentSplitRecipients ??
-            response.recipients ??
-            response.items ??
-            response.data ??
-            []);
-    }
-    isMercadoPagoProvider(provider) {
-        return ['mercado_pago', 'mercadopago', 'mercado-pago'].includes(String(provider ?? '').trim().toLowerCase());
-    }
-    isPaidWebhookStatus(status) {
-        return ['paid', 'invoice_paid'].includes(String(status ?? '').trim());
     }
     async findPaymentTransactionByGatewayTransactionIdSafe(gatewayTransactionId) {
         try {
@@ -738,6 +499,65 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
             event.gatewayInvoiceId ??
             event.gatewaySubscriptionId);
     }
+    async settleNativeSplitFromWebhookSafe(params) {
+        if (params.paymentSplitId === null) {
+            return {
+                dispatched: false,
+                nativeSettled: false,
+                wasAlreadySettled: false,
+                reason: 'paymentSplitId is required for native split settlement',
+                paymentSplitId: null,
+                sourceTransactionId: params.sourceTransactionId,
+            };
+        }
+        try {
+            const dtoOut = await this.markNativePaymentSplitAsTransferredService.exec(new mark_native_payment_split_as_transferred_dto_in_1.MarkNativePaymentSplitAsTransferredDtoIn({
+                paymentSplitId: params.paymentSplitId,
+                paymentTransactionId: params.paymentTransactionId,
+                paymentWebhookEventId: params.paymentWebhookEventId,
+                provider: params.provider,
+                settlementMode: 'native_split',
+                sourceTransactionId: params.sourceTransactionId,
+                eventId: params.eventId,
+                eventType: params.eventType,
+                eventAction: params.eventAction,
+                canonicalStatus: params.canonicalStatus,
+                rawPayload: params.rawPayload,
+                source: 'ProcessPaymentWebhookEventUseCase.nativeSplitSettlement',
+            }));
+            return {
+                dispatched: false,
+                nativeSettled: dtoOut.nativeSettled,
+                wasAlreadySettled: dtoOut.wasAlreadySettled,
+                reason: dtoOut.reason,
+                paymentSplit: dtoOut.paymentSplit,
+                paymentSplitRecipients: dtoOut.paymentSplitRecipients,
+                paymentSplitId: dtoOut.paymentSplitId,
+                sourceTransactionId: dtoOut.sourceTransactionId,
+                gatewayResult: dtoOut.gatewayResult,
+            };
+        }
+        catch (error) {
+            const message = error instanceof Error
+                ? error.message
+                : 'error on native split settlement from webhook';
+            return {
+                dispatched: false,
+                nativeSettled: false,
+                wasAlreadySettled: false,
+                reason: message,
+                paymentSplitId: params.paymentSplitId,
+                sourceTransactionId: params.sourceTransactionId,
+                errorMessage: message,
+            };
+        }
+    }
+    isMercadoPagoProvider(provider) {
+        return ['mercado_pago', 'mercadopago', 'mercado-pago'].includes(String(provider ?? '').trim().toLowerCase());
+    }
+    isPaidWebhookStatus(status) {
+        return ['paid', 'invoice_paid'].includes(String(status ?? '').trim());
+    }
     buildProviderResponse(params) {
         return {
             ...(params.current ?? {}),
@@ -807,13 +627,18 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
                 authoritativeEvent: false,
             };
         }
-        switch (params.event.provider) {
+        const normalizedProvider = String(params.event.provider ?? '')
+            .trim()
+            .toLowerCase();
+        switch (normalizedProvider) {
             case 'stripe':
                 return this.resolveStripeSplitDispatchDecision({
                     event: params.event,
                     paymentSplitId,
                 });
             case 'mercado_pago':
+            case 'mercadopago':
+            case 'mercado-pago':
                 return {
                     required: false,
                     reason: 'mercado_pago uses native split settlement from webhook; external gateway dispatch is not required',
@@ -911,53 +736,6 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
         }
         const stringValue = String(paymentSplitId).trim();
         return stringValue === '' ? null : stringValue;
-    }
-    toRecordOrNull(value) {
-        if (!value || typeof value !== 'object' || Array.isArray(value)) {
-            return null;
-        }
-        return value;
-    }
-    toNullableString(value) {
-        if (value === undefined || value === null) {
-            return null;
-        }
-        const stringValue = String(value).trim();
-        return stringValue === '' ? null : stringValue;
-    }
-    extractObjectFromPath(object, path) {
-        let current = object;
-        for (const key of path) {
-            if (!current || typeof current !== 'object' || Array.isArray(current)) {
-                return null;
-            }
-            current = current[key];
-        }
-        if (!current || typeof current !== 'object' || Array.isArray(current)) {
-            return null;
-        }
-        return current;
-    }
-    extractStringFromPath(object, path) {
-        let current = object;
-        for (const key of path) {
-            if (!current || typeof current !== 'object' || Array.isArray(current)) {
-                return null;
-            }
-            current = current[key];
-        }
-        return this.toNullableString(current);
-    }
-    extractNumberFromPath(object, path) {
-        let current = object;
-        for (const key of path) {
-            if (!current || typeof current !== 'object' || Array.isArray(current)) {
-                return null;
-            }
-            current = current[key];
-        }
-        const numberValue = Number(current);
-        return Number.isFinite(numberValue) ? numberValue : null;
     }
     async markPaymentWebhookEventAsFailedSafe(params) {
         try {
@@ -1067,13 +845,10 @@ exports.ProcessPaymentWebhookEventUseCase = ProcessPaymentWebhookEventUseCase = 
         find_payment_transaction_by_gateway_transaction_id_service_1.FindPaymentTransactionByGatewayTransactionIdService,
         get_all_payment_transactions_by_checkout_session_id_service_1.GetAllPaymentTransactionsByCheckoutSessionIdService,
         update_payment_transaction_service_1.UpdatePaymentTransactionService,
-        find_payment_split_by_unique_id_service_1.FindPaymentSplitByUniqueIdService,
-        update_payment_split_service_1.UpdatePaymentSplitService,
-        get_all_payment_split_recipients_by_payment_split_id_service_1.GetAllPaymentSplitRecipientsByPaymentSplitIdService,
-        update_payment_split_recipient_service_1.UpdatePaymentSplitRecipientService,
         resolve_payment_split_dispatch_eligibility_service_1.ResolvePaymentSplitDispatchEligibilityService,
         reserve_payment_split_dispatch_service_1.ReservePaymentSplitDispatchService,
         dispatch_payment_split_to_gateway_use_case_1.DispatchPaymentSplitToGatewayUseCase,
+        mark_native_payment_split_as_transferred_service_1.MarkNativePaymentSplitAsTransferredService,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])
 ], ProcessPaymentWebhookEventUseCase);
 //# sourceMappingURL=process-payment-webhook-event.use-case.js.map

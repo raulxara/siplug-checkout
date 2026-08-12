@@ -97,6 +97,18 @@ type MercadoPagoPreferencePayer = {
   };
 };
 
+type MercadoPagoPreferencePaymentMethods = {
+  excluded_payment_methods?: Array<{
+    id: string;
+  }>;
+  excluded_payment_types?: Array<{
+    id: string;
+  }>;
+  default_payment_method_id?: string;
+  installments?: number;
+  default_installments?: number;
+};
+
 type MercadoPagoPreferenceRequest = {
   items: MercadoPagoPreferenceItem[];
   payer?: MercadoPagoPreferencePayer;
@@ -108,6 +120,7 @@ type MercadoPagoPreferenceRequest = {
     pending?: string;
   };
   auto_return?: 'approved' | 'all';
+  payment_methods?: MercadoPagoPreferencePaymentMethods;
   metadata?: Record<string, unknown>;
 
   marketplace_fee?: number;
@@ -620,6 +633,7 @@ export class MercadoPagoGatewayPaymentProvider implements IGatewayPaymentProvide
           ];
 
     const payer = this.buildPreferencePayer(payerPayload);
+    const paymentMethods = this.buildPreferencePaymentMethods(dtoIn);
 
     const payload: MercadoPagoPreferenceRequest = {
       items,
@@ -636,6 +650,10 @@ export class MercadoPagoGatewayPaymentProvider implements IGatewayPaymentProvide
 
     if (payer !== null) {
       payload.payer = payer;
+    }
+
+    if (paymentMethods !== null) {
+      payload.payment_methods = paymentMethods;
     }
 
     const notificationUrl = this.resolveNotificationUrl(dtoIn);
@@ -675,6 +693,143 @@ export class MercadoPagoGatewayPaymentProvider implements IGatewayPaymentProvide
     });
 
     return payload;
+  }
+
+  private buildPreferencePaymentMethods(
+    dtoIn: GatewayPaymentDtoIn,
+  ): MercadoPagoPreferencePaymentMethods | null {
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const paymentData = this.asObject(providerPayload.paymentData);
+
+    const config = dtoIn.config ?? {};
+    const transactionConfig = this.asObject(config.transactionConfig);
+    const gatewayConfig = this.asObject(config.gatewayConfig);
+    const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+    const checkoutSessionConfig = this.asObject(
+      (config as Record<string, unknown>).checkoutSessionConfig,
+    );
+
+    const mercadoPagoConfig = this.firstNonEmptyObject([
+      this.asObject(providerPayload.mercadoPago),
+      this.asObject(providerPayload.mercado_pago),
+      this.asObject(paymentData.mercadoPago),
+      this.asObject(paymentData.mercado_pago),
+      this.asObject(transactionConfig.mercadoPago),
+      this.asObject(transactionConfig.mercado_pago),
+      this.asObject(gatewayConfig.mercadoPago),
+      this.asObject(gatewayConfig.mercado_pago),
+      this.asObject(apiCredentialConfig.mercadoPago),
+      this.asObject(apiCredentialConfig.mercado_pago),
+      this.asObject(checkoutSessionConfig.mercadoPago),
+      this.asObject(checkoutSessionConfig.mercado_pago),
+    ]);
+
+    const paymentMethodsConfig = this.firstNonEmptyObject([
+      this.asObject(paymentData.paymentMethods),
+      this.asObject(paymentData.payment_methods),
+      this.asObject(providerPayload.paymentMethods),
+      this.asObject(providerPayload.payment_methods),
+      this.asObject(mercadoPagoConfig.paymentMethods),
+      this.asObject(mercadoPagoConfig.payment_methods),
+      this.asObject(transactionConfig.paymentMethods),
+      this.asObject(transactionConfig.payment_methods),
+      this.asObject(gatewayConfig.paymentMethods),
+      this.asObject(gatewayConfig.payment_methods),
+      this.asObject(apiCredentialConfig.paymentMethods),
+      this.asObject(apiCredentialConfig.payment_methods),
+      this.asObject(checkoutSessionConfig.paymentMethods),
+      this.asObject(checkoutSessionConfig.payment_methods),
+    ]);
+
+    if (Object.keys(paymentMethodsConfig).length === 0) {
+      return null;
+    }
+
+    const excludedPaymentMethods = this.buildExcludedPaymentItems(
+      paymentMethodsConfig.excludedPaymentMethods ??
+        paymentMethodsConfig.excluded_payment_methods,
+    );
+
+    const excludedPaymentTypes = this.buildExcludedPaymentItems(
+      paymentMethodsConfig.excludedPaymentTypes ??
+        paymentMethodsConfig.excluded_payment_types,
+    );
+
+    const defaultPaymentMethodId =
+      this.toNullableString(paymentMethodsConfig.defaultPaymentMethodId) ??
+      this.toNullableString(paymentMethodsConfig.default_payment_method_id);
+
+    const installments =
+      this.toPositiveIntegerOrNull(paymentMethodsConfig.installments) ??
+      this.toPositiveIntegerOrNull(paymentMethodsConfig.maxInstallments) ??
+      this.toPositiveIntegerOrNull(paymentMethodsConfig.max_installments);
+
+    const defaultInstallments =
+      this.toPositiveIntegerOrNull(paymentMethodsConfig.defaultInstallments) ??
+      this.toPositiveIntegerOrNull(paymentMethodsConfig.default_installments);
+
+    const paymentMethods: MercadoPagoPreferencePaymentMethods = {};
+
+    if (excludedPaymentMethods.length > 0) {
+      paymentMethods.excluded_payment_methods = excludedPaymentMethods;
+    }
+
+    if (excludedPaymentTypes.length > 0) {
+      paymentMethods.excluded_payment_types = excludedPaymentTypes;
+    }
+
+    if (defaultPaymentMethodId !== null) {
+      paymentMethods.default_payment_method_id = defaultPaymentMethodId;
+    }
+
+    if (installments !== null) {
+      paymentMethods.installments = installments;
+    }
+
+    if (defaultInstallments !== null) {
+      paymentMethods.default_installments = defaultInstallments;
+    }
+
+    return Object.keys(paymentMethods).length > 0 ? paymentMethods : null;
+  }
+
+  private firstNonEmptyObject(
+    objects: Array<Record<string, unknown>>,
+  ): Record<string, unknown> {
+    return (
+      objects.find((object) => Object.keys(object).length > 0) ?? {}
+    );
+  }
+
+  private buildExcludedPaymentItems(value: unknown): Array<{ id: string }> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => {
+        if (typeof item === 'string') {
+          return this.toNullableString(item);
+        }
+
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          return this.toNullableString((item as Record<string, unknown>).id);
+        }
+
+        return null;
+      })
+      .filter((id): id is string => id !== null)
+      .map((id) => ({ id }));
+  }
+
+  private toPositiveIntegerOrNull(value: unknown): number | null {
+    const numberValue = Number(value);
+
+    if (!Number.isInteger(numberValue) || numberValue <= 0) {
+      return null;
+    }
+
+    return numberValue;
   }
 
   private applyMercadoPagoNativeSplitToPaymentPayload(params: {
@@ -1663,10 +1818,6 @@ export class MercadoPagoGatewayPaymentProvider implements IGatewayPaymentProvide
     const sandboxInitPoint = this.toNullableString(
       params.responseBody.sandbox_init_point,
     );
-
-    if (this.isSandboxEnvironment(params.dtoIn)) {
-      return sandboxInitPoint ?? initPoint;
-    }
 
     return initPoint ?? sandboxInitPoint;
   }

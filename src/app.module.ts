@@ -106,6 +106,7 @@ import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-
 import { RetryPaymentSplitDispatchModule } from './use-cases/retry-payment-split-dispatch/retry-payment-split-dispatch.module';
 import { ReconcilePaymentSplitWithGatewayModule } from './use-cases/reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module';
 import { ReversePaymentSplitWithGatewayModule } from './use-cases/reverse-payment-split-with-gateway/reverse-payment-split-with-gateway.module';
+import { SimulateMercadoPagoPaymentWebhookModule } from './use-cases/simulate-mercado-pago-payment-webhook/simulate-mercado-pago-payment-webhook.module';
 
 @Module({
   controllers: [AppController],
@@ -218,6 +219,7 @@ import { ReversePaymentSplitWithGatewayModule } from './use-cases/reverse-paymen
     RetryPaymentSplitDispatchModule,
     ReconcilePaymentSplitWithGatewayModule,
     ReversePaymentSplitWithGatewayModule,
+    SimulateMercadoPagoPaymentWebhookModule,
   ],
 })
 export class AppModule {}
