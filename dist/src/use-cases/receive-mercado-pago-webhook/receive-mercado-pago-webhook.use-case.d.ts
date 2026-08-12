@@ -25,6 +25,7 @@ export declare class ReceiveMercadoPagoWebhookUseCase {
     private readonly handleUseCaseExceptionService;
     constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validateMercadoPagoWebhookService: ValidateMercadoPagoWebhookService, getMercadoPagoPaymentService: GetMercadoPagoPaymentService, normalizeMercadoPagoWebhookService: NormalizeMercadoPagoWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ReceiveMercadoPagoWebhookDtoIn): Promise<ReceiveMercadoPagoWebhookDtoOut>;
+    private shouldValidateMercadoPagoSignature;
     private resolveResourceType;
     private resolveResourceId;
     private resolveMercadoPagoResource;

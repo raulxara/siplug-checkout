@@ -211,6 +211,10 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
         if (dateOfExpiration !== null) {
             payload.date_of_expiration = dateOfExpiration;
         }
+        this.applyMercadoPagoNativeSplitToPaymentPayload({
+            dtoIn,
+            payload: payload,
+        });
         return payload;
     }
     buildCreditCardPaymentRequestPayload(dtoIn) {
@@ -259,6 +263,10 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
         if (notificationUrl !== null) {
             payload.notification_url = notificationUrl;
         }
+        this.applyMercadoPagoNativeSplitToPaymentPayload({
+            dtoIn,
+            payload,
+        });
         return payload;
     }
     buildBoletoPaymentRequestPayload(dtoIn) {
@@ -294,6 +302,10 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
         if (dateOfExpiration !== null) {
             payload.date_of_expiration = dateOfExpiration;
         }
+        this.applyMercadoPagoNativeSplitToPaymentPayload({
+            dtoIn,
+            payload,
+        });
         return payload;
     }
     buildPaymentLinkPreferenceRequestPayload(dtoIn) {
@@ -373,7 +385,216 @@ let MercadoPagoGatewayPaymentProvider = class MercadoPagoGatewayPaymentProvider 
         if (successUrl !== null) {
             payload.auto_return = 'approved';
         }
+        this.applyMercadoPagoNativeSplitToPreferencePayload({
+            dtoIn,
+            payload,
+        });
         return payload;
+    }
+    applyMercadoPagoNativeSplitToPaymentPayload(params) {
+        const splitData = this.resolveMercadoPagoNativeSplitData(params.dtoIn);
+        if (!splitData.enabled) {
+            return;
+        }
+        const applicationFeeAmountInCents = splitData.applicationFeeAmountInCents ??
+            splitData.marketplaceFeeAmountInCents;
+        if (applicationFeeAmountInCents === null ||
+            applicationFeeAmountInCents <= 0) {
+            throw new Error('Mercado Pago native split requires applicationFeeAmountInCents for /v1/payments');
+        }
+        this.assertMercadoPagoFeeAmountIsValid({
+            feeAmountInCents: applicationFeeAmountInCents,
+            transactionAmountInCents: params.dtoIn.paymentTransaction.amount,
+            field: 'application_fee',
+        });
+        params.payload.application_fee = this.convertCentsToAmount(applicationFeeAmountInCents);
+        const metadata = this.asObject(params.payload.metadata);
+        params.payload.metadata = {
+            ...metadata,
+            splitRequired: true,
+            splitMode: 'mercado_pago_native_1_1',
+            paymentSplitId: splitData.paymentSplitId,
+            applicationFeeAmountInCents,
+            applicationFeeAmount: this.convertCentsToAmount(applicationFeeAmountInCents),
+        };
+    }
+    applyMercadoPagoNativeSplitToPreferencePayload(params) {
+        const splitData = this.resolveMercadoPagoNativeSplitData(params.dtoIn);
+        if (!splitData.enabled) {
+            return;
+        }
+        const marketplaceFeeAmountInCents = splitData.marketplaceFeeAmountInCents ??
+            splitData.applicationFeeAmountInCents;
+        if (marketplaceFeeAmountInCents === null ||
+            marketplaceFeeAmountInCents <= 0) {
+            throw new Error('Mercado Pago native split requires marketplaceFeeAmountInCents for /checkout/preferences');
+        }
+        this.assertMercadoPagoFeeAmountIsValid({
+            feeAmountInCents: marketplaceFeeAmountInCents,
+            transactionAmountInCents: params.dtoIn.paymentTransaction.amount,
+            field: 'marketplace_fee',
+        });
+        params.payload.marketplace_fee = this.convertCentsToAmount(marketplaceFeeAmountInCents);
+        const metadata = this.asObject(params.payload.metadata);
+        params.payload.metadata = {
+            ...metadata,
+            splitRequired: true,
+            splitMode: 'mercado_pago_native_1_1',
+            paymentSplitId: splitData.paymentSplitId,
+            marketplaceFeeAmountInCents,
+            marketplaceFeeAmount: this.convertCentsToAmount(marketplaceFeeAmountInCents),
+        };
+    }
+    resolveMercadoPagoNativeSplitData(dtoIn) {
+        const providerPayload = dtoIn.providerPayload ?? {};
+        const config = dtoIn.config ?? {};
+        const transactionConfig = this.asObject(config.transactionConfig);
+        const gatewayConfig = this.asObject(config.gatewayConfig);
+        const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+        const providerSplit = this.asObject(providerPayload.mercadoPagoSplit) ??
+            this.asObject(providerPayload.mercado_pago_split) ??
+            this.asObject(providerPayload.gatewaySplit) ??
+            this.asObject(providerPayload.gateway_split) ??
+            this.asObject(providerPayload.split);
+        const transactionSplit = this.asObject(transactionConfig.mercadoPagoSplit) ??
+            this.asObject(transactionConfig.mercado_pago_split) ??
+            this.asObject(transactionConfig.gatewaySplit) ??
+            this.asObject(transactionConfig.gateway_split) ??
+            this.asObject(transactionConfig.split);
+        const gatewaySplit = this.asObject(gatewayConfig.mercadoPagoSplit) ??
+            this.asObject(gatewayConfig.mercado_pago_split) ??
+            this.asObject(gatewayConfig.gatewaySplit) ??
+            this.asObject(gatewayConfig.gateway_split) ??
+            this.asObject(gatewayConfig.split);
+        const credentialSplit = this.asObject(apiCredentialConfig.mercadoPagoSplit) ??
+            this.asObject(apiCredentialConfig.mercado_pago_split) ??
+            this.asObject(apiCredentialConfig.gatewaySplit) ??
+            this.asObject(apiCredentialConfig.gateway_split) ??
+            this.asObject(apiCredentialConfig.split);
+        const splitObjects = [
+            providerSplit,
+            transactionSplit,
+            gatewaySplit,
+            credentialSplit,
+        ];
+        const enabled = dtoIn.paymentTransaction.hasSplit === true ||
+            dtoIn.paymentTransaction.splitRequired === true ||
+            splitObjects.some((item) => this.extractBoolean(item, 'enabled') === true) ||
+            splitObjects.some((item) => this.extractBoolean(item, 'required') === true);
+        if (!enabled) {
+            return {
+                enabled: false,
+                marketplaceId: null,
+                paymentSplitId: null,
+                marketplaceFeeAmountInCents: null,
+                applicationFeeAmountInCents: null,
+            };
+        }
+        return {
+            enabled: true,
+            marketplaceId: this.firstStringFromObjects(splitObjects, [
+                'marketplaceId',
+                'marketplace_id',
+                'marketplace',
+            ]),
+            paymentSplitId: this.firstStringFromObjects(splitObjects, [
+                'paymentSplitId',
+                'payment_split_id',
+            ]) ??
+                this.extractString(transactionSplit, 'paymentSplitId') ??
+                this.extractString(transactionSplit, 'payment_split_id'),
+            marketplaceFeeAmountInCents: this.firstIntegerFromObjects(splitObjects, [
+                'marketplaceFeeAmountInCents',
+                'marketplace_fee_amount_in_cents',
+                'marketplaceFeeAmount',
+                'marketplace_fee_amount',
+                'platformCommissionAmount',
+                'platform_commission_amount',
+                'commissionAmount',
+                'commission_amount',
+                'platformAmount',
+                'platform_amount',
+            ]),
+            applicationFeeAmountInCents: this.firstIntegerFromObjects(splitObjects, [
+                'applicationFeeAmountInCents',
+                'application_fee_amount_in_cents',
+                'applicationFeeAmount',
+                'application_fee_amount',
+                'platformCommissionAmount',
+                'platform_commission_amount',
+                'commissionAmount',
+                'commission_amount',
+                'platformAmount',
+                'platform_amount',
+            ]),
+        };
+    }
+    assertMercadoPagoFeeAmountIsValid(params) {
+        if (!Number.isInteger(params.feeAmountInCents) ||
+            params.feeAmountInCents <= 0) {
+            throw new Error(`${params.field} must be an integer greater than zero`);
+        }
+        if (params.feeAmountInCents >= params.transactionAmountInCents) {
+            throw new Error(`${params.field} must be lower than transaction amount`);
+        }
+    }
+    firstStringFromObjects(objects, keys) {
+        for (const object of objects) {
+            for (const key of keys) {
+                const value = this.extractString(object, key);
+                if (value !== null) {
+                    return value;
+                }
+            }
+        }
+        return null;
+    }
+    firstIntegerFromObjects(objects, keys) {
+        for (const object of objects) {
+            for (const key of keys) {
+                const value = object[key];
+                if (value === undefined || value === null) {
+                    continue;
+                }
+                const numberValue = Number(value);
+                if (Number.isInteger(numberValue) && numberValue > 0) {
+                    return numberValue;
+                }
+            }
+        }
+        return null;
+    }
+    extractBoolean(object, key) {
+        const value = object[key];
+        if (value === true || value === false) {
+            return value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+                return true;
+            }
+            if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+                return false;
+            }
+        }
+        if (typeof value === 'number') {
+            if (value === 1) {
+                return true;
+            }
+            if (value === 0) {
+                return false;
+            }
+        }
+        return null;
+    }
+    extractString(object, key) {
+        const value = object[key];
+        if (value === undefined || value === null) {
+            return null;
+        }
+        const stringValue = String(value).trim();
+        return stringValue === '' ? null : stringValue;
     }
     buildPayer(payerPayload) {
         const email = this.toNullableString(payerPayload.email);
