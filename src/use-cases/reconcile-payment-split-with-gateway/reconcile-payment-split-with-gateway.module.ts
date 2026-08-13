@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { UseCaseSupportModule } from '../../common/services/use-case-support/use-case-support.module';
 import { ApiCredentialsModule } from '../../modules/api-credentials/api-credentials.module';
 import { GatewaySplitTransfersModule } from '../../modules/gateway-split-transfers/gateway-split-transfers.module';
+import { GetMercadoPagoPaymentService } from '../../modules/payment-webhook-gateways/mercado-pago/services/get-mercado-pago-payment/get-mercado-pago-payment.service';
 import { PaymentSplitRecipientsModule } from '../../modules/payment-split-recipients/payment-split-recipients.module';
 import { PaymentSplitsModule } from '../../modules/payment-splits/payment-splits.module';
 import { PaymentTransactionsModule } from '../../modules/payment-transactions/payment-transactions.module';
@@ -22,7 +23,10 @@ import { ReconcilePaymentSplitWithGatewayUseCase } from './reconcile-payment-spl
     UseCaseSupportModule,
   ],
   controllers: [ReconcilePaymentSplitWithGatewayController],
-  providers: [ReconcilePaymentSplitWithGatewayUseCase],
+  providers: [
+    ReconcilePaymentSplitWithGatewayUseCase,
+    GetMercadoPagoPaymentService,
+  ],
   exports: [ReconcilePaymentSplitWithGatewayUseCase],
 })
 export class ReconcilePaymentSplitWithGatewayModule {}
