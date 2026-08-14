@@ -7,6 +7,7 @@ export declare class PagSeguroGatewayPaymentProvider implements IGatewayPaymentP
     processPayment(dtoIn: GatewayPaymentDtoIn): Promise<GatewayPaymentDtoOut>;
     private processTransparentOrder;
     private buildOrderRequestPayload;
+    private buildNativeSplit;
     private buildCreditCardCharge;
     private buildBoletoCharge;
     private buildBoletoHolderAddress;
@@ -35,8 +36,10 @@ export declare class PagSeguroGatewayPaymentProvider implements IGatewayPaymentP
     private extractCheckoutUrl;
     private extractPagSeguroErrorMessage;
     private asStringArray;
+    private asObjectsArray;
     private asObject;
     private toNullableString;
+    private toNullableNumber;
     private toPositiveInteger;
     private nowAsSqlDateTime;
     private formatDateToSqlDateTime;

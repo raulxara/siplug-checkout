@@ -41,7 +41,7 @@ type ReversalAllocation = {
   amount: number;
 };
 
-type SupportedGatewayProvider = 'stripe' | 'mercado_pago';
+type SupportedGatewayProvider = 'stripe' | 'mercado_pago' | 'pagseguro';
 
 @Injectable()
 export class ReversePaymentSplitWithGatewayUseCase {
@@ -163,6 +163,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
         provider: string;
         status: string;
         token: string | null;
+        config: Record<string, unknown> | null;
       };
 
       if (apiCredential.status !== 'active') {
@@ -179,6 +180,17 @@ export class ReversePaymentSplitWithGatewayUseCase {
         );
       }
 
+      const recipients = await this.getPaymentSplitRecipients(dtoIn.paymentSplitId);
+
+      if (recipients.length === 0) {
+        throw new Error('payment split must have at least one recipient');
+      }
+
+      const allocations = this.allocateReversalAmount({
+        recipients,
+        reversalAmount,
+      });
+
       const providerToken = this.resolveProviderToken(apiCredential);
 
       const gatewayRefundResult =
@@ -191,26 +203,22 @@ export class ReversePaymentSplitWithGatewayUseCase {
               idempotencyKey: this.buildGatewayRefundIdempotencyKey(dtoIn),
               reason: dtoIn.reason,
             })
-          : null;
-
-      const recipientsDtoOut =
-        await this.getAllPaymentSplitRecipientsByPaymentSplitIdService.exec(
-          new GetAllPaymentSplitRecipientsByPaymentSplitIdDtoIn(
-            dtoIn.paymentSplitId,
-          ),
-        );
-
-      const recipients = this.extractRecipients(recipientsDtoOut);
-
-      if (recipients.length === 0) {
-        throw new Error('payment split must have at least one recipient');
-      }
-
-      const allocations = this.allocateReversalAmount({
-        recipients,
-        paymentSplitAmount,
-        reversalAmount,
-      });
+          : provider === 'pagseguro'
+            ? await this.createPagSeguroPaymentRefund({
+                paymentTransaction,
+                recipients,
+                allocations,
+                providerToken,
+                apiCredentialConfig: apiCredential.config,
+                reversalAmount,
+                paymentSplitAmount,
+                idempotencyKey: this.buildGatewayRefundIdempotencyKey(
+                  dtoIn,
+                  provider,
+                ),
+                reason: dtoIn.reason,
+              })
+            : null;
 
       const reversedAt = new Date().toISOString();
       const recipientResults: Array<Record<string, unknown>> = [];
@@ -240,6 +248,9 @@ export class ReversePaymentSplitWithGatewayUseCase {
           }),
           reason: dtoIn.reason,
           reversedAt,
+          sourceTransactionId: this.toNullableString(
+            paymentTransaction.gatewayTransactionId,
+          ),
         });
 
         recipientResults.push(result);
@@ -355,6 +366,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
     idempotencyKey: string;
     reason: string | null;
     reversedAt: string;
+    sourceTransactionId: string | null;
   }): Promise<Record<string, unknown>> {
     const recipient = params.recipient;
 
@@ -400,10 +412,11 @@ export class ReversePaymentSplitWithGatewayUseCase {
       };
     }
 
-    if (params.provider === 'mercado_pago') {
-      return this.reverseMercadoPagoNativeRecipient({
+    if (params.provider === 'mercado_pago' || params.provider === 'pagseguro') {
+      return this.reverseNativeSplitRecipient({
         recipient,
         paymentSplit: params.paymentSplit,
+        provider: params.provider,
         paymentSplitRecipientId,
         splitRecipientId,
         role,
@@ -414,6 +427,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
         reason: params.reason,
         reversedAt: params.reversedAt,
         gatewayRefundResult: params.gatewayRefundResult,
+        sourceTransactionId: params.sourceTransactionId,
       });
     }
 
@@ -475,9 +489,10 @@ export class ReversePaymentSplitWithGatewayUseCase {
     };
   }
 
-  private reverseMercadoPagoNativeRecipient(params: {
+  private reverseNativeSplitRecipient(params: {
     recipient: Record<string, unknown>;
     paymentSplit: Record<string, unknown>;
+    provider: 'mercado_pago' | 'pagseguro';
     paymentSplitRecipientId: string;
     splitRecipientId: string | null;
     role: string | null;
@@ -488,13 +503,14 @@ export class ReversePaymentSplitWithGatewayUseCase {
     reason: string | null;
     reversedAt: string;
     gatewayRefundResult: Record<string, unknown> | null;
+    sourceTransactionId: string | null;
   }): Record<string, unknown> {
     const gatewayTransferId = this.toNullableString(
       params.recipient.gatewayTransferId,
     );
 
     const sourceTransactionId =
-      this.toNullableString(params.paymentSplit.gatewaySplitId) ??
+      params.sourceTransactionId ??
       this.extractNullableStringFromPath(params.paymentSplit, [
         'metadata',
         'lastNativeSplitSettlement',
@@ -509,14 +525,16 @@ export class ReversePaymentSplitWithGatewayUseCase {
         'gatewayResponse',
         'nativeSettlement',
         'sourceTransactionId',
-      ]);
+      ]) ??
+      this.toNullableString(params.paymentSplit.gatewaySplitId);
 
     const finalRecipientStatus =
       params.reversalAmount >= params.recipientAmount
         ? PAYMENT_SPLIT_RECIPIENT_STATUS.REVERSED
         : PAYMENT_SPLIT_RECIPIENT_STATUS.PARTIALLY_REVERSED;
 
-    const gatewayReversalId = this.buildMercadoPagoNativeReversalId({
+    const gatewayReversalId = this.buildNativeReversalId({
+      provider: params.provider,
       sourceTransactionId,
       paymentSplitRecipientId: params.paymentSplitRecipientId,
       role: params.role,
@@ -527,7 +545,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
       paymentSplitRecipientId: params.paymentSplitRecipientId,
       splitRecipientId: params.splitRecipientId,
       role: params.role,
-      type: 'mercado_pago_native_split',
+      type: `${params.provider}_native_split`,
       success: true,
       status: finalRecipientStatus,
       originalStatus: params.originalStatus,
@@ -540,7 +558,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
       nativeSplit: true,
       reason: params.reason,
       providerRequest: {
-        provider: 'mercado_pago',
+        provider: params.provider,
         mode: 'native_split',
         action: 'internal_native_split_reversal',
         sourceTransactionId,
@@ -552,10 +570,10 @@ export class ReversePaymentSplitWithGatewayUseCase {
         currency: params.currency,
         refundResult: params.gatewayRefundResult,
         note:
-          'Mercado Pago native split is reversed through the payment refund mechanism; there is no separate transfer reversal call for this internal split record.',
+          `${params.provider} native split is reversed through the payment refund mechanism; there is no separate transfer reversal call for this internal split record.`,
       },
       providerResponse: {
-        provider: 'mercado_pago',
+        provider: params.provider,
         mode: 'native_split',
         status: finalRecipientStatus,
         gatewayTransferId,
@@ -611,16 +629,31 @@ export class ReversePaymentSplitWithGatewayUseCase {
 
   private allocateReversalAmount(params: {
     recipients: Array<Record<string, unknown>>;
-    paymentSplitAmount: number;
     reversalAmount: number;
   }): ReversalAllocation[] {
     const allocations: ReversalAllocation[] = [];
     let allocated = 0;
 
-    const eligibleRecipients = params.recipients.filter((recipient) => {
+    const recipientsWithPositiveAmount = params.recipients.filter((recipient) => {
       const amount = Number(recipient.amount ?? 0);
       return Number.isInteger(amount) && amount > 0;
     });
+
+    const liableRecipients = recipientsWithPositiveAmount.filter(
+      (recipient) => this.extractBoolean(this.toObject(recipient.config), 'liableForRefund') === true,
+    );
+
+    const eligibleRecipients =
+      liableRecipients.length > 0 ? liableRecipients : recipientsWithPositiveAmount;
+
+    const allocationBaseAmount = eligibleRecipients.reduce(
+      (total, recipient) => total + Number(recipient.amount ?? 0),
+      0,
+    );
+
+    if (allocationBaseAmount <= 0) {
+      throw new Error('payment split must have at least one eligible refund recipient');
+    }
 
     eligibleRecipients.forEach((recipient, index) => {
       const paymentSplitRecipientId = String(recipient._id ?? '').trim();
@@ -632,7 +665,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
         ? params.reversalAmount - allocated
         : Math.floor(
             (recipientAmount * params.reversalAmount) /
-              params.paymentSplitAmount,
+              allocationBaseAmount,
           );
 
       allocated += amount;
@@ -676,6 +709,10 @@ export class ReversePaymentSplitWithGatewayUseCase {
       (result) => result.type === 'mercado_pago_native_split',
     ).length;
 
+    const pagSeguroNativeReversalCount = params.recipientResults.filter(
+      (result) => result.type === 'pagseguro_native_split',
+    ).length;
+
     const status =
       failedCount === 0
         ? params.reversalAmount >= params.paymentSplitAmount
@@ -697,6 +734,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
       retainedReversalCount,
       gatewayReversalCount,
       mercadoPagoNativeReversalCount,
+      pagSeguroNativeReversalCount,
       gatewayRefundResult: params.gatewayRefundResult,
       recipientResults: params.recipientResults,
     };
@@ -704,10 +742,11 @@ export class ReversePaymentSplitWithGatewayUseCase {
 
   private buildGatewayRefundIdempotencyKey(
     dtoIn: ReversePaymentSplitWithGatewayDtoIn,
+    provider: SupportedGatewayProvider = 'mercado_pago',
   ): string {
     return (
       dtoIn.idempotencyKey ??
-      `mercado-pago-refund:${dtoIn.paymentSplitId}:${dtoIn.reversalAmount ?? 'full'}`
+      `${provider}-refund:${dtoIn.paymentSplitId}:${dtoIn.reversalAmount ?? 'full'}`
     );
   }
 
@@ -787,6 +826,158 @@ export class ReversePaymentSplitWithGatewayUseCase {
     }
 
     return result;
+  }
+
+  private async createPagSeguroPaymentRefund(params: {
+    paymentTransaction: Record<string, unknown>;
+    recipients: Array<Record<string, unknown>>;
+    allocations: ReversalAllocation[];
+    providerToken: string;
+    apiCredentialConfig: Record<string, unknown> | null;
+    reversalAmount: number;
+    paymentSplitAmount: number;
+    idempotencyKey: string;
+    reason: string | null;
+  }): Promise<Record<string, unknown>> {
+    const chargeId = this.requiredString(
+      params.paymentTransaction.gatewayTransactionId,
+      'paymentTransaction.gatewayTransactionId',
+    );
+
+    if (!chargeId.startsWith('CHAR_')) {
+      throw new Error('PagSeguro payment transaction must contain a CHAR_ charge id');
+    }
+
+    const receivers = params.allocations.map((allocation) => {
+      const recipient = params.recipients.find(
+        (item) =>
+          this.toNullableString(item._id) === allocation.paymentSplitRecipientId,
+      );
+
+      if (!recipient) {
+        throw new Error('payment split recipient was not found for reversal');
+      }
+
+      const accountId = this.resolvePagSeguroRecipientAccountId(recipient);
+
+      if (accountId === null) {
+        throw new Error(
+          `PagSeguro accountId is required for split recipient ${allocation.paymentSplitRecipientId}`,
+        );
+      }
+
+      return {
+        account: { id: accountId },
+        amount: { value: allocation.amount },
+      };
+    });
+
+    const receiverTotal = receivers.reduce(
+      (total, receiver) => total + receiver.amount.value,
+      0,
+    );
+
+    if (receiverTotal !== params.reversalAmount) {
+      throw new Error('PagSeguro custom split reversal does not match reversalAmount');
+    }
+
+    const isFullRefund = params.reversalAmount >= params.paymentSplitAmount;
+    const requestBody = {
+      amount: { value: params.reversalAmount },
+      splits: {
+        method: 'FIXED',
+        receivers,
+      },
+    };
+    const baseUrl = this.resolvePagSeguroBaseUrl(params.apiCredentialConfig);
+    const endpoint = `/charges/${chargeId}/cancel`;
+
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${params.providerToken}`,
+        'Content-Type': 'application/json',
+        'x-idempotency-key': params.idempotencyKey,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseText = await response.text();
+    const responseBody = this.parseJson(responseText);
+    const result = {
+      provider: 'pagseguro',
+      mode: 'native_split_payment_refund',
+      endpoint,
+      ok: response.ok,
+      httpStatus: response.status,
+      chargeId,
+      idempotencyKey: params.idempotencyKey,
+      fullRefund: isFullRefund,
+      refundAmountInCents: params.reversalAmount,
+      reason: params.reason,
+      requestBody,
+      responseBody,
+    };
+
+    if (!response.ok) {
+      const errorMessage =
+        this.extractString(responseBody, 'message') ??
+        this.extractString(responseBody, 'error') ??
+        `PagSeguro refund failed with status ${response.status}`;
+
+      throw new Error(errorMessage);
+    }
+
+    return result;
+  }
+
+  private resolvePagSeguroBaseUrl(
+    apiCredentialConfig: Record<string, unknown> | null,
+  ): string {
+    const configuredBaseUrl = this.toNullableString(
+      apiCredentialConfig?.baseUrl,
+    );
+    const baseUrl = configuredBaseUrl ?? 'https://api.pagseguro.com';
+
+    return baseUrl.replace(/\/+$/, '');
+  }
+
+  private resolvePagSeguroRecipientAccountId(
+    recipient: Record<string, unknown>,
+  ): string | null {
+    const directAccountId = this.toNullableString(
+      recipient.gatewayRecipientId,
+    );
+
+    if (directAccountId?.startsWith('ACCO_')) {
+      return directAccountId;
+    }
+
+    const config = this.toObject(recipient.config);
+    const pagSeguroAccountId = this.toNullableString(
+      config?.pagseguroAccountId,
+    );
+
+    if (pagSeguroAccountId?.startsWith('ACCO_')) {
+      return pagSeguroAccountId;
+    }
+
+    const gatewayAccounts = this.toObject(config?.gatewayAccounts);
+    const pagSeguroAccount = this.toObject(gatewayAccounts?.pagseguro);
+    const accountId = this.toNullableString(pagSeguroAccount?.accountId);
+
+    return accountId?.startsWith('ACCO_') ? accountId : null;
+  }
+
+  private async getPaymentSplitRecipients(
+    paymentSplitId: string,
+  ): Promise<Array<Record<string, unknown>>> {
+    const recipientsDtoOut =
+      await this.getAllPaymentSplitRecipientsByPaymentSplitIdService.exec(
+        new GetAllPaymentSplitRecipientsByPaymentSplitIdDtoIn(paymentSplitId),
+      );
+
+    return this.extractRecipients(recipientsDtoOut);
   }
 
   private convertCentsToAmount(valueInCents: number): number {
@@ -926,17 +1117,22 @@ export class ReversePaymentSplitWithGatewayUseCase {
       return 'mercado_pago';
     }
 
+    if (['pagseguro', 'pagbank', 'pag-bank', 'pag_seguro'].includes(normalized)) {
+      return 'pagseguro';
+    }
+
     throw new Error(`gateway reversal not implemented for: ${provider}`);
   }
 
-  private buildMercadoPagoNativeReversalId(params: {
+  private buildNativeReversalId(params: {
+    provider: 'mercado_pago' | 'pagseguro';
     sourceTransactionId: string | null;
     paymentSplitRecipientId: string;
     role: string | null;
     reversalAmount: number;
   }): string {
     return [
-      'mercado-pago-native-reversal',
+      `${params.provider}-native-reversal`,
       params.sourceTransactionId ?? 'unknown-payment',
       params.role ?? 'recipient',
       params.paymentSplitRecipientId,

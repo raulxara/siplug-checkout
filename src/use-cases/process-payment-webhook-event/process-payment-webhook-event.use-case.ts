@@ -418,7 +418,7 @@ export class ProcessPaymentWebhookEventUseCase {
 
     return {
       provider: params.provider,
-      mode: this.isMercadoPagoProvider(params.provider)
+      mode: this.usesNativeSplitSettlement(params.provider)
         ? 'native_split'
         : 'external_gateway_dispatch',
 
@@ -483,14 +483,14 @@ export class ProcessPaymentWebhookEventUseCase {
     }): Promise<Record<string, unknown>> {
 
     if (
-      this.isMercadoPagoProvider(params.provider) &&
+      this.usesNativeSplitSettlement(params.provider) &&
       this.isPaidWebhookStatus(params.canonicalStatus)
     ) {
       return await this.settleNativeSplitFromWebhookSafe({
         paymentSplitId: params.splitDispatchDecision.paymentSplitId,
         paymentTransactionId: params.paymentTransactionId,
         paymentWebhookEventId: params.paymentWebhookEventId,
-        provider: 'mercado_pago',
+        provider: params.provider,
         eventId: params.eventId,
         eventType: params.eventType,
         eventAction: params.eventAction,
@@ -809,6 +809,16 @@ export class ProcessPaymentWebhookEventUseCase {
     );
   }
 
+  private isPagSeguroProvider(provider: unknown): boolean {
+    return ['pagseguro', 'pagbank', 'pag_bank', 'pag-seguro'].includes(
+      String(provider ?? '').trim().toLowerCase(),
+    );
+  }
+
+  private usesNativeSplitSettlement(provider: unknown): boolean {
+    return this.isMercadoPagoProvider(provider) || this.isPagSeguroProvider(provider);
+  }
+
   private isPaidWebhookStatus(status: string | null): boolean {
     return ['paid', 'invoice_paid'].includes(String(status ?? '').trim());
   }
@@ -937,10 +947,10 @@ export class ProcessPaymentWebhookEventUseCase {
         return {
           required: false,
           reason:
-            'pagseguro split dispatch is not implemented in webhook flow yet',
-          sourceTransactionId: null,
+            'pagseguro uses native split settlement from webhook; external gateway dispatch is not required',
+          sourceTransactionId: this.resolveGenericSourceTransactionId(params.event),
           paymentSplitId,
-          authoritativeEvent: false,
+          authoritativeEvent: true,
         };
 
       case 'paypal':

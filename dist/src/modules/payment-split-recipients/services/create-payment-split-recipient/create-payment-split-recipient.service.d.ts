@@ -9,4 +9,5 @@ export declare class CreatePaymentSplitRecipientService {
     exec(dtoIn: CreatePaymentSplitRecipientDtoIn): Promise<CreatePaymentSplitRecipientDtoOut>;
     private toNullableString;
     private extractStringFromObject;
+    private resolveGatewayProvider;
 }

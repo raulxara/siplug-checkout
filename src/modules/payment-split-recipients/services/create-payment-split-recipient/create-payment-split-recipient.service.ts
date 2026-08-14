@@ -44,6 +44,11 @@ export class CreatePaymentSplitRecipientService {
       this.extractStringFromObject(splitRecipientData.metadata, 'gatewayRecipientId') ??
       this.extractStringFromObject(splitRecipientData.metadata, 'gateway_recipient_id');
 
+    const gatewayProvider = this.resolveGatewayProvider({
+      config: dtoIn.config,
+      gatewayRecipientId: resolvedGatewayRecipientId,
+    });
+
     const entity = new PaymentSplitRecipientEntity(
       this.paymentSplitRecipientsRepository,
     );
@@ -68,7 +73,11 @@ export class CreatePaymentSplitRecipientService {
       ...(resolvedGatewayRecipientId !== null
         ? {
             gatewayRecipientId: resolvedGatewayRecipientId,
-            stripeAccountId: resolvedGatewayRecipientId,
+            ...(gatewayProvider === 'stripe'
+              ? { stripeAccountId: resolvedGatewayRecipientId }
+              : gatewayProvider === 'pagseguro'
+                ? { pagseguroAccountId: resolvedGatewayRecipientId }
+                : {}),
           }
         : {}),
     };
@@ -78,7 +87,11 @@ export class CreatePaymentSplitRecipientService {
       ...(resolvedGatewayRecipientId !== null
         ? {
             gatewayRecipientId: resolvedGatewayRecipientId,
-            stripeAccountId: resolvedGatewayRecipientId,
+            ...(gatewayProvider === 'stripe'
+              ? { stripeAccountId: resolvedGatewayRecipientId }
+              : gatewayProvider === 'pagseguro'
+                ? { pagseguroAccountId: resolvedGatewayRecipientId }
+                : {}),
           }
         : {}),
     };
@@ -139,5 +152,38 @@ export class CreatePaymentSplitRecipientService {
     }
 
     return this.toNullableString((value as Record<string, unknown>)[key]);
+  }
+
+  private resolveGatewayProvider(params: {
+    config: Record<string, unknown> | null;
+    gatewayRecipientId: string | null;
+  }): string | null {
+    if (params.gatewayRecipientId === null) {
+      return null;
+    }
+
+    const gatewayAccounts = params.config?.gatewayAccounts;
+
+    if (
+      gatewayAccounts &&
+      typeof gatewayAccounts === 'object' &&
+      !Array.isArray(gatewayAccounts)
+    ) {
+      for (const [provider, account] of Object.entries(gatewayAccounts)) {
+        if (!account || typeof account !== 'object' || Array.isArray(account)) {
+          continue;
+        }
+
+        const accountId = this.toNullableString(
+          (account as Record<string, unknown>).accountId,
+        );
+
+        if (accountId === params.gatewayRecipientId) {
+          return provider;
+        }
+      }
+    }
+
+    return params.gatewayRecipientId.startsWith('acct_') ? 'stripe' : null;
   }
 }

@@ -292,7 +292,7 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
         const paymentSplit = this.toObject(params.splitGatewayDispatchResult.paymentSplit);
         return {
             provider: params.provider,
-            mode: this.isMercadoPagoProvider(params.provider)
+            mode: this.usesNativeSplitSettlement(params.provider)
                 ? 'native_split'
                 : 'external_gateway_dispatch',
             required: params.splitDispatchRequired,
@@ -308,13 +308,13 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
         };
     }
     async dispatchPaymentSplitToGatewayFromWebhookSafe(params) {
-        if (this.isMercadoPagoProvider(params.provider) &&
+        if (this.usesNativeSplitSettlement(params.provider) &&
             this.isPaidWebhookStatus(params.canonicalStatus)) {
             return await this.settleNativeSplitFromWebhookSafe({
                 paymentSplitId: params.splitDispatchDecision.paymentSplitId,
                 paymentTransactionId: params.paymentTransactionId,
                 paymentWebhookEventId: params.paymentWebhookEventId,
-                provider: 'mercado_pago',
+                provider: params.provider,
                 eventId: params.eventId,
                 eventType: params.eventType,
                 eventAction: params.eventAction,
@@ -555,6 +555,12 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
     isMercadoPagoProvider(provider) {
         return ['mercado_pago', 'mercadopago', 'mercado-pago'].includes(String(provider ?? '').trim().toLowerCase());
     }
+    isPagSeguroProvider(provider) {
+        return ['pagseguro', 'pagbank', 'pag_bank', 'pag-seguro'].includes(String(provider ?? '').trim().toLowerCase());
+    }
+    usesNativeSplitSettlement(provider) {
+        return this.isMercadoPagoProvider(provider) || this.isPagSeguroProvider(provider);
+    }
     isPaidWebhookStatus(status) {
         return ['paid', 'invoice_paid'].includes(String(status ?? '').trim());
     }
@@ -649,10 +655,10 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
             case 'pagseguro':
                 return {
                     required: false,
-                    reason: 'pagseguro split dispatch is not implemented in webhook flow yet',
-                    sourceTransactionId: null,
+                    reason: 'pagseguro uses native split settlement from webhook; external gateway dispatch is not required',
+                    sourceTransactionId: this.resolveGenericSourceTransactionId(params.event),
                     paymentSplitId,
-                    authoritativeEvent: false,
+                    authoritativeEvent: true,
                 };
             case 'paypal':
                 return {

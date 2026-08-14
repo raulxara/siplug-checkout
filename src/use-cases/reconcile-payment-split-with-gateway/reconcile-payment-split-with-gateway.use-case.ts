@@ -28,6 +28,8 @@ import { FindPaymentSplitByUniqueIdDtoIn } from '../../modules/payment-splits/se
 import { FindPaymentSplitByUniqueIdService } from '../../modules/payment-splits/services/find-payment-split-by-unique-id/find-payment-split-by-unique-id.service';
 import { UpdatePaymentSplitDtoIn } from '../../modules/payment-splits/services/update-payment-split/dtos/update-payment-split.dto-in';
 import { UpdatePaymentSplitService } from '../../modules/payment-splits/services/update-payment-split/update-payment-split.service';
+import { MarkNativePaymentSplitAsTransferredDtoIn } from '../../modules/payment-splits/services/mark-native-payment-split-as-transferred/dtos/mark-native-payment-split-as-transferred.dto-in';
+import { MarkNativePaymentSplitAsTransferredService } from '../../modules/payment-splits/services/mark-native-payment-split-as-transferred/mark-native-payment-split-as-transferred.service';
 
 import { FindPaymentTransactionByUniqueIdDtoIn } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/dtos/find-payment-transaction-by-unique-id.dto-in';
 import { FindPaymentTransactionByUniqueIdService } from '../../modules/payment-transactions/services/find-payment-transaction-by-unique-id/find-payment-transaction-by-unique-id.service';
@@ -37,7 +39,7 @@ import { ResolveActorAuthorizationService } from '../../modules/security/service
 import { ReconcilePaymentSplitWithGatewayDtoIn } from './dtos/reconcile-payment-split-with-gateway.dto-in';
 import { ReconcilePaymentSplitWithGatewayDtoOut } from './dtos/reconcile-payment-split-with-gateway.dto-out';
 
-type NormalizedGatewayProvider = 'stripe' | 'mercado_pago';
+type NormalizedGatewayProvider = 'stripe' | 'mercado_pago' | 'pagseguro';
 
 type MercadoPagoPaymentReconciliationResult = {
   updatedPaymentSplit: Record<string, unknown>;
@@ -47,6 +49,13 @@ type MercadoPagoPaymentReconciliationResult = {
   gatewayPayment: Record<string, unknown>;
 };
 
+type PagSeguroSplitReconciliationResult = {
+  updatedPaymentSplit: Record<string, unknown>;
+  recipientResults: Array<Record<string, unknown>>;
+  paymentResult: Record<string, unknown>;
+  settlementResult: Record<string, unknown> | null;
+};
+
 @Injectable()
 export class ReconcilePaymentSplitWithGatewayUseCase {
   constructor(
@@ -54,6 +63,7 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
 
     private readonly findPaymentSplitByUniqueIdService: FindPaymentSplitByUniqueIdService,
     private readonly updatePaymentSplitService: UpdatePaymentSplitService,
+    private readonly markNativePaymentSplitAsTransferredService: MarkNativePaymentSplitAsTransferredService,
 
     private readonly getAllPaymentSplitRecipientsByPaymentSplitIdService: GetAllPaymentSplitRecipientsByPaymentSplitIdService,
     private readonly updatePaymentSplitRecipientService: UpdatePaymentSplitRecipientService,
@@ -120,6 +130,7 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
         provider: string;
         status: string;
         token: string | null;
+        config: Record<string, unknown> | null;
       };
 
       if (apiCredential.status !== 'active') {
@@ -213,6 +224,68 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
             : 'payment split reconciliation found inconsistencies',
           updatedPaymentSplit,
           mercadoPagoResult.recipientResults,
+          summary,
+        );
+      }
+
+      if (provider === 'pagseguro') {
+        const pagSeguroResult = await this.reconcilePagSeguroNativeSplit({
+          dtoIn,
+          paymentSplit,
+          paymentTransaction,
+          providerToken,
+          apiCredentialConfig: apiCredential.config,
+          recipients,
+          checkedAt,
+        });
+
+        const summary = this.buildSummary({
+          paymentSplitId: dtoIn.paymentSplitId,
+          provider,
+          checkedAt,
+          reason: dtoIn.reason,
+          recipientResults: pagSeguroResult.recipientResults,
+          paymentResult: pagSeguroResult.paymentResult,
+          settlementResult: pagSeguroResult.settlementResult,
+        });
+
+        const reconciled = summary.status === 'reconciled';
+        let updatedPaymentSplit = pagSeguroResult.updatedPaymentSplit;
+
+        if (dtoIn.persistResult) {
+          const updatedDtoOut = await this.updatePaymentSplitService.exec(
+            new UpdatePaymentSplitDtoIn({
+              _id: dtoIn.paymentSplitId,
+              metadata: {
+                ...(this.toObject(updatedPaymentSplit.metadata) ?? {}),
+                lastGatewayReconciliation: summary,
+              },
+              providerResponse: {
+                ...(this.toObject(updatedPaymentSplit.providerResponse) ?? {}),
+                reconciliation: summary,
+              },
+              gatewayResponse: {
+                ...(this.toObject(updatedPaymentSplit.gatewayResponse) ?? {}),
+                reconciliation: summary,
+              },
+              source: 'ReconcilePaymentSplitWithGatewayUseCase',
+            }),
+          );
+
+          updatedPaymentSplit = updatedDtoOut.paymentSplit as Record<
+            string,
+            unknown
+          >;
+        }
+
+        return new ReconcilePaymentSplitWithGatewayDtoOut(
+          reconciled,
+          String(summary.status),
+          reconciled
+            ? 'payment split reconciled with gateway successfully'
+            : 'payment split reconciliation found inconsistencies',
+          updatedPaymentSplit,
+          pagSeguroResult.recipientResults,
           summary,
         );
       }
@@ -432,6 +505,180 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
       settlementResult,
       gatewayPayment,
     };
+  }
+
+  private async reconcilePagSeguroNativeSplit(params: {
+    dtoIn: ReconcilePaymentSplitWithGatewayDtoIn;
+    paymentSplit: Record<string, unknown>;
+    paymentTransaction: Record<string, unknown>;
+    providerToken: string;
+    apiCredentialConfig: Record<string, unknown> | null;
+    recipients: Array<Record<string, unknown>>;
+    checkedAt: string;
+  }): Promise<PagSeguroSplitReconciliationResult> {
+    const chargeId = this.requiredString(
+      this.toNullableString(params.paymentTransaction.gatewayTransactionId) ??
+        this.extractNullableStringFromPath(params.paymentSplit, [
+          'providerPayload',
+          'nativeSettlement',
+          'sourceTransactionId',
+        ]),
+      'pagseguro.chargeId',
+    );
+
+    if (!chargeId.startsWith('CHAR_')) {
+      throw new Error('PagSeguro payment transaction must contain a CHAR_ charge id');
+    }
+
+    const baseUrl = this.resolvePagSeguroBaseUrl(params.apiCredentialConfig);
+    const gatewayCharge = await this.getPagSeguroResource({
+      baseUrl,
+      path: `/charges/${chargeId}`,
+      providerToken: params.providerToken,
+      resource: 'charge',
+    });
+    const splitId = this.resolvePagSeguroSplitId({
+      paymentSplit: params.paymentSplit,
+      gatewayCharge,
+    });
+    const gatewaySplit =
+      splitId === null
+        ? null
+        : await this.getPagSeguroResource({
+            baseUrl,
+            path: `/splits/${splitId}`,
+            providerToken: params.providerToken,
+            resource: 'split',
+          });
+
+    const canonicalStatus = this.normalizePagSeguroChargeStatus(gatewayCharge);
+    const refundedAmount = this.extractPagSeguroRefundedAmount(gatewayCharge);
+    const totalAmount = this.extractPagSeguroChargeAmount(gatewayCharge);
+    const expectedSplitStatus = this.resolvePagSeguroInternalSplitStatus({
+      canonicalStatus,
+      refundedAmount,
+      totalAmount,
+    });
+
+    let updatedPaymentSplit = params.paymentSplit;
+    let effectiveRecipients = params.recipients;
+    let settlementResult: Record<string, unknown> | null = null;
+
+    if (
+      canonicalStatus === 'paid' &&
+      refundedAmount === 0 &&
+      !['transferred', 'partially_transferred'].includes(
+        this.requiredString(params.paymentSplit.status, 'paymentSplit.status'),
+      ) &&
+      params.dtoIn.persistResult
+    ) {
+      const settlementDtoOut =
+        await this.markNativePaymentSplitAsTransferredService.exec(
+          new MarkNativePaymentSplitAsTransferredDtoIn({
+            paymentSplitId: this.requiredString(params.paymentSplit._id, 'paymentSplit._id'),
+            paymentTransactionId: this.requiredString(
+              params.paymentTransaction._id,
+              'paymentTransaction._id',
+            ),
+            provider: 'pagseguro',
+            sourceTransactionId: chargeId,
+            eventId: `manual-reconcile:${chargeId}:${params.checkedAt}`,
+            eventType: 'charge',
+            eventAction: 'manual.reconcile',
+            settlementMode: 'native_split',
+          }),
+        );
+
+      if (settlementDtoOut.nativeSettled && settlementDtoOut.paymentSplit) {
+        updatedPaymentSplit = settlementDtoOut.paymentSplit;
+        effectiveRecipients = settlementDtoOut.paymentSplitRecipients;
+        settlementResult = settlementDtoOut.gatewayResult;
+      }
+    }
+
+    const recipientResults = effectiveRecipients.map((recipient) =>
+      this.reconcilePagSeguroNativeRecipient({
+        recipient,
+        gatewaySplit,
+        canonicalStatus,
+        checkedAt: params.checkedAt,
+      }),
+    );
+
+    if (params.dtoIn.persistResult) {
+      for (const recipient of effectiveRecipients) {
+        const result = recipientResults.find(
+          (item) =>
+            this.toNullableString(item.paymentSplitRecipientId) ===
+            this.toNullableString(recipient._id),
+        );
+
+        if (result) {
+          await this.persistPagSeguroRecipientReconciliation({
+            recipient,
+            result,
+            checkedAt: params.checkedAt,
+          });
+        }
+      }
+    }
+
+    const paymentResult = this.buildPagSeguroPaymentResult({
+      paymentSplit: updatedPaymentSplit,
+      paymentTransaction: params.paymentTransaction,
+      gatewayCharge,
+      gatewaySplit,
+      chargeId,
+      splitId,
+      canonicalStatus,
+      refundedAmount,
+      totalAmount,
+      expectedSplitStatus,
+      checkedAt: params.checkedAt,
+      settlementResult,
+    });
+
+    if (params.dtoIn.persistResult) {
+      const updatedDtoOut = await this.updatePaymentSplitService.exec(
+        new UpdatePaymentSplitDtoIn({
+          _id: this.requiredString(params.paymentSplit._id, 'paymentSplit._id'),
+          gatewaySplitId: splitId ?? undefined,
+          status: expectedSplitStatus ?? undefined,
+          source: 'ReconcilePaymentSplitWithGatewayUseCase.pagseguro',
+        }),
+      );
+      updatedPaymentSplit = updatedDtoOut.paymentSplit as Record<string, unknown>;
+    }
+
+    return {
+      updatedPaymentSplit,
+      recipientResults,
+      paymentResult,
+      settlementResult,
+    };
+  }
+
+  private async getPagSeguroResource(params: {
+    baseUrl: string;
+    path: string;
+    providerToken: string;
+    resource: string;
+  }): Promise<Record<string, unknown>> {
+    const response = await fetch(`${params.baseUrl}${params.path}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${params.providerToken}` },
+    });
+    const responseBody = this.parseJson(await response.text());
+
+    if (!response.ok || responseBody === null) {
+      const message =
+        this.extractString(responseBody, 'message') ??
+        this.extractString(responseBody, 'error') ??
+        `PagSeguro ${params.resource} query failed with status ${response.status}`;
+      throw new Error(message);
+    }
+
+    return responseBody;
   }
 
   private async markMercadoPagoNativeSplitAsTransferred(params: {
@@ -750,6 +997,176 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
     };
   }
 
+  private reconcilePagSeguroNativeRecipient(params: {
+    recipient: Record<string, unknown>;
+    gatewaySplit: Record<string, unknown> | null;
+    canonicalStatus: string;
+    checkedAt: string;
+  }): Record<string, unknown> {
+    const accountId = this.resolvePagSeguroRecipientAccountId(params.recipient);
+    const receiver = this.findPagSeguroReceiver(params.gatewaySplit, accountId);
+    const refundedAmount = this.toNumberFromPath(receiver, ['amount', 'refunded']) ?? 0;
+    const allocatedAmount = this.toNumberFromPath(receiver, ['amount', 'value']);
+    const originalAmount = Number(params.recipient.amount ?? 0);
+    const expectedStatus = this.resolvePagSeguroRecipientStatus({
+      canonicalStatus: params.canonicalStatus,
+      refundedAmount,
+      originalAmount,
+    });
+    const actualStatus = this.requiredString(
+      params.recipient.status,
+      'paymentSplitRecipient.status',
+    );
+    const splitMethod = this.toNullableString(params.gatewaySplit?.method);
+    const expectedAllocation =
+      splitMethod === 'PERCENTAGE'
+        ? Number(params.recipient.percentage ?? 0)
+        : originalAmount;
+    const checks = {
+      splitFound: params.gatewaySplit !== null,
+      receiverFound: receiver !== null,
+      accountMatched: accountId !== null && this.toNullableString(this.toObject(receiver?.account)?.id) === accountId,
+      allocationMatched:
+        allocatedAmount === null || expectedAllocation <= 0
+          ? true
+          : allocatedAmount === expectedAllocation,
+      statusMatched: expectedStatus === null || actualStatus === expectedStatus,
+    };
+    const matched = Object.values(checks).every((value) => value === true);
+
+    return {
+      paymentSplitRecipientId: this.requiredString(params.recipient._id, 'paymentSplitRecipient._id'),
+      splitRecipientId: this.toNullableString(params.recipient.splitRecipientId),
+      role: this.toNullableString(params.recipient.role),
+      type: 'pagseguro_native_split',
+      status: matched ? 'matched' : 'mismatch',
+      matched,
+      checkedAt: params.checkedAt,
+      gatewayRecipientId: accountId,
+      expected: {
+        status: expectedStatus,
+        accountId,
+        allocation: expectedAllocation,
+        splitMethod,
+      },
+      actual: {
+        status: actualStatus,
+        refundedAmount,
+        allocatedAmount,
+        accountId: this.toNullableString(this.toObject(receiver?.account)?.id),
+      },
+      checks,
+      providerResponse: receiver,
+    };
+  }
+
+  private async persistPagSeguroRecipientReconciliation(params: {
+    recipient: Record<string, unknown>;
+    result: Record<string, unknown>;
+    checkedAt: string;
+  }): Promise<void> {
+    const expected = this.toObject(params.result.expected);
+    const expectedStatus = this.toNullableString(expected?.status);
+
+    await this.updatePaymentSplitRecipientService.exec(
+      new UpdatePaymentSplitRecipientDtoIn({
+        _id: this.requiredString(params.recipient._id, 'paymentSplitRecipient._id'),
+        metadata: {
+          ...(this.toObject(params.recipient.metadata) ?? {}),
+          lastGatewayReconciliation: params.result,
+          lastGatewayReconciledAt: params.checkedAt,
+        },
+        providerResponse: {
+          ...(this.toObject(params.recipient.providerResponse) ?? {}),
+          reconciliation: params.result,
+        },
+        gatewayResponse: {
+          ...(this.toObject(params.recipient.gatewayResponse) ?? {}),
+          reconciliation: params.result,
+        },
+        status:
+          expectedStatus ??
+          this.requiredString(
+            params.recipient.status,
+            'paymentSplitRecipient.status',
+          ),
+        source: 'ReconcilePaymentSplitWithGatewayUseCase.pagseguroRecipient',
+      }),
+    );
+  }
+
+  private buildPagSeguroPaymentResult(params: {
+    paymentSplit: Record<string, unknown>;
+    paymentTransaction: Record<string, unknown>;
+    gatewayCharge: Record<string, unknown>;
+    gatewaySplit: Record<string, unknown> | null;
+    chargeId: string;
+    splitId: string | null;
+    canonicalStatus: string;
+    refundedAmount: number;
+    totalAmount: number | null;
+    expectedSplitStatus: string | null;
+    checkedAt: string;
+    settlementResult: Record<string, unknown> | null;
+  }): Record<string, unknown> {
+    const expectedAmount = Number(params.paymentTransaction.amount ?? 0);
+    const actualCurrency = this.toNullableString(
+      this.toObject(params.gatewayCharge.amount)?.currency,
+    );
+    const expectedCurrency = this.toNullableString(
+      params.paymentTransaction.currency,
+    )?.toUpperCase() ?? null;
+    const expectedReference = this.toNullableString(
+      params.paymentTransaction.externalReference,
+    );
+    const actualReference = this.toNullableString(params.gatewayCharge.reference_id);
+    const actualSplitStatus = this.toNullableString(params.paymentSplit.status);
+    const checks = {
+      chargeIdMatched: this.toNullableString(params.gatewayCharge.id) === params.chargeId,
+      amountMatched: params.totalAmount === expectedAmount,
+      currencyMatched: actualCurrency?.toUpperCase() === expectedCurrency,
+      externalReferenceMatched:
+        expectedReference === null || actualReference === expectedReference,
+      splitFound: params.splitId !== null && params.gatewaySplit !== null,
+      splitIdMatched:
+        params.splitId === null || this.toNullableString(params.gatewaySplit?.id) === params.splitId,
+      splitStatusMatched:
+        params.expectedSplitStatus === null ||
+        actualSplitStatus === params.expectedSplitStatus,
+    };
+
+    return {
+      type: 'pagseguro_charge_and_split',
+      status: Object.values(checks).every((value) => value === true)
+        ? 'matched'
+        : 'mismatch',
+      matched: Object.values(checks).every((value) => value === true),
+      checkedAt: params.checkedAt,
+      canonicalStatus: params.canonicalStatus,
+      expected: {
+        chargeId: params.chargeId,
+        amountInCents: expectedAmount,
+        currency: expectedCurrency,
+        externalReference: expectedReference,
+        splitStatus: params.expectedSplitStatus,
+      },
+      actual: {
+        chargeId: this.toNullableString(params.gatewayCharge.id),
+        splitId: params.splitId,
+        amountInCents: params.totalAmount,
+        refundedAmountInCents: params.refundedAmount,
+        currency: actualCurrency,
+        externalReference: actualReference,
+        gatewayStatus: this.toNullableString(params.gatewayCharge.status),
+        splitStatus: actualSplitStatus,
+      },
+      checks,
+      gatewayCharge: params.gatewayCharge,
+      gatewaySplit: params.gatewaySplit,
+      settlementResult: params.settlementResult,
+    };
+  }
+
   private async reconcileStripeRecipient(params: {
     recipient: Record<string, unknown>;
     paymentSplit: Record<string, unknown>;
@@ -967,6 +1384,10 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
       (result) => result.type === 'mercado_pago_native_split',
     ).length;
 
+    const pagSeguroNativeCount = params.recipientResults.filter(
+      (result) => result.type === 'pagseguro_native_split',
+    ).length;
+
     const paymentMatched =
       params.paymentResult === undefined ||
       params.paymentResult === null ||
@@ -990,6 +1411,7 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
       retainedCount,
       transferCount,
       mercadoPagoNativeCount,
+      pagSeguroNativeCount,
       paymentResult: params.paymentResult ?? null,
       settlementResult: params.settlementResult ?? null,
     };
@@ -1104,6 +1526,187 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
     );
   }
 
+  private resolvePagSeguroBaseUrl(
+    apiCredentialConfig: Record<string, unknown> | null,
+  ): string {
+    const configuredBaseUrl = this.toNullableString(
+      apiCredentialConfig?.baseUrl,
+    );
+
+    return (configuredBaseUrl ?? 'https://api.pagseguro.com').replace(/\/+$/, '');
+  }
+
+  private resolvePagSeguroSplitId(params: {
+    paymentSplit: Record<string, unknown>;
+    gatewayCharge: Record<string, unknown>;
+  }): string | null {
+    const storedSplitId = this.toNullableString(params.paymentSplit.gatewaySplitId);
+
+    if (storedSplitId?.startsWith('SPLI_')) {
+      return storedSplitId;
+    }
+
+    const links = Array.isArray(params.gatewayCharge.links)
+      ? params.gatewayCharge.links
+      : [];
+
+    for (const link of links) {
+      const item = this.toObject(link);
+
+      if (this.toNullableString(item?.rel) !== 'SPLIT') {
+        continue;
+      }
+
+      const splitId = this.toNullableString(item?.href)?.split('/').pop()?.trim();
+
+      if (splitId?.startsWith('SPLI_')) {
+        return splitId;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizePagSeguroChargeStatus(
+    gatewayCharge: Record<string, unknown>,
+  ): string {
+    const status = this.toNullableString(gatewayCharge.status)?.toUpperCase();
+
+    if (status === 'PAID') {
+      return 'paid';
+    }
+
+    if (status === 'CANCELED') {
+      return 'refunded';
+    }
+
+    if (status === 'AUTHORIZED') {
+      return 'authorized';
+    }
+
+    if (status === 'WAITING' || status === 'IN_ANALYSIS') {
+      return 'pending';
+    }
+
+    if (status === 'DECLINED') {
+      return 'failed';
+    }
+
+    return status?.toLowerCase() ?? 'unknown';
+  }
+
+  private extractPagSeguroChargeAmount(
+    gatewayCharge: Record<string, unknown>,
+  ): number | null {
+    return this.toNumberFromPath(gatewayCharge, ['amount', 'value']);
+  }
+
+  private extractPagSeguroRefundedAmount(
+    gatewayCharge: Record<string, unknown>,
+  ): number {
+    return this.toNumberFromPath(gatewayCharge, ['amount', 'summary', 'refunded']) ?? 0;
+  }
+
+  private resolvePagSeguroInternalSplitStatus(params: {
+    canonicalStatus: string;
+    refundedAmount: number;
+    totalAmount: number | null;
+  }): string | null {
+    if (params.refundedAmount > 0) {
+      return params.totalAmount !== null && params.refundedAmount >= params.totalAmount
+        ? 'reversed'
+        : 'partially_reversed';
+    }
+
+    return params.canonicalStatus === 'paid' ? 'transferred' : null;
+  }
+
+  private resolvePagSeguroRecipientStatus(params: {
+    canonicalStatus: string;
+    refundedAmount: number;
+    originalAmount: number;
+  }): string | null {
+    if (params.refundedAmount > 0) {
+      return params.refundedAmount >= params.originalAmount
+        ? PAYMENT_SPLIT_RECIPIENT_STATUS.REVERSED
+        : PAYMENT_SPLIT_RECIPIENT_STATUS.PARTIALLY_REVERSED;
+    }
+
+    return params.canonicalStatus === 'paid'
+      ? PAYMENT_SPLIT_RECIPIENT_STATUS.TRANSFERRED
+      : null;
+  }
+
+  private resolvePagSeguroRecipientAccountId(
+    recipient: Record<string, unknown>,
+  ): string | null {
+    const direct = this.toNullableString(recipient.gatewayRecipientId);
+
+    if (direct?.startsWith('ACCO_')) {
+      return direct;
+    }
+
+    const config = this.toObject(recipient.config);
+    const directConfigId = this.toNullableString(config?.pagseguroAccountId);
+
+    if (directConfigId?.startsWith('ACCO_')) {
+      return directConfigId;
+    }
+
+    return this.toNullableString(
+      this.toObject(this.toObject(config?.gatewayAccounts)?.pagseguro)?.accountId,
+    );
+  }
+
+  private findPagSeguroReceiver(
+    gatewaySplit: Record<string, unknown> | null,
+    accountId: string | null,
+  ): Record<string, unknown> | null {
+    if (gatewaySplit === null || accountId === null) {
+      return null;
+    }
+
+    const receivers = Array.isArray(gatewaySplit.receivers)
+      ? gatewaySplit.receivers
+      : [];
+
+    return (
+      receivers
+        .map((receiver) => this.toObject(receiver))
+        .find(
+          (receiver) =>
+            this.toNullableString(this.toObject(receiver?.account)?.id) === accountId,
+        ) ?? null
+    );
+  }
+
+  private toNumberFromPath(
+    object: Record<string, unknown> | null,
+    path: string[],
+  ): number | null {
+    let current: unknown = object;
+
+    for (const key of path) {
+      if (!current || typeof current !== 'object' || Array.isArray(current)) {
+        return null;
+      }
+
+      current = (current as Record<string, unknown>)[key];
+    }
+
+    const value = Number(current);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  private parseJson(value: string): Record<string, unknown> | null {
+    try {
+      const parsed = JSON.parse(value);
+      return this.toObject(parsed);
+    } catch {
+      return null;
+    }
+  }
+
   private normalizeGatewayProvider(provider: string): NormalizedGatewayProvider {
     const normalized = provider.trim().toLowerCase();
 
@@ -1117,6 +1720,10 @@ export class ReconcilePaymentSplitWithGatewayUseCase {
       normalized === 'mercado-pago'
     ) {
       return 'mercado_pago';
+    }
+
+    if (['pagseguro', 'pagbank', 'pag-bank', 'pag_seguro'].includes(normalized)) {
+      return 'pagseguro';
     }
 
     throw new Error(`gateway reconciliation not implemented for: ${provider}`);

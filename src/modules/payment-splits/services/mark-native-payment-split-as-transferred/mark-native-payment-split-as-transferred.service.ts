@@ -192,7 +192,9 @@ export class MarkNativePaymentSplitAsTransferredService {
       new UpdatePaymentSplitDtoIn({
         _id: dtoIn.paymentSplitId,
 
-        gatewaySplitId: dtoIn.sourceTransactionId,
+        gatewaySplitId:
+          this.toNullableString(paymentSplit.gatewaySplitId) ??
+          dtoIn.sourceTransactionId,
 
         providerPayload: {
           ...(this.toObject(paymentSplit.providerPayload) ?? {}),
@@ -283,6 +285,7 @@ export class MarkNativePaymentSplitAsTransferredService {
       .toLowerCase();
 
     const gatewayTransferId = this.buildNativeRecipientReference({
+      provider: params.provider,
       sourceTransactionId: params.sourceTransactionId,
       role,
       recipientId,
@@ -371,12 +374,13 @@ export class MarkNativePaymentSplitAsTransferredService {
   }
 
   private buildNativeRecipientReference(params: {
+    provider: string;
     sourceTransactionId: string | null;
     role: string;
     recipientId: string;
   }): string {
     return [
-      'mercado-pago-native',
+      `${params.provider}-native`,
       params.sourceTransactionId ?? 'unknown-payment',
       params.role,
       params.recipientId,
@@ -433,7 +437,9 @@ export class MarkNativePaymentSplitAsTransferredService {
   }
 
   private isSupportedNativeProvider(provider: unknown): boolean {
-    return this.isMercadoPagoProvider(provider);
+    return (
+      this.isMercadoPagoProvider(provider) || this.isPagSeguroProvider(provider)
+    );
   }
 
   private providerMatches(
@@ -455,6 +461,12 @@ export class MarkNativePaymentSplitAsTransferredService {
 
   private isMercadoPagoProvider(provider: unknown): boolean {
     return ['mercado_pago', 'mercadopago', 'mercado-pago'].includes(
+      String(provider ?? '').trim().toLowerCase(),
+    );
+  }
+
+  private isPagSeguroProvider(provider: unknown): boolean {
+    return ['pagseguro', 'pagbank', 'pag_bank', 'pag-seguro'].includes(
       String(provider ?? '').trim().toLowerCase(),
     );
   }

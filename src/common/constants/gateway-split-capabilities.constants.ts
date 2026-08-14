@@ -79,9 +79,9 @@ export const GATEWAY_SPLIT_CAPABILITIES = {
     provider: 'pagseguro',
 
     supportsSplit: true,
-    supportsAutomaticWebhookDispatch: false,
-    supportsManualRetry: false,
-    supportsManualReconciliation: false,
+    supportsAutomaticWebhookDispatch: true,
+    supportsManualRetry: true,
+    supportsManualReconciliation: true,
     supportsTransferReversal: false,
     supportsRetainedPlatformCommission: false,
 
@@ -94,7 +94,7 @@ export const GATEWAY_SPLIT_CAPABILITIES = {
 
     productionValidated: false,
     notes:
-      'Initial capability placeholder. Enable each capability only after implementation and test validation.',
+      'Native split is sent in PagBank Orders for Pix, boleto and credit card; paid webhooks settle the internal split lifecycle. Manual retry is reconciliation-only and never replays a native transfer. Reversals use the native charge cancellation endpoint with custom FIXED receivers.',
   },
 
   picpay: {

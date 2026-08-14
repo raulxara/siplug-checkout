@@ -4,6 +4,8 @@ import { GetAllSplitRuleRecipientsBySplitRuleIdDtoIn } from '../../../split-rule
 import { GetAllSplitRuleRecipientsBySplitRuleIdService } from '../../../split-rule-recipients/services/get-all-split-rule-recipients-by-split-rule-id/get-all-split-rule-recipients-by-split-rule-id.service';
 import { FindSplitRuleByUniqueIdDtoIn } from '../../../split-rules/services/find-split-rule-by-unique-id/dtos/find-split-rule-by-unique-id.dto-in';
 import { FindSplitRuleByUniqueIdService } from '../../../split-rules/services/find-split-rule-by-unique-id/find-split-rule-by-unique-id.service';
+import { FindSplitRecipientByUniqueIdDtoIn } from '../../../split-recipients/services/find-split-recipient-by-unique-id/dtos/find-split-recipient-by-unique-id.dto-in';
+import { FindSplitRecipientByUniqueIdService } from '../../../split-recipients/services/find-split-recipient-by-unique-id/find-split-recipient-by-unique-id.service';
 import { CalculatePaymentSplitDtoIn } from './dtos/calculate-payment-split.dto-in';
 import {
   CalculatedPaymentSplitRecipientDtoOut,
@@ -15,6 +17,7 @@ export class CalculatePaymentSplitService {
   constructor(
     private readonly findSplitRuleByUniqueIdService: FindSplitRuleByUniqueIdService,
     private readonly getAllSplitRuleRecipientsBySplitRuleIdService: GetAllSplitRuleRecipientsBySplitRuleIdService,
+    private readonly findSplitRecipientByUniqueIdService: FindSplitRecipientByUniqueIdService,
   ) {}
 
   async exec(
@@ -75,7 +78,7 @@ export class CalculatePaymentSplitService {
       netAmount,
     });
 
-    const calculatedRecipients = this.calculateRecipients({
+    const calculatedRecipients = await this.calculateRecipients({
       recipients: activeRecipients,
       baseAmount,
       currency: dtoIn.currency,
@@ -123,11 +126,11 @@ export class CalculatePaymentSplitService {
     throw new Error(`unsupported calculationBase: ${params.calculationBase}`);
   }
 
-  private calculateRecipients(params: {
+  private async calculateRecipients(params: {
     recipients: Array<Record<string, unknown>>;
     baseAmount: number;
     currency: string;
-  }): CalculatedPaymentSplitRecipientDtoOut[] {
+  }): Promise<CalculatedPaymentSplitRecipientDtoOut[]> {
     const calculatedRecipients: CalculatedPaymentSplitRecipientDtoOut[] = [];
 
     let percentageTotal = 0;
@@ -168,6 +171,19 @@ export class CalculatePaymentSplitService {
         amount += this.calculatePercentageAmount(params.baseAmount, percentage);
       }
 
+      const splitRecipientDtoOut =
+        await this.findSplitRecipientByUniqueIdService.exec(
+          new FindSplitRecipientByUniqueIdDtoIn(
+            String(recipient.splitRecipientId),
+          ),
+        );
+
+      const splitRecipient = splitRecipientDtoOut.splitRecipient;
+      const splitRecipientConfig = this.toNullableObject(
+        splitRecipient.config,
+      );
+      const ruleRecipientConfig = this.toNullableObject(recipient.config);
+
       calculatedRecipients.push({
         splitRuleRecipientId: String(recipient._id),
         splitRecipientId: String(recipient.splitRecipientId),
@@ -187,7 +203,16 @@ export class CalculatePaymentSplitService {
         priority: this.toNumber(recipient.priority, 0),
 
         metadata: this.toNullableObject(recipient.metadata),
-        config: this.toNullableObject(recipient.config),
+        config: {
+          ...(splitRecipientConfig ?? {}),
+          ...(ruleRecipientConfig ?? {}),
+          gatewayAccounts: {
+            ...(this.toNullableObject(splitRecipientConfig?.gatewayAccounts) ??
+              {}),
+            ...(this.toNullableObject(ruleRecipientConfig?.gatewayAccounts) ??
+              {}),
+          },
+        },
       });
     }
 

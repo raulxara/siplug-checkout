@@ -8,6 +8,8 @@ import { FindPaymentSplitByUniqueIdService } from '../../modules/payment-splits/
 
 import { DispatchPaymentSplitToGatewayDtoIn } from '../dispatch-payment-split-to-gateway/dtos/dispatch-payment-split-to-gateway.dto-in';
 import { DispatchPaymentSplitToGatewayUseCase } from '../dispatch-payment-split-to-gateway/dispatch-payment-split-to-gateway.use-case';
+import { ReconcilePaymentSplitWithGatewayDtoIn } from '../reconcile-payment-split-with-gateway/dtos/reconcile-payment-split-with-gateway.dto-in';
+import { ReconcilePaymentSplitWithGatewayUseCase } from '../reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.use-case';
 
 import { RetryPaymentSplitDispatchDtoIn } from './dtos/retry-payment-split-dispatch.dto-in';
 import { RetryPaymentSplitDispatchDtoOut } from './dtos/retry-payment-split-dispatch.dto-out';
@@ -17,6 +19,7 @@ export class RetryPaymentSplitDispatchUseCase {
   constructor(
     private readonly findPaymentSplitByUniqueIdService: FindPaymentSplitByUniqueIdService,
     private readonly dispatchPaymentSplitToGatewayUseCase: DispatchPaymentSplitToGatewayUseCase,
+    private readonly reconcilePaymentSplitWithGatewayUseCase: ReconcilePaymentSplitWithGatewayUseCase,
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
   ) {}
 
@@ -35,6 +38,15 @@ export class RetryPaymentSplitDispatchUseCase {
       >;
 
       const currentStatus = String(paymentSplit.status ?? '').trim();
+
+      const provider = this.requiredString(
+        paymentSplit.gatewayProvider,
+        'paymentSplit.gatewayProvider',
+      );
+
+      if (this.isPagSeguroProvider(provider)) {
+        return this.retryPagSeguroNativeSplit({ dtoIn, paymentSplit });
+      }
 
       if (currentStatus === 'transferred') {
         return new RetryPaymentSplitDispatchDtoOut(
@@ -72,11 +84,6 @@ export class RetryPaymentSplitDispatchUseCase {
           },
         );
       }
-
-      const provider = this.requiredString(
-        paymentSplit.gatewayProvider,
-        'paymentSplit.gatewayProvider',
-      );
 
       const paymentTransactionId = this.requiredString(
         paymentSplit.paymentTransactionId,
@@ -184,6 +191,44 @@ export class RetryPaymentSplitDispatchUseCase {
 
       throw new Error(message);
     }
+  }
+
+  private async retryPagSeguroNativeSplit(params: {
+    dtoIn: RetryPaymentSplitDispatchDtoIn;
+    paymentSplit: Record<string, unknown>;
+  }): Promise<RetryPaymentSplitDispatchDtoOut> {
+    const reconciliationDtoOut =
+      await this.reconcilePaymentSplitWithGatewayUseCase.exec(
+        new ReconcilePaymentSplitWithGatewayDtoIn({
+          token: params.dtoIn.token,
+          paymentSplitId: params.dtoIn.paymentSplitId,
+          persistResult: true,
+          reason:
+            params.dtoIn.reason ??
+            'safe native split retry: reconciliation before any gateway action',
+        }),
+      );
+
+    return new RetryPaymentSplitDispatchDtoOut(
+      reconciliationDtoOut.reconciled,
+      reconciliationDtoOut.reconciled
+        ? 'PagSeguro native split retry completed through reconciliation; no transfer was replayed'
+        : 'PagSeguro native split retry stopped because reconciliation found inconsistencies; no transfer was replayed',
+      reconciliationDtoOut.paymentSplit,
+      reconciliationDtoOut.recipientResults,
+      {
+        provider: 'pagseguro',
+        mode: 'native_split_safe_retry',
+        replayedGatewayOperation: false,
+        reconciliation: reconciliationDtoOut.summary,
+      },
+    );
+  }
+
+  private isPagSeguroProvider(provider: string): boolean {
+    return ['pagseguro', 'pagbank', 'pag-bank', 'pag_seguro'].includes(
+      provider.trim().toLowerCase(),
+    );
   }
 
   private extractSourceTransactionIdFromSplit(

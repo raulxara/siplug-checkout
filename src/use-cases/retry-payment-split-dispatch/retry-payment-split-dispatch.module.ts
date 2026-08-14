@@ -4,6 +4,7 @@ import { UseCaseSupportModule } from '../../common/services/use-case-support/use
 import { PaymentSplitsModule } from '../../modules/payment-splits/payment-splits.module';
 
 import { DispatchPaymentSplitToGatewayModule } from '../dispatch-payment-split-to-gateway/dispatch-payment-split-to-gateway.module';
+import { ReconcilePaymentSplitWithGatewayModule } from '../reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module';
 
 import { RetryPaymentSplitDispatchController } from './retry-payment-split-dispatch.controller';
 import { RetryPaymentSplitDispatchUseCase } from './retry-payment-split-dispatch.use-case';
@@ -12,6 +13,7 @@ import { RetryPaymentSplitDispatchUseCase } from './retry-payment-split-dispatch
   imports: [
     PaymentSplitsModule,
     DispatchPaymentSplitToGatewayModule,
+    ReconcilePaymentSplitWithGatewayModule,
     UseCaseSupportModule,
   ],
   controllers: [RetryPaymentSplitDispatchController],

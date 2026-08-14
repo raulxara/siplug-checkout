@@ -39,6 +39,8 @@ export declare class ProcessPaymentWebhookEventUseCase {
     private resolveGatewayTransactionId;
     private settleNativeSplitFromWebhookSafe;
     private isMercadoPagoProvider;
+    private isPagSeguroProvider;
+    private usesNativeSplitSettlement;
     private isPaidWebhookStatus;
     private buildProviderResponse;
     private buildGatewayResponse;
