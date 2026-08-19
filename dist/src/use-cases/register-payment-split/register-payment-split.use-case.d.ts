@@ -11,4 +11,7 @@ export declare class RegisterPaymentSplitUseCase {
     private readonly createPaymentSplitRecipientService;
     constructor(resolveActorAuthorizationService: ResolveActorAuthorizationService, calculatePaymentSplitService: CalculatePaymentSplitService, createPaymentSplitService: CreatePaymentSplitService, createPaymentSplitRecipientService: CreatePaymentSplitRecipientService);
     exec(dtoIn: RegisterPaymentSplitDtoIn): Promise<RegisterPaymentSplitDtoOut>;
+    private shouldRetainRecipientOnPlatform;
+    private toObject;
+    private extractBoolean;
 }

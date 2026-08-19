@@ -24,9 +24,7 @@ let ListCheckoutSessionsByOfficeIdController = class ListCheckoutSessionsByOffic
     }
     async handle(body, authorization) {
         try {
-            const token = body.token ??
-                authorization?.replace(/^Bearer\s+/i, '').trim() ??
-                '';
+            const token = body.token ?? authorization?.replace(/^Bearer\s+/i, '').trim() ?? '';
             const dtoOut = await this.listCheckoutSessionsByOfficeIdUseCase.exec(new list_checkout_sessions_by_office_id_dto_in_1.ListCheckoutSessionsByOfficeIdDtoIn({
                 token,
                 officeId: body.officeId,
@@ -51,6 +49,7 @@ let ListCheckoutSessionsByOfficeIdController = class ListCheckoutSessionsByOffic
 exports.ListCheckoutSessionsByOfficeIdController = ListCheckoutSessionsByOfficeIdController;
 __decorate([
     (0, common_1.Post)('list-by-office-id'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Headers)('authorization')),
     __metadata("design:type", Function),

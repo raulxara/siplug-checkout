@@ -36,6 +36,7 @@ export class ReceiveMercadoPagoWebhookController {
         headers: this.normalizeHeaders(headers),
         xSignature: this.resolveHeader(headers, 'x-signature'),
         xRequestId: this.resolveHeader(headers, 'x-request-id'),
+        devSkipSignature: this.resolveDevSkipSignature(queryParams),
       }),
     );
 
@@ -93,6 +94,24 @@ export class ReceiveMercadoPagoWebhookController {
     }
 
     return normalized;
+  }
+
+  private resolveDevSkipSignature(
+    queryParams: Record<string, unknown>,
+  ): boolean {
+    const value =
+      this.extractString(queryParams, 'dev_skip_signature') ??
+      this.extractString(queryParams, 'devSkipSignature') ??
+      this.extractString(queryParams, 'skip_signature') ??
+      this.extractString(queryParams, 'skipSignature');
+
+    if (value === null) {
+      return false;
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    return ['true', '1', 'yes', 'y', 'sim', 's'].includes(normalized);
   }
 
   private extractString(

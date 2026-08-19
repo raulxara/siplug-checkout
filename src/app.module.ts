@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { PrismaModule } from './infra/database/prisma/prisma.module';
 import { HealthModule } from './modules/health/health.module';
 import { OfficesModule } from './modules/offices/offices.module';
@@ -101,8 +103,14 @@ import { GetPermissionByUniqueIdModule } from './use-cases/get-permission-by-uni
 import { UpdatePermissionByUniqueIdModule } from './use-cases/update-permission-by-unique-id/update-permission-by-unique-id.module';
 import { ListPermissionPositionByPositionIdModule } from './use-cases/list-permission-position-by-position-id/list-permission-position-by-position-id.module';
 import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-sessions-by-office-id/list-checkout-sessions-by-office-id.module';
+import { RetryPaymentSplitDispatchModule } from './use-cases/retry-payment-split-dispatch/retry-payment-split-dispatch.module';
+import { ReconcilePaymentSplitWithGatewayModule } from './use-cases/reconcile-payment-split-with-gateway/reconcile-payment-split-with-gateway.module';
+import { ReversePaymentSplitWithGatewayModule } from './use-cases/reverse-payment-split-with-gateway/reverse-payment-split-with-gateway.module';
+import { SimulateMercadoPagoPaymentWebhookModule } from './use-cases/simulate-mercado-pago-payment-webhook/simulate-mercado-pago-payment-webhook.module';
 
 @Module({
+  controllers: [AppController],
+  providers: [AppService],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -208,6 +216,10 @@ import { ListCheckoutSessionsByOfficeIdModule } from './use-cases/list-checkout-
     UpdatePermissionByUniqueIdModule,
     ListPermissionPositionByPositionIdModule,
     ListCheckoutSessionsByOfficeIdModule,
+    RetryPaymentSplitDispatchModule,
+    ReconcilePaymentSplitWithGatewayModule,
+    ReversePaymentSplitWithGatewayModule,
+    SimulateMercadoPagoPaymentWebhookModule,
   ],
 })
 export class AppModule {}

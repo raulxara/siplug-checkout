@@ -3,6 +3,7 @@ export declare class ReceiveMercadoPagoWebhookDtoIn {
     readonly payload: Record<string, unknown>;
     readonly headers: Record<string, unknown>;
     readonly queryParams: Record<string, unknown>;
+    readonly devSkipSignature: boolean;
     readonly xSignature: string;
     readonly xRequestId: string;
     constructor(params: {
@@ -12,6 +13,8 @@ export declare class ReceiveMercadoPagoWebhookDtoIn {
         queryParams?: unknown;
         xSignature?: unknown;
         xRequestId?: unknown;
+        devSkipSignature?: unknown;
     });
+    private resolveXRequestId;
     private toObject;
 }

@@ -15,13 +15,17 @@ const get_all_split_rule_recipients_by_split_rule_id_dto_in_1 = require("../../.
 const get_all_split_rule_recipients_by_split_rule_id_service_1 = require("../../../split-rule-recipients/services/get-all-split-rule-recipients-by-split-rule-id/get-all-split-rule-recipients-by-split-rule-id.service");
 const find_split_rule_by_unique_id_dto_in_1 = require("../../../split-rules/services/find-split-rule-by-unique-id/dtos/find-split-rule-by-unique-id.dto-in");
 const find_split_rule_by_unique_id_service_1 = require("../../../split-rules/services/find-split-rule-by-unique-id/find-split-rule-by-unique-id.service");
+const find_split_recipient_by_unique_id_dto_in_1 = require("../../../split-recipients/services/find-split-recipient-by-unique-id/dtos/find-split-recipient-by-unique-id.dto-in");
+const find_split_recipient_by_unique_id_service_1 = require("../../../split-recipients/services/find-split-recipient-by-unique-id/find-split-recipient-by-unique-id.service");
 const calculate_payment_split_dto_out_1 = require("./dtos/calculate-payment-split.dto-out");
 let CalculatePaymentSplitService = class CalculatePaymentSplitService {
     findSplitRuleByUniqueIdService;
     getAllSplitRuleRecipientsBySplitRuleIdService;
-    constructor(findSplitRuleByUniqueIdService, getAllSplitRuleRecipientsBySplitRuleIdService) {
+    findSplitRecipientByUniqueIdService;
+    constructor(findSplitRuleByUniqueIdService, getAllSplitRuleRecipientsBySplitRuleIdService, findSplitRecipientByUniqueIdService) {
         this.findSplitRuleByUniqueIdService = findSplitRuleByUniqueIdService;
         this.getAllSplitRuleRecipientsBySplitRuleIdService = getAllSplitRuleRecipientsBySplitRuleIdService;
+        this.findSplitRecipientByUniqueIdService = findSplitRecipientByUniqueIdService;
     }
     async exec(dtoIn) {
         this.validateAmount(dtoIn.grossAmount, 'grossAmount');
@@ -56,7 +60,7 @@ let CalculatePaymentSplitService = class CalculatePaymentSplitService {
             grossAmount: dtoIn.grossAmount,
             netAmount,
         });
-        const calculatedRecipients = this.calculateRecipients({
+        const calculatedRecipients = await this.calculateRecipients({
             recipients: activeRecipients,
             baseAmount,
             currency: dtoIn.currency,
@@ -77,7 +81,7 @@ let CalculatePaymentSplitService = class CalculatePaymentSplitService {
         }
         throw new Error(`unsupported calculationBase: ${params.calculationBase}`);
     }
-    calculateRecipients(params) {
+    async calculateRecipients(params) {
         const calculatedRecipients = [];
         let percentageTotal = 0;
         let fixedAmountTotal = 0;
@@ -107,6 +111,10 @@ let CalculatePaymentSplitService = class CalculatePaymentSplitService {
             if (percentage !== null) {
                 amount += this.calculatePercentageAmount(params.baseAmount, percentage);
             }
+            const splitRecipientDtoOut = await this.findSplitRecipientByUniqueIdService.exec(new find_split_recipient_by_unique_id_dto_in_1.FindSplitRecipientByUniqueIdDtoIn(String(recipient.splitRecipientId)));
+            const splitRecipient = splitRecipientDtoOut.splitRecipient;
+            const splitRecipientConfig = this.toNullableObject(splitRecipient.config);
+            const ruleRecipientConfig = this.toNullableObject(recipient.config);
             calculatedRecipients.push({
                 splitRuleRecipientId: String(recipient._id),
                 splitRecipientId: String(recipient.splitRecipientId),
@@ -119,7 +127,16 @@ let CalculatePaymentSplitService = class CalculatePaymentSplitService {
                 liableForRefund: this.toBoolean(recipient.liableForRefund, false),
                 priority: this.toNumber(recipient.priority, 0),
                 metadata: this.toNullableObject(recipient.metadata),
-                config: this.toNullableObject(recipient.config),
+                config: {
+                    ...(splitRecipientConfig ?? {}),
+                    ...(ruleRecipientConfig ?? {}),
+                    gatewayAccounts: {
+                        ...(this.toNullableObject(splitRecipientConfig?.gatewayAccounts) ??
+                            {}),
+                        ...(this.toNullableObject(ruleRecipientConfig?.gatewayAccounts) ??
+                            {}),
+                    },
+                },
             });
         }
         this.applyRoundingResidueWhenNeeded({
@@ -205,6 +222,7 @@ exports.CalculatePaymentSplitService = CalculatePaymentSplitService;
 exports.CalculatePaymentSplitService = CalculatePaymentSplitService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [find_split_rule_by_unique_id_service_1.FindSplitRuleByUniqueIdService,
-        get_all_split_rule_recipients_by_split_rule_id_service_1.GetAllSplitRuleRecipientsBySplitRuleIdService])
+        get_all_split_rule_recipients_by_split_rule_id_service_1.GetAllSplitRuleRecipientsBySplitRuleIdService,
+        find_split_recipient_by_unique_id_service_1.FindSplitRecipientByUniqueIdService])
 ], CalculatePaymentSplitService);
 //# sourceMappingURL=calculate-payment-split.service.js.map

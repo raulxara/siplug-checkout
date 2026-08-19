@@ -39,6 +39,8 @@ import { CreatePaymentSplitRecipientDtoIn } from '../../modules/payment-split-re
 import { CreatePaymentSplitRecipientService } from '../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service';
 import { CreatePaymentSplitDtoIn } from '../../modules/payment-splits/services/create-payment-split/dtos/create-payment-split.dto-in';
 import { CreatePaymentSplitService } from '../../modules/payment-splits/services/create-payment-split/create-payment-split.service';
+import { UpdatePaymentSplitDtoIn } from '../../modules/payment-splits/services/update-payment-split/dtos/update-payment-split.dto-in';
+import { UpdatePaymentSplitService } from '../../modules/payment-splits/services/update-payment-split/update-payment-split.service';
 import { CalculatePaymentSplitDtoIn } from '../../modules/split-calculations/services/calculate-payment-split/dtos/calculate-payment-split.dto-in';
 import { CalculatePaymentSplitService } from '../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service';
 
@@ -63,6 +65,7 @@ export class ProcessPaymentUseCase {
 
     private readonly calculatePaymentSplitService: CalculatePaymentSplitService,
     private readonly createPaymentSplitService: CreatePaymentSplitService,
+    private readonly updatePaymentSplitService: UpdatePaymentSplitService,
     private readonly createPaymentSplitRecipientService: CreatePaymentSplitRecipientService,
 
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
@@ -228,123 +231,124 @@ export class ProcessPaymentUseCase {
         dtoIn.config,
       );
 
-      const transactionDtoOut =
-        await this.createPaymentTransactionService.exec(
-          new CreatePaymentTransactionDtoIn({
-            officeId: checkoutSession.officeId,
-            clientId: checkoutSession.clientId,
-            checkoutSessionId: checkoutSession._id,
-            paymentCustomerId: checkoutSession.paymentCustomerId,
+      const transactionDtoOut = await this.createPaymentTransactionService.exec(
+        new CreatePaymentTransactionDtoIn({
+          officeId: checkoutSession.officeId,
+          clientId: checkoutSession.clientId,
+          checkoutSessionId: checkoutSession._id,
+          paymentCustomerId: checkoutSession.paymentCustomerId,
 
-            gatewayId: resolvedGateway._id,
+          gatewayId: resolvedGateway._id,
+          apiCredentialId: resolvedApiCredential._id,
+
+          gatewayTransactionId: null,
+          externalReference:
+            dtoIn.externalReference ?? checkoutSession.externalReference,
+          idempotencyKey:
+            dtoIn.idempotencyKey ?? checkoutSession.idempotencyKey,
+
+          paymentType: checkoutSession.paymentType,
+          paymentMethod: dtoIn.paymentMethod,
+
+          amount: checkoutSession.amount,
+          currency: checkoutSession.currency,
+
+          installments: dtoIn.installments,
+          installmentAmount: dtoIn.installmentAmount,
+          interestAmount: dtoIn.interestAmount,
+          interestType: dtoIn.interestType,
+
+          gatewayStatus: null,
+          status: 'created',
+          processStatus: 'dispatching_gateway',
+          processMessage:
+            'payment transaction created and dispatching to gateway',
+
+          providerPayload: sanitizedProviderPayload,
+
+          providerResponse: null,
+          gatewayResponse: null,
+
+          qrCode: null,
+          qrCodeBase64: null,
+          boletoUrl: null,
+          checkoutUrl: null,
+
+          splitRequired,
+          hasSplit: false,
+
+          paidAt: null,
+          authorizedAt: null,
+          canceledAt: null,
+          failedAt: null,
+          refundedAt: null,
+          expiresAt: checkoutSession.expiresAt,
+
+          metadata: {
+            ...(checkoutSession.metadata ?? {}),
+            ...(dtoIn.metadata ?? {}),
+            gatewaySlug: resolvedGateway.slug,
+            gatewayProvider: resolvedGateway.provider,
             apiCredentialId: resolvedApiCredential._id,
+            source: 'ProcessPaymentUseCase',
+          },
 
-            gatewayTransactionId: null,
-            externalReference:
-              dtoIn.externalReference ?? checkoutSession.externalReference,
-            idempotencyKey:
-              dtoIn.idempotencyKey ?? checkoutSession.idempotencyKey,
-
-            paymentType: checkoutSession.paymentType,
-            paymentMethod: dtoIn.paymentMethod,
-
-            amount: checkoutSession.amount,
-            currency: checkoutSession.currency,
-
-            installments: dtoIn.installments,
-            installmentAmount: dtoIn.installmentAmount,
-            interestAmount: dtoIn.interestAmount,
-            interestType: dtoIn.interestType,
-
-            gatewayStatus: null,
-            status: 'created',
-            processStatus: 'dispatching_gateway',
-            processMessage:
-              'payment transaction created and dispatching to gateway',
-
-            providerPayload: sanitizedProviderPayload,
-
-            providerResponse: null,
-            gatewayResponse: null,
-
-            qrCode: null,
-            qrCodeBase64: null,
-            boletoUrl: null,
-            checkoutUrl: null,
-
-            splitRequired,
-            hasSplit: false,
-
-            paidAt: null,
-            authorizedAt: null,
-            canceledAt: null,
-            failedAt: null,
-            refundedAt: null,
-            expiresAt: checkoutSession.expiresAt,
-
-            metadata: {
-              ...(checkoutSession.metadata ?? {}),
-              ...(dtoIn.metadata ?? {}),
-              gatewaySlug: resolvedGateway.slug,
-              gatewayProvider: resolvedGateway.provider,
-              apiCredentialId: resolvedApiCredential._id,
-              source: 'ProcessPaymentUseCase',
-            },
-
-            config: {
-              ...(checkoutSession.config ?? {}),
-              ...(dtoIn.config ?? {}),
-            },
-          }),
-        );
+          config: {
+            ...(checkoutSession.config ?? {}),
+            ...(dtoIn.config ?? {}),
+          },
+        }),
+      );
 
       let createdPaymentTransaction =
         this.buildPaymentTransactionRowFromCreateDtoOut(transactionDtoOut);
 
-        const paymentSplitSnapshot = await this.registerPaymentSplitForTransaction({
-  checkoutSessionConfig: checkoutSession.config,
-  requestConfig: dtoIn.config,
-  token: dtoIn.token,
-  paymentTransaction: createdPaymentTransaction,
-  gatewayProvider: resolvedGateway.provider,
-  metadata: {
-    source: 'ProcessPaymentUseCase',
-    checkoutSessionId: checkoutSession._id,
-    paymentTransactionId: createdPaymentTransaction._id,
-  },
-});
-
-if (paymentSplitSnapshot !== null) {
-  rawProviderPayload = {
-    ...rawProviderPayload,
-    split: paymentSplitSnapshot,
-  };
-
-  const updatedWithSplitDtoOut =
-    await this.updatePaymentTransactionService.exec(
-      new UpdatePaymentTransactionDtoIn({
-        _id: createdPaymentTransaction._id,
-
-        hasSplit: true,
-
-        providerPayload: this.sanitizeSensitiveGatewayData(rawProviderPayload),
-
-        config: {
-          ...(createdPaymentTransaction.config ?? {}),
-          split: {
-            required: true,
-            paymentSplitId: String(paymentSplitSnapshot.paymentSplitId),
-            splitRuleId: String(paymentSplitSnapshot.splitRuleId),
-            mode: 'internal-calculation',
+      const paymentSplitSnapshot =
+        await this.registerPaymentSplitForTransaction({
+          checkoutSessionConfig: checkoutSession.config,
+          requestConfig: dtoIn.config,
+          token: dtoIn.token,
+          paymentTransaction: createdPaymentTransaction,
+          gatewayProvider: resolvedGateway.provider,
+          metadata: {
+            source: 'ProcessPaymentUseCase',
+            checkoutSessionId: checkoutSession._id,
+            paymentTransactionId: createdPaymentTransaction._id,
           },
-        },
+        });
 
-        source: 'ProcessPaymentUseCase.registerPaymentSplit',
-      }),
-    );
+      if (paymentSplitSnapshot !== null) {
+        rawProviderPayload = {
+          ...rawProviderPayload,
+          split: paymentSplitSnapshot,
+        };
 
-  createdPaymentTransaction = updatedWithSplitDtoOut.paymentTransaction;
-}
+        const updatedWithSplitDtoOut =
+          await this.updatePaymentTransactionService.exec(
+            new UpdatePaymentTransactionDtoIn({
+              _id: createdPaymentTransaction._id,
+
+              hasSplit: true,
+
+              providerPayload:
+                this.sanitizeSensitiveGatewayData(rawProviderPayload),
+
+              config: {
+                ...(createdPaymentTransaction.config ?? {}),
+                split: {
+                  required: true,
+                  paymentSplitId: String(paymentSplitSnapshot.paymentSplitId),
+                  splitRuleId: String(paymentSplitSnapshot.splitRuleId),
+                  mode: 'internal-calculation',
+                },
+              },
+
+              source: 'ProcessPaymentUseCase.registerPaymentSplit',
+            }),
+          );
+
+        createdPaymentTransaction = updatedWithSplitDtoOut.paymentTransaction;
+      }
 
       const gatewayPaymentDtoOut =
         await this.dispatchGatewayPaymentService.exec(
@@ -369,6 +373,12 @@ if (paymentSplitSnapshot !== null) {
             },
           }),
         );
+
+      await this.persistPagSeguroGatewaySplitId({
+        paymentSplitSnapshot,
+        gatewayProvider: resolvedGateway.provider,
+        providerResponse: gatewayPaymentDtoOut.providerResponse,
+      });
 
       const updatedTransactionDtoOut =
         await this.updatePaymentTransactionService.exec(
@@ -533,21 +543,56 @@ if (paymentSplitSnapshot !== null) {
       return null;
     }
 
-    const sanitized = this.sanitizeUnknownGatewayValue(data);
+    const sanitized = this.sanitizeUnknownGatewayValue(data, new WeakSet());
 
-    if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+    if (
+      !sanitized ||
+      typeof sanitized !== 'object' ||
+      Array.isArray(sanitized)
+    ) {
       return null;
     }
 
     return sanitized as Record<string, unknown>;
   }
 
-  private sanitizeUnknownGatewayValue(value: unknown): unknown {
+  private sanitizeUnknownGatewayValue(
+    value: unknown,
+    seen: WeakSet<object>,
+    depth = 0,
+  ): unknown {
+    if (depth > 32) {
+      return '[TRUNCATED]';
+    }
+
+    if (typeof value === 'bigint') {
+      return value.toString();
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
     if (Array.isArray(value)) {
-      return value.map((item) => this.sanitizeUnknownGatewayValue(item));
+      if (seen.has(value)) {
+        return '[CIRCULAR]';
+      }
+
+      seen.add(value);
+      const sanitizedArray = value.map((item) =>
+        this.sanitizeUnknownGatewayValue(item, seen, depth + 1),
+      );
+      seen.delete(value);
+
+      return sanitizedArray;
     }
 
     if (value && typeof value === 'object') {
+      if (seen.has(value)) {
+        return '[CIRCULAR]';
+      }
+
+      seen.add(value);
       const sanitizedObject: Record<string, unknown> = {};
 
       for (const [key, itemValue] of Object.entries(
@@ -558,8 +603,14 @@ if (paymentSplitSnapshot !== null) {
           continue;
         }
 
-        sanitizedObject[key] = this.sanitizeUnknownGatewayValue(itemValue);
+        sanitizedObject[key] = this.sanitizeUnknownGatewayValue(
+          itemValue,
+          seen,
+          depth + 1,
+        );
       }
+
+      seen.delete(value);
 
       return sanitizedObject;
     }
@@ -571,7 +622,7 @@ if (paymentSplitSnapshot !== null) {
     const normalizedKey = key
       .toLowerCase()
       .trim()
-      .replace(/[\s_\-]/g, '');
+      .replace(/[\s_-]/g, '');
 
     const sensitiveKeys = [
       'token',
@@ -637,7 +688,9 @@ if (paymentSplitSnapshot !== null) {
     }
   }
 
-  private resolveCheckoutSessionStatus(paymentTransactionStatus: string): string {
+  private resolveCheckoutSessionStatus(
+    paymentTransactionStatus: string,
+  ): string {
     if (paymentTransactionStatus === 'paid') {
       return 'paid';
     }
@@ -661,7 +714,7 @@ if (paymentSplitSnapshot !== null) {
     return 'processing';
   }
 
- private resolveSplitRequired(
+  private resolveSplitRequired(
     checkoutSessionConfig: Record<string, unknown> | null,
     requestConfig: Record<string, unknown> | null,
   ): boolean {
@@ -792,7 +845,10 @@ if (paymentSplitSnapshot !== null) {
             String(paymentSplitDtoOut.paymentSplit._id),
             recipient.splitRecipientId,
 
-            null,
+            this.resolveGatewayRecipientId(
+              recipient.config,
+              params.gatewayProvider,
+            ),
             null,
 
             recipient.role,
@@ -846,6 +902,124 @@ if (paymentSplitSnapshot !== null) {
     return this.getStringFromConfig(checkoutSessionConfig, 'splitRuleId');
   }
 
+  private async persistPagSeguroGatewaySplitId(params: {
+    paymentSplitSnapshot: Record<string, unknown> | null;
+    gatewayProvider: string;
+    providerResponse: Record<string, unknown> | null;
+  }): Promise<void> {
+    if (!this.isPagSeguroProvider(params.gatewayProvider)) {
+      return;
+    }
+
+    const paymentSplitId = this.getStringFromConfig(
+      params.paymentSplitSnapshot,
+      'paymentSplitId',
+    );
+    const gatewaySplitId = this.extractPagSeguroSplitId(
+      params.providerResponse,
+    );
+
+    if (paymentSplitId === null || gatewaySplitId === null) {
+      return;
+    }
+
+    await this.updatePaymentSplitService.exec(
+      new UpdatePaymentSplitDtoIn({
+        _id: paymentSplitId,
+        gatewaySplitId,
+        source: 'ProcessPaymentUseCase.persistPagSeguroGatewaySplitId',
+      }),
+    );
+  }
+
+  private extractPagSeguroSplitId(
+    providerResponse: Record<string, unknown> | null,
+  ): string | null {
+    const charges = Array.isArray(providerResponse?.charges)
+      ? providerResponse.charges
+      : [];
+
+    for (const charge of charges) {
+      if (!charge || typeof charge !== 'object' || Array.isArray(charge)) {
+        continue;
+      }
+
+      const links = (charge as Record<string, unknown>).links;
+
+      if (!Array.isArray(links)) {
+        continue;
+      }
+
+      for (const link of links) {
+        if (!link || typeof link !== 'object' || Array.isArray(link)) {
+          continue;
+        }
+
+        const linkData = link as Record<string, unknown>;
+
+        if (this.getStringFromConfig(linkData, 'rel') !== 'SPLIT') {
+          continue;
+        }
+
+        const href = this.getStringFromConfig(linkData, 'href');
+        const splitId = href?.split('/').pop()?.trim() ?? null;
+
+        if (splitId?.startsWith('SPLI_')) {
+          return splitId;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private resolveGatewayRecipientId(
+    recipientConfig: Record<string, unknown> | null,
+    gatewayProvider: string,
+  ): string | null {
+    if (recipientConfig === null) {
+      return null;
+    }
+
+    const gatewayAccounts = recipientConfig.gatewayAccounts;
+
+    if (
+      gatewayAccounts &&
+      typeof gatewayAccounts === 'object' &&
+      !Array.isArray(gatewayAccounts)
+    ) {
+      const normalizedGatewayProvider = gatewayProvider.trim().toLowerCase();
+      const gatewayAccountKey = this.isPagSeguroProvider(gatewayProvider)
+        ? 'pagseguro'
+        : normalizedGatewayProvider;
+      const account = (gatewayAccounts as Record<string, unknown>)[
+        gatewayAccountKey
+      ];
+
+      if (account && typeof account === 'object' && !Array.isArray(account)) {
+        const accountId = this.getStringFromConfig(
+          account as Record<string, unknown>,
+          'accountId',
+        );
+
+        if (accountId !== null) {
+          return accountId;
+        }
+      }
+    }
+
+    return (
+      this.getStringFromConfig(recipientConfig, 'gatewayRecipientId') ??
+      this.getStringFromConfig(recipientConfig, 'stripeAccountId')
+    );
+  }
+
+  private isPagSeguroProvider(provider: string): boolean {
+    return ['pagseguro', 'pagbank', 'pag_bank', 'pag-seguro'].includes(
+      provider.trim().toLowerCase(),
+    );
+  }
+
   private getStringFromConfig(
     config: Record<string, unknown> | null,
     key: string,
@@ -857,6 +1031,14 @@ if (paymentSplitSnapshot !== null) {
     const value = config[key];
 
     if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (
+      typeof value !== 'string' &&
+      typeof value !== 'number' &&
+      typeof value !== 'boolean'
+    ) {
       return null;
     }
 
@@ -955,6 +1137,10 @@ if (paymentSplitSnapshot !== null) {
       return value;
     }
 
+    if (typeof value !== 'string' && typeof value !== 'number') {
+      return null;
+    }
+
     const normalized = String(value).trim().toLowerCase();
 
     if (['true', '1', 'yes', 'sim'].includes(normalized)) {
@@ -968,8 +1154,7 @@ if (paymentSplitSnapshot !== null) {
     return null;
   }
 
-  private buildPaymentTransactionRowFromCreateDtoOut(
-  transactionDtoOut: {
+  private buildPaymentTransactionRowFromCreateDtoOut(transactionDtoOut: {
     id: number;
     _id: string;
     officeId: string;
@@ -1013,8 +1198,7 @@ if (paymentSplitSnapshot !== null) {
     changesHistory: Array<Record<string, unknown>> | null;
     createdAt: string | null;
     updatedAt: string | null;
-  },
-): PaymentTransactionRow {
+  }): PaymentTransactionRow {
     return {
       id: transactionDtoOut.id,
       _id: transactionDtoOut._id,

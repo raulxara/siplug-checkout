@@ -11,6 +11,7 @@ import { ProcessPaymentWebhookEventDtoOut } from './dtos/process-payment-webhook
 import { ResolvePaymentSplitDispatchEligibilityService } from '../../modules/payment-splits/services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service';
 import { ReservePaymentSplitDispatchService } from '../../modules/payment-splits/services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service';
 import { DispatchPaymentSplitToGatewayUseCase } from '../dispatch-payment-split-to-gateway/dispatch-payment-split-to-gateway.use-case';
+import { MarkNativePaymentSplitAsTransferredService } from '../../modules/payment-splits/services/mark-native-payment-split-as-transferred/mark-native-payment-split-as-transferred.service';
 export declare class ProcessPaymentWebhookEventUseCase {
     private readonly markPaymentWebhookEventAsProcessingService;
     private readonly markPaymentWebhookEventAsProcessedService;
@@ -22,16 +23,27 @@ export declare class ProcessPaymentWebhookEventUseCase {
     private readonly resolvePaymentSplitDispatchEligibilityService;
     private readonly reservePaymentSplitDispatchService;
     private readonly dispatchPaymentSplitToGatewayUseCase;
+    private readonly markNativePaymentSplitAsTransferredService;
     private readonly handleUseCaseExceptionService;
-    constructor(markPaymentWebhookEventAsProcessingService: MarkPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService: MarkPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService: MarkPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService: GetAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService: UpdatePaymentTransactionService, resolvePaymentSplitDispatchEligibilityService: ResolvePaymentSplitDispatchEligibilityService, reservePaymentSplitDispatchService: ReservePaymentSplitDispatchService, dispatchPaymentSplitToGatewayUseCase: DispatchPaymentSplitToGatewayUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(markPaymentWebhookEventAsProcessingService: MarkPaymentWebhookEventAsProcessingService, markPaymentWebhookEventAsProcessedService: MarkPaymentWebhookEventAsProcessedService, markPaymentWebhookEventAsFailedService: MarkPaymentWebhookEventAsFailedService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, getAllPaymentTransactionsByCheckoutSessionIdService: GetAllPaymentTransactionsByCheckoutSessionIdService, updatePaymentTransactionService: UpdatePaymentTransactionService, resolvePaymentSplitDispatchEligibilityService: ResolvePaymentSplitDispatchEligibilityService, reservePaymentSplitDispatchService: ReservePaymentSplitDispatchService, dispatchPaymentSplitToGatewayUseCase: DispatchPaymentSplitToGatewayUseCase, markNativePaymentSplitAsTransferredService: MarkNativePaymentSplitAsTransferredService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ProcessPaymentWebhookEventDtoIn): Promise<ProcessPaymentWebhookEventDtoOut>;
     private resolvePaymentTransaction;
     private findPaymentTransactionByUniqueIdSafe;
+    private toObject;
+    private toNullableString;
+    private buildSplitProcessingSummary;
     private dispatchPaymentSplitToGatewayFromWebhookSafe;
     private findPaymentTransactionByGatewayTransactionIdSafe;
     private getPaymentTransactionsByCheckoutSessionIdSafe;
     private resolveTransactionStatusUpdate;
     private resolveGatewayTransactionId;
+    private settleNativeSplitFromWebhookSafe;
+    private isMercadoPagoProvider;
+    private isPagSeguroProvider;
+    private usesNativeSplitSettlement;
+    private isStripeNativeRecurringSplitTransaction;
+    private isStripeNativeRecurringSplitConfig;
+    private isPaidWebhookStatus;
     private buildProviderResponse;
     private buildGatewayResponse;
     private buildMetadata;

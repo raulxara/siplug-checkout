@@ -75,6 +75,7 @@ type PagSeguroOrderRequest = {
     amount: {
       value: number;
     };
+    splits?: PagSeguroNativeSplit;
   }>;
   charges?: Array<{
     reference_id: string;
@@ -84,8 +85,17 @@ type PagSeguroOrderRequest = {
       currency: string;
     };
     payment_method: Record<string, unknown>;
+    splits?: PagSeguroNativeSplit;
   }>;
   notification_urls?: string[];
+};
+
+type PagSeguroNativeSplit = {
+  method: 'FIXED' | 'PERCENTAGE';
+  receivers: Array<{
+    account: { id: string };
+    amount: { value: number };
+  }>;
 };
 
 type PagSeguroOrderResponse = {
@@ -163,6 +173,12 @@ export class PagSeguroGatewayPaymentProvider
   ): Promise<GatewayPaymentDtoOut> {
     try {
       if (dtoIn.paymentTransaction.paymentMethod === 'payment_link') {
+        if (dtoIn.paymentTransaction.hasSplit) {
+          throw new Error(
+            'PagSeguro native split requires a transparent order payment; payment_link is not supported',
+          );
+        }
+
         return this.processHostedCheckout(dtoIn);
       }
 
@@ -316,6 +332,8 @@ export class PagSeguroGatewayPaymentProvider
       items: this.buildItems(dtoIn),
     };
 
+    const nativeSplit = this.buildNativeSplit(dtoIn);
+
     const customer = this.buildCustomer(payerPayload);
 
     if (customer !== null) {
@@ -340,6 +358,7 @@ export class PagSeguroGatewayPaymentProvider
           amount: {
             value: dtoIn.paymentTransaction.amount,
           },
+          ...(nativeSplit === null ? {} : { splits: nativeSplit }),
         },
       ];
 
@@ -347,24 +366,28 @@ export class PagSeguroGatewayPaymentProvider
     }
 
     if (dtoIn.paymentTransaction.paymentMethod === 'boleto') {
-      payload.charges = [
-        this.buildBoletoCharge({
+      const charge = this.buildBoletoCharge({
           dtoIn,
           referenceId,
           payerPayload,
-        }),
+        });
+
+      payload.charges = [
+        nativeSplit === null ? charge : { ...charge, splits: nativeSplit },
       ];
 
       return payload;
     }
 
     if (dtoIn.paymentTransaction.paymentMethod === 'credit_card') {
-      payload.charges = [
-        this.buildCreditCardCharge({
+      const charge = this.buildCreditCardCharge({
           dtoIn,
           referenceId,
           payerPayload,
-        }),
+        });
+
+      payload.charges = [
+        nativeSplit === null ? charge : { ...charge, splits: nativeSplit },
       ];
 
       return payload;
@@ -373,6 +396,98 @@ export class PagSeguroGatewayPaymentProvider
     throw new Error(
       `PagSeguro transparent order does not support payment method ${dtoIn.paymentTransaction.paymentMethod}`,
     );
+  }
+
+  private buildNativeSplit(
+    dtoIn: GatewayPaymentDtoIn,
+  ): PagSeguroNativeSplit | null {
+    if (!dtoIn.paymentTransaction.hasSplit) {
+      return null;
+    }
+
+    const providerPayload = dtoIn.providerPayload ?? {};
+    const paymentSplit = this.asObject(providerPayload.split);
+    const recipients = this.asObjectsArray(paymentSplit?.recipients);
+
+    if (recipients.length === 0) {
+      throw new Error(
+        'PagSeguro native split requires the calculated payment split recipients',
+      );
+    }
+
+    const calculationBase = this.toNullableString(
+      paymentSplit?.calculationBase,
+    );
+
+    if (calculationBase !== null && calculationBase !== 'gross_amount') {
+      throw new Error(
+        'PagSeguro native split requires a split rule calculated from gross_amount',
+      );
+    }
+
+    const mappedRecipients = recipients.map((recipient) => {
+      const config = this.asObject(recipient.config);
+      const gatewayAccounts = this.asObject(config?.gatewayAccounts);
+      const pagSeguroAccount = this.asObject(gatewayAccounts?.pagseguro);
+      const accountId = this.toNullableString(pagSeguroAccount?.accountId);
+      const splitRecipientId =
+        this.toNullableString(recipient.splitRecipientId) ?? 'unknown';
+
+      if (accountId === null || !accountId.startsWith('ACCO_')) {
+        throw new Error(
+          `PagSeguro Account_ID is required for split recipient ${splitRecipientId}`,
+        );
+      }
+
+      const amount = Number(recipient.amount);
+      const percentage = this.toNullableNumber(recipient.percentage);
+
+      if (!Number.isInteger(amount) || amount < 0) {
+        throw new Error('PagSeguro split recipient amount must be a non-negative integer in cents');
+      }
+
+      return { accountId, amount, percentage };
+    });
+
+    const canUsePercentage = mappedRecipients.every(
+      (recipient) => recipient.percentage !== null,
+    );
+
+    if (canUsePercentage) {
+      const percentageTotal = mappedRecipients.reduce(
+        (total, recipient) => total + Number(recipient.percentage),
+        0,
+      );
+
+      if (Math.round(percentageTotal * 100) === 10000) {
+        return {
+          method: 'PERCENTAGE',
+          receivers: mappedRecipients.map((recipient) => ({
+            account: { id: recipient.accountId },
+            amount: { value: Number(recipient.percentage) },
+          })),
+        };
+      }
+    }
+
+    const totalAmount = mappedRecipients.reduce(
+      (total, recipient) => total + recipient.amount,
+      0,
+    );
+
+    if (totalAmount !== dtoIn.paymentTransaction.amount) {
+      throw new Error(
+        'PagSeguro FIXED split recipients must allocate the full gross transaction amount',
+      );
+    }
+
+    return {
+      method: 'FIXED',
+      receivers: mappedRecipients.map((recipient) => ({
+        account: { id: recipient.accountId },
+        amount: { value: recipient.amount },
+      })),
+    };
   }
 
   private buildCreditCardCharge(params: {
@@ -1448,6 +1563,17 @@ export class PagSeguroGatewayPaymentProvider
     return items.length > 0 ? items : null;
   }
 
+  private asObjectsArray(value: unknown): Array<Record<string, unknown>> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+    );
+  }
+
   private asObject(value: unknown): Record<string, unknown> {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return {};
@@ -1464,6 +1590,16 @@ export class PagSeguroGatewayPaymentProvider
     const stringValue = String(value).trim();
 
     return stringValue === '' ? null : stringValue;
+  }
+
+  private toNullableNumber(value: unknown): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const numberValue = Number(value);
+
+    return Number.isFinite(numberValue) ? numberValue : null;
   }
 
   private toPositiveInteger(value: unknown): number | null {

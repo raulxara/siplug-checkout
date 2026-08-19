@@ -6,16 +6,49 @@ import { PAYMENT_SPLIT_RECIPIENTS_REPOSITORY } from '../../tokens/payment-split-
 import { CreatePaymentSplitRecipientDtoIn } from './dtos/create-payment-split-recipient.dto-in';
 import { CreatePaymentSplitRecipientDtoOut } from './dtos/create-payment-split-recipient.dto-out';
 
+import { FindSplitRecipientByUniqueIdDtoIn } from '../../../split-recipients/services/find-split-recipient-by-unique-id/dtos/find-split-recipient-by-unique-id.dto-in';
+import { FindSplitRecipientByUniqueIdService } from '../../../split-recipients/services/find-split-recipient-by-unique-id/find-split-recipient-by-unique-id.service';
+
 @Injectable()
 export class CreatePaymentSplitRecipientService {
   constructor(
     @Inject(PAYMENT_SPLIT_RECIPIENTS_REPOSITORY)
     private readonly paymentSplitRecipientsRepository: IPaymentSplitRecipientsRepository,
+
+    private readonly findSplitRecipientByUniqueIdService: FindSplitRecipientByUniqueIdService,
   ) {}
 
   async exec(
     dtoIn: CreatePaymentSplitRecipientDtoIn,
   ): Promise<CreatePaymentSplitRecipientDtoOut> {
+    const splitRecipient =
+      await this.findSplitRecipientByUniqueIdService.exec(
+        new FindSplitRecipientByUniqueIdDtoIn(dtoIn.splitRecipientId),
+      );
+
+    const splitRecipientData = splitRecipient.splitRecipient as Record<
+      string,
+      unknown
+    >;
+
+    const resolvedGatewayRecipientId =
+      this.toNullableString(dtoIn.gatewayRecipientId) ??
+      this.toNullableString(splitRecipientData.gatewayRecipientId) ??
+      this.toNullableString(splitRecipientData.gateway_recipient_id) ??
+      this.extractStringFromObject(splitRecipientData.config, 'stripeAccountId') ??
+      this.extractStringFromObject(splitRecipientData.config, 'stripe_account_id') ??
+      this.extractStringFromObject(splitRecipientData.config, 'gatewayRecipientId') ??
+      this.extractStringFromObject(splitRecipientData.config, 'gateway_recipient_id') ??
+      this.extractStringFromObject(splitRecipientData.metadata, 'stripeAccountId') ??
+      this.extractStringFromObject(splitRecipientData.metadata, 'stripe_account_id') ??
+      this.extractStringFromObject(splitRecipientData.metadata, 'gatewayRecipientId') ??
+      this.extractStringFromObject(splitRecipientData.metadata, 'gateway_recipient_id');
+
+    const gatewayProvider = this.resolveGatewayProvider({
+      config: dtoIn.config,
+      gatewayRecipientId: resolvedGatewayRecipientId,
+    });
+
     const entity = new PaymentSplitRecipientEntity(
       this.paymentSplitRecipientsRepository,
     );
@@ -23,7 +56,7 @@ export class CreatePaymentSplitRecipientService {
     entity.paymentSplitId = dtoIn.paymentSplitId;
     entity.splitRecipientId = dtoIn.splitRecipientId;
 
-    entity.gatewayRecipientId = dtoIn.gatewayRecipientId;
+    entity.gatewayRecipientId = resolvedGatewayRecipientId;
     entity.gatewayTransferId = dtoIn.gatewayTransferId;
 
     entity.role = dtoIn.role;
@@ -34,8 +67,34 @@ export class CreatePaymentSplitRecipientService {
     entity.providerPayload = dtoIn.providerPayload;
     entity.providerResponse = dtoIn.providerResponse;
     entity.gatewayResponse = dtoIn.gatewayResponse;
-    entity.metadata = dtoIn.metadata;
-    entity.config = dtoIn.config;
+
+    entity.metadata = {
+      ...(dtoIn.metadata ?? {}),
+      ...(resolvedGatewayRecipientId !== null
+        ? {
+            gatewayRecipientId: resolvedGatewayRecipientId,
+            ...(gatewayProvider === 'stripe'
+              ? { stripeAccountId: resolvedGatewayRecipientId }
+              : gatewayProvider === 'pagseguro'
+                ? { pagseguroAccountId: resolvedGatewayRecipientId }
+                : {}),
+          }
+        : {}),
+    };
+
+    entity.config = {
+      ...(dtoIn.config ?? {}),
+      ...(resolvedGatewayRecipientId !== null
+        ? {
+            gatewayRecipientId: resolvedGatewayRecipientId,
+            ...(gatewayProvider === 'stripe'
+              ? { stripeAccountId: resolvedGatewayRecipientId }
+              : gatewayProvider === 'pagseguro'
+                ? { pagseguroAccountId: resolvedGatewayRecipientId }
+                : {}),
+          }
+        : {}),
+    };
 
     entity.changesHistory = [
       {
@@ -75,5 +134,56 @@ export class CreatePaymentSplitRecipientService {
       createdAt: created.createdAt,
       updatedAt: created.updatedAt,
     });
+  }
+
+  private toNullableString(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const stringValue = String(value).trim();
+
+    return stringValue === '' ? null : stringValue;
+  }
+
+  private extractStringFromObject(value: unknown, key: string): string | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    return this.toNullableString((value as Record<string, unknown>)[key]);
+  }
+
+  private resolveGatewayProvider(params: {
+    config: Record<string, unknown> | null;
+    gatewayRecipientId: string | null;
+  }): string | null {
+    if (params.gatewayRecipientId === null) {
+      return null;
+    }
+
+    const gatewayAccounts = params.config?.gatewayAccounts;
+
+    if (
+      gatewayAccounts &&
+      typeof gatewayAccounts === 'object' &&
+      !Array.isArray(gatewayAccounts)
+    ) {
+      for (const [provider, account] of Object.entries(gatewayAccounts)) {
+        if (!account || typeof account !== 'object' || Array.isArray(account)) {
+          continue;
+        }
+
+        const accountId = this.toNullableString(
+          (account as Record<string, unknown>).accountId,
+        );
+
+        if (accountId === params.gatewayRecipientId) {
+          return provider;
+        }
+      }
+    }
+
+    return params.gatewayRecipientId.startsWith('acct_') ? 'stripe' : null;
   }
 }

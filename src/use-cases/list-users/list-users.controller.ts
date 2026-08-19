@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
 } from '@nestjs/common';
 import { ListUsersDtoIn } from './dtos/list-users.dto-in';
@@ -14,6 +16,7 @@ export class ListUsersController {
   constructor(private readonly listUsersUseCase: ListUsersUseCase) {}
 
   @Post('list')
+  @HttpCode(HttpStatus.OK)
   async handle(
     @Body() body: ListUsersRequest,
     @Headers('authorization') authorization?: string,

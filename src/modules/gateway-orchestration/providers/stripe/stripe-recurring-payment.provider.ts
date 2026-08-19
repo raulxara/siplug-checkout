@@ -209,6 +209,19 @@ export class StripeRecurringPaymentProvider {
       );
     }
 
+    const nativeSplit = this.buildNativeRecurringSplit(dtoIn);
+
+    if (nativeSplit !== null) {
+      params.append(
+        'subscription_data[transfer_data][destination]',
+        nativeSplit.destinationAccountId,
+      );
+      params.append(
+        'subscription_data[transfer_data][amount_percent]',
+        nativeSplit.destinationAmountPercent,
+      );
+    }
+
     params.append(
       'metadata[checkoutSessionId]',
       this.toNullableString(checkoutSession._id) ?? '',
@@ -259,6 +272,125 @@ export class StripeRecurringPaymentProvider {
     }
 
     return params;
+  }
+
+  private buildNativeRecurringSplit(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+  ): {
+    destinationAccountId: string;
+    destinationAmountPercent: string;
+  } | null {
+    if (!dtoIn.paymentTransaction.hasSplit) {
+      return null;
+    }
+
+    const paymentSplit = this.asObject(dtoIn.providerPayload.split);
+    const recipients = this.asObjectsArray(paymentSplit.recipients);
+
+    if (recipients.length !== 2) {
+      throw new Error(
+        'Stripe native recurring split supports exactly one connected recipient and one platform recipient',
+      );
+    }
+
+    if (
+      this.toNullableString(paymentSplit.calculationBase) !== null &&
+      this.toNullableString(paymentSplit.calculationBase) !== 'gross_amount'
+    ) {
+      throw new Error(
+        'Stripe native recurring split requires a split rule calculated from gross_amount',
+      );
+    }
+
+    const platformRecipients = recipients.filter((recipient) =>
+      this.isPlatformRecipient(recipient),
+    );
+    const connectedRecipients = recipients.filter(
+      (recipient) => !this.isPlatformRecipient(recipient),
+    );
+
+    if (platformRecipients.length !== 1 || connectedRecipients.length !== 1) {
+      throw new Error(
+        'Stripe native recurring split requires exactly one platform recipient and one connected recipient',
+      );
+    }
+
+    const platformRecipient = platformRecipients[0];
+    const connectedRecipient = connectedRecipients[0];
+    const destinationAccountId = this.resolveStripeConnectedAccountId(
+      connectedRecipient,
+    );
+    const platformAmount = this.toRequiredInteger(
+      platformRecipient.amount,
+      'Stripe platform split amount',
+    );
+    const destinationAmount = this.toRequiredInteger(
+      connectedRecipient.amount,
+      'Stripe connected recipient split amount',
+    );
+
+    if (platformAmount < 0 || destinationAmount <= 0) {
+      throw new Error('Stripe native recurring split amounts are invalid');
+    }
+
+    if (platformAmount + destinationAmount !== dtoIn.paymentTransaction.amount) {
+      throw new Error(
+        'Stripe native recurring split recipients must allocate the full gross subscription amount',
+      );
+    }
+
+    const destinationPercent = (destinationAmount / dtoIn.paymentTransaction.amount) * 100;
+
+    return {
+      destinationAccountId,
+      destinationAmountPercent: this.formatStripePercentage(destinationPercent),
+    };
+  }
+
+  private isPlatformRecipient(recipient: Record<string, unknown>): boolean {
+    const config = this.asObject(recipient.config);
+    const role = this.toNullableString(recipient.role)?.toLowerCase();
+    const defaultRole = this.toNullableString(config.defaultRole)?.toLowerCase();
+
+    return role === 'platform' || defaultRole === 'platform';
+  }
+
+  private resolveStripeConnectedAccountId(
+    recipient: Record<string, unknown>,
+  ): string {
+    const config = this.asObject(recipient.config);
+    const gatewayAccounts = this.asObject(config.gatewayAccounts);
+    const stripeAccount = this.asObject(gatewayAccounts.stripe);
+    const accountId =
+      this.toNullableString(recipient.gatewayRecipientId) ??
+      this.toNullableString(stripeAccount.accountId) ??
+      this.toNullableString(config.stripeAccountId);
+
+    if (accountId === null || !accountId.startsWith('acct_')) {
+      throw new Error(
+        'Stripe connected account id is required for the recurring split recipient',
+      );
+    }
+
+    return accountId;
+  }
+
+  private toRequiredInteger(value: unknown, name: string): number {
+    const parsed = Number(value);
+
+    if (!Number.isInteger(parsed)) {
+      throw new Error(`${name} must be an integer in cents`);
+    }
+
+    return parsed;
+  }
+
+  private formatStripePercentage(value: number): string {
+    if (!Number.isFinite(value) || value <= 0 || value > 100) {
+      throw new Error('Stripe destination amount percentage is invalid');
+    }
+
+    return String(Number(value.toFixed(2)));
   }
 
   private resolveStripePaymentMethodType(paymentMethod: string): string | null {
@@ -582,6 +714,17 @@ export class StripeRecurringPaymentProvider {
     }
 
     return value as Record<string, unknown>;
+  }
+
+  private asObjectsArray(value: unknown): Array<Record<string, unknown>> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+    );
   }
 
   private toNullableString(value: unknown): string | null {

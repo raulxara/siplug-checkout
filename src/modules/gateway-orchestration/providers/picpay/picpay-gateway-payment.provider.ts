@@ -31,8 +31,8 @@ type PicPayPaymentLinkRequest = {
     };
   };
   options: {
-    allow_create_pix_key: boolean;
-    card_max_installment_number: number;
+    allow_create_pix_key?: boolean;
+    card_max_installment_number?: number;
     expired_at: string;
   };
 };
@@ -562,7 +562,7 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
             this.toNullableString(transactionConfig.charge_name) ??
             this.toNullableString(dtoIn.paymentTransaction.externalReference) ??
             `Cobrança ${dtoIn.paymentTransaction._id}`,
-        100,
+        50,
         ),
 
         description: this.limitText(
@@ -578,7 +578,9 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
 
         payment: {
             methods: paymentMethods.methods,
-            brcode_arrangements: paymentMethods.brcodeArrangements,
+            ...(paymentMethods.methods.includes('BRCODE')
+              ? { brcode_arrangements: paymentMethods.brcodeArrangements }
+              : {}),
         },
 
         amounts: {
@@ -591,8 +593,12 @@ export class PicPayGatewayPaymentProvider implements IGatewayPaymentProvider {
         },
 
         options: {
-        allow_create_pix_key: true,
-        card_max_installment_number: installments,
+        ...(paymentMethods.methods.includes('BRCODE')
+          ? { allow_create_pix_key: true }
+          : {}),
+        ...(paymentMethods.methods.includes('CREDIT_CARD')
+          ? { card_max_installment_number: installments }
+          : {}),
         expired_at: this.resolvePicPayExpirationDate(dtoIn),
         },
     };

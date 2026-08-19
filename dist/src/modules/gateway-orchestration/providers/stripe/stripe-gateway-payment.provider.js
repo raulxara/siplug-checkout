@@ -21,12 +21,7 @@ let StripeGatewayPaymentProvider = class StripeGatewayPaymentProvider {
     }
     async processPayment(dtoIn) {
         try {
-            if (![
-                'payment_link',
-                'credit_card',
-                'pix',
-                'boleto',
-            ].includes(dtoIn.paymentTransaction.paymentMethod)) {
+            if (!['payment_link', 'credit_card', 'pix', 'boleto'].includes(dtoIn.paymentTransaction.paymentMethod)) {
                 return new gateway_payment_dto_out_1.GatewayPaymentDtoOut({
                     success: false,
                     provider: this.getProviderName(),
@@ -173,8 +168,7 @@ let StripeGatewayPaymentProvider = class StripeGatewayPaymentProvider {
             payload[`line_items[${index}][price_data][unit_amount]`] = String(item.unitAmount);
             payload[`line_items[${index}][quantity]`] = String(item.quantity);
             if (item.referenceId !== null) {
-                payload[`line_items[${index}][price_data][product_data][metadata][reference_id]`] =
-                    item.referenceId;
+                payload[`line_items[${index}][price_data][product_data][metadata][reference_id]`] = item.referenceId;
             }
         });
         payload['metadata[paymentTransactionId]'] = dtoIn.paymentTransaction._id;
@@ -206,6 +200,9 @@ let StripeGatewayPaymentProvider = class StripeGatewayPaymentProvider {
         const config = dtoIn.config ?? {};
         const transactionConfig = this.asObject(config.transactionConfig);
         const apiCredentialConfig = this.asObject(config.apiCredentialConfig);
+        if (dtoIn.paymentTransaction.paymentMethod === 'payment_link') {
+            return ['card'];
+        }
         if (dtoIn.paymentTransaction.paymentMethod === 'credit_card') {
             return ['card'];
         }
@@ -453,6 +450,11 @@ let StripeGatewayPaymentProvider = class StripeGatewayPaymentProvider {
     }
     toNullableString(value) {
         if (value === undefined || value === null) {
+            return null;
+        }
+        if (typeof value !== 'string' &&
+            typeof value !== 'number' &&
+            typeof value !== 'boolean') {
             return null;
         }
         const stringValue = String(value).trim();

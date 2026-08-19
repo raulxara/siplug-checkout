@@ -25,6 +25,12 @@ const create_payment_transaction_dto_in_1 = require("../../modules/payment-trans
 const create_payment_transaction_service_1 = require("../../modules/payment-transactions/services/create-payment-transaction/create-payment-transaction.service");
 const update_payment_transaction_dto_in_1 = require("../../modules/payment-transactions/services/update-payment-transaction/dtos/update-payment-transaction.dto-in");
 const update_payment_transaction_service_1 = require("../../modules/payment-transactions/services/update-payment-transaction/update-payment-transaction.service");
+const create_payment_split_recipient_dto_in_1 = require("../../modules/payment-split-recipients/services/create-payment-split-recipient/dtos/create-payment-split-recipient.dto-in");
+const create_payment_split_recipient_service_1 = require("../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service");
+const create_payment_split_dto_in_1 = require("../../modules/payment-splits/services/create-payment-split/dtos/create-payment-split.dto-in");
+const create_payment_split_service_1 = require("../../modules/payment-splits/services/create-payment-split/create-payment-split.service");
+const calculate_payment_split_dto_in_1 = require("../../modules/split-calculations/services/calculate-payment-split/dtos/calculate-payment-split.dto-in");
+const calculate_payment_split_service_1 = require("../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service");
 const resolve_actor_authorization_dto_in_1 = require("../../modules/security/services/resolve-actor-authorization/dtos/resolve-actor-authorization.dto-in");
 const resolve_actor_authorization_service_1 = require("../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service");
 const create_subscription_cycle_dto_in_1 = require("../../modules/subscription-cycles/services/create-subscription-cycle/dtos/create-subscription-cycle.dto-in");
@@ -55,10 +61,13 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
     updateSubscriptionInvoiceService;
     createPaymentTransactionService;
     updatePaymentTransactionService;
+    calculatePaymentSplitService;
+    createPaymentSplitService;
+    createPaymentSplitRecipientService;
     resolvePaymentGatewayCredentialService;
     dispatchGatewayRecurringPaymentService;
     handleUseCaseExceptionService;
-    constructor(resolveActorAuthorizationService, findCheckoutSessionByUniqueIdService, updateCheckoutSessionService, findSubscriptionPlanByUniqueIdService, createPaymentCustomerService, createSubscriptionService, updateSubscriptionService, createSubscriptionCycleService, createSubscriptionInvoiceService, updateSubscriptionInvoiceService, createPaymentTransactionService, updatePaymentTransactionService, resolvePaymentGatewayCredentialService, dispatchGatewayRecurringPaymentService, handleUseCaseExceptionService) {
+    constructor(resolveActorAuthorizationService, findCheckoutSessionByUniqueIdService, updateCheckoutSessionService, findSubscriptionPlanByUniqueIdService, createPaymentCustomerService, createSubscriptionService, updateSubscriptionService, createSubscriptionCycleService, createSubscriptionInvoiceService, updateSubscriptionInvoiceService, createPaymentTransactionService, updatePaymentTransactionService, calculatePaymentSplitService, createPaymentSplitService, createPaymentSplitRecipientService, resolvePaymentGatewayCredentialService, dispatchGatewayRecurringPaymentService, handleUseCaseExceptionService) {
         this.resolveActorAuthorizationService = resolveActorAuthorizationService;
         this.findCheckoutSessionByUniqueIdService = findCheckoutSessionByUniqueIdService;
         this.updateCheckoutSessionService = updateCheckoutSessionService;
@@ -71,6 +80,9 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
         this.updateSubscriptionInvoiceService = updateSubscriptionInvoiceService;
         this.createPaymentTransactionService = createPaymentTransactionService;
         this.updatePaymentTransactionService = updatePaymentTransactionService;
+        this.calculatePaymentSplitService = calculatePaymentSplitService;
+        this.createPaymentSplitService = createPaymentSplitService;
+        this.createPaymentSplitRecipientService = createPaymentSplitRecipientService;
         this.resolvePaymentGatewayCredentialService = resolvePaymentGatewayCredentialService;
         this.dispatchGatewayRecurringPaymentService = dispatchGatewayRecurringPaymentService;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
@@ -83,11 +95,6 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 requiredEntity: 'payments',
             }));
             this.validatePaymentMethod(dtoIn.paymentMethod);
-            this.assertNoForbiddenRawCardData({
-                paymentData: dtoIn.paymentData,
-                gatewayProvider: dtoIn.gatewayProvider,
-                paymentMethod: dtoIn.paymentMethod,
-            });
             this.assertNoSensitiveFields(dtoIn.metadata, 'metadata');
             this.assertNoSensitiveFields(dtoIn.config, 'config');
             const checkoutSessionDtoOut = await this.findCheckoutSessionByUniqueIdService.exec(new find_checkout_session_by_unique_id_dto_in_1.FindCheckoutSessionByUniqueIdDtoIn(dtoIn.checkoutSessionId));
@@ -142,6 +149,11 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
             });
             const resolvedGateway = resolvedGatewayCredentialDtoOut.gateway;
             const resolvedApiCredential = resolvedGatewayCredentialDtoOut.apiCredential;
+            this.assertNoForbiddenRawCardData({
+                paymentData: dtoIn.paymentData,
+                gatewayProvider: resolvedGateway.provider,
+                paymentMethod: dtoIn.paymentMethod,
+            });
             const externalReference = checkoutSession.externalReference ??
                 `recurring-checkout-${checkoutSession._id}`;
             const subscriptionDtoOut = await this.createSubscriptionService.exec(new create_subscription_dto_in_1.CreateSubscriptionDtoIn(checkoutSession.officeId, checkoutSession.clientId, subscriptionPlan._id, paymentCustomerId, resolvedGateway._id, resolvedApiCredential._id, null, externalReference, checkoutSession.amount, checkoutSession.currency, 0, this.resolveInitialNextBillingAt(subscriptionPlan.trialDays), null, null, null, {
@@ -164,6 +176,7 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 },
             }, 'pending'));
             const subscription = subscriptionDtoOut.subscription;
+            let recurringSplitSnapshot = null;
             const cycleNumber = 1;
             const scheduledAt = subscription.nextBillingAt ?? new Date().toISOString();
             const periodStart = scheduledAt;
@@ -188,6 +201,7 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 apiCredentialId: resolvedApiCredential._id,
             }, 'created'));
             const subscriptionInvoice = subscriptionInvoiceDtoOut.subscriptionInvoice;
+            const splitRequired = this.resolveSplitRequired(checkoutSession.config, dtoIn.config);
             const idempotencyKey = `recurring-${checkoutSession._id}-${subscriptionInvoice._id}`;
             const providerPayload = {
                 checkoutSession: {
@@ -262,7 +276,7 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 qrCodeBase64: null,
                 boletoUrl: null,
                 checkoutUrl: null,
-                splitRequired: false,
+                splitRequired,
                 hasSplit: false,
                 paidAt: null,
                 authorizedAt: null,
@@ -287,13 +301,53 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 },
             }));
             const paymentTransaction = this.buildPaymentTransactionRowFromCreateDtoOut(createPaymentTransactionDtoOut);
+            let paymentTransactionWithSplit = paymentTransaction;
+            const paymentSplitSnapshot = await this.registerPaymentSplitForTransaction({
+                checkoutSessionConfig: checkoutSession.config,
+                requestConfig: dtoIn.config,
+                paymentTransaction,
+                gatewayProvider: resolvedGateway.provider,
+                subscriptionId: subscription._id,
+                subscriptionInvoiceId: subscriptionInvoice._id,
+                metadata: {
+                    source: 'ProcessRecurringPaymentUseCase',
+                    checkoutSessionId: checkoutSession._id,
+                    paymentTransactionId: paymentTransaction._id,
+                    subscriptionId: subscription._id,
+                    subscriptionInvoiceId: subscriptionInvoice._id,
+                },
+            });
+            if (paymentSplitSnapshot !== null) {
+                recurringSplitSnapshot = this.buildRecurringSplitSnapshot(paymentSplitSnapshot);
+                providerPayload.split = paymentSplitSnapshot;
+                const updatedWithSplitDtoOut = await this.updatePaymentTransactionService.exec(new update_payment_transaction_dto_in_1.UpdatePaymentTransactionDtoIn({
+                    _id: paymentTransaction._id,
+                    hasSplit: true,
+                    providerPayload: this.sanitizeSensitiveGatewayData(providerPayload),
+                    config: {
+                        ...(paymentTransaction.config ?? {}),
+                        split: {
+                            required: true,
+                            paymentSplitId: String(paymentSplitSnapshot.paymentSplitId),
+                            splitRuleId: String(paymentSplitSnapshot.splitRuleId),
+                            mode: 'gateway-native-recurring',
+                        },
+                    },
+                    source: 'ProcessRecurringPaymentUseCase.registerPaymentSplit',
+                }));
+                paymentTransactionWithSplit = updatedWithSplitDtoOut.paymentTransaction;
+                await this.updateSubscriptionService.exec(new update_subscription_dto_in_1.UpdateSubscriptionDtoIn(subscription._id, subscription.currentCycle, subscription.nextBillingAt, subscription.startedAt, subscription.canceledAt, subscription.endedAt, subscription.metadata, {
+                    ...(subscription.config ?? {}),
+                    recurringSplit: recurringSplitSnapshot,
+                }, subscription.status, 'ProcessRecurringPaymentUseCase.registerPaymentSplit', subscription.gatewaySubscriptionId));
+            }
             const gatewayRecurringDtoOut = await this.dispatchGatewayRecurringPaymentService.exec(new gateway_recurring_payment_dto_in_1.GatewayRecurringPaymentDtoIn({
                 gatewayProvider: resolvedGateway.provider,
                 gatewaySlug: resolvedGateway.slug,
                 subscriptionPlan,
                 subscription,
                 subscriptionInvoice,
-                paymentTransaction,
+                paymentTransaction: paymentTransactionWithSplit,
                 apiCredential: {
                     _id: resolvedApiCredential._id,
                     slug: resolvedApiCredential.slug,
@@ -306,7 +360,7 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 idempotencyKey,
                 config: {
                     gatewayConfig: resolvedGateway.config,
-                    transactionConfig: paymentTransaction.config,
+                    transactionConfig: paymentTransactionWithSplit.config,
                     apiCredentialConfig: resolvedApiCredential.config,
                     subscriptionPlanConfig: subscriptionPlan.config,
                     subscriptionConfig: subscription.config,
@@ -343,6 +397,9 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 gatewayPlanId: gatewayRecurringDtoOut.gatewayPlanId,
                 checkoutUrl: gatewayRecurringDtoOut.checkoutUrl ??
                     gatewayRecurringDtoOut.approvalUrl,
+                ...(recurringSplitSnapshot === null
+                    ? {}
+                    : { recurringSplit: recurringSplitSnapshot }),
             }, this.resolveSubscriptionStatus(gatewayRecurringDtoOut.status), 'ProcessRecurringPaymentUseCase.gatewayResponse', gatewayRecurringDtoOut.gatewaySubscriptionId));
             const updatedInvoiceDtoOut = await this.updateSubscriptionInvoiceService.exec(new update_subscription_invoice_dto_in_1.UpdateSubscriptionInvoiceDtoIn(subscriptionInvoice._id, updatedPaymentTransactionDtoOut.paymentTransaction._id, gatewayRecurringDtoOut.gatewayInvoiceId ??
                 gatewayRecurringDtoOut.gatewayTransactionId, this.nowAsIso(), 2, gatewayRecurringDtoOut.paidAt, subscriptionInvoice.metadata, subscriptionInvoice.config, this.resolveInvoiceStatus(gatewayRecurringDtoOut.status), 'ProcessRecurringPaymentUseCase.gatewayResponse'));
@@ -473,6 +530,107 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
             return 'canceled';
         }
         return 'processing';
+    }
+    resolveSplitRequired(checkoutSessionConfig, requestConfig) {
+        const requestConfigObject = this.asObject(requestConfig);
+        const checkoutConfigObject = this.asObject(checkoutSessionConfig);
+        const requested = this.toNullableBoolean(requestConfigObject.splitRequired ?? requestConfigObject.requiresSplit);
+        if (requested === false) {
+            return false;
+        }
+        if (this.resolveSplitRuleId(checkoutSessionConfig, requestConfig) !== null) {
+            return true;
+        }
+        const checkoutRequired = this.toNullableBoolean(checkoutConfigObject.splitRequired ?? checkoutConfigObject.requiresSplit);
+        if (requested === true || checkoutRequired === true) {
+            throw new Error('splitRuleId is required when split is required');
+        }
+        return false;
+    }
+    resolveSplitRuleId(checkoutSessionConfig, requestConfig) {
+        return (this.toNullableString(this.asObject(requestConfig).splitRuleId) ??
+            this.toNullableString(this.asObject(checkoutSessionConfig).splitRuleId));
+    }
+    async registerPaymentSplitForTransaction(params) {
+        if (!params.paymentTransaction.splitRequired) {
+            return null;
+        }
+        const splitRuleId = this.resolveSplitRuleId(params.checkoutSessionConfig, params.requestConfig);
+        if (splitRuleId === null) {
+            throw new Error('splitRuleId is required when split is required');
+        }
+        const calculation = await this.calculatePaymentSplitService.exec(new calculate_payment_split_dto_in_1.CalculatePaymentSplitDtoIn(splitRuleId, params.paymentTransaction.amount, null, null, params.paymentTransaction.currency, params.metadata));
+        const paymentSplitDtoOut = await this.createPaymentSplitService.exec(new create_payment_split_dto_in_1.CreatePaymentSplitDtoIn(String(calculation.splitRule.officeId), String(calculation.splitRule.clientId), params.paymentTransaction.checkoutSessionId, params.paymentTransaction._id, params.subscriptionId, params.subscriptionInvoiceId, splitRuleId, params.gatewayProvider, null, calculation.allocatedAmount, calculation.currency, null, null, null, params.metadata, {
+            splitRuleId,
+            mode: 'gateway-native-recurring',
+            calculationSnapshot: {
+                calculationBase: calculation.calculationBase,
+                grossAmount: calculation.grossAmount,
+                gatewayFeeAmount: calculation.gatewayFeeAmount,
+                netAmount: calculation.netAmount,
+                baseAmount: calculation.baseAmount,
+                allocatedAmount: calculation.allocatedAmount,
+                unallocatedAmount: calculation.unallocatedAmount,
+                currency: calculation.currency,
+            },
+        }, 'created'));
+        const recipients = [];
+        for (const recipient of calculation.recipients) {
+            const recipientConfig = {
+                ...(recipient.config ?? {}),
+                splitRuleRecipientId: recipient.splitRuleRecipientId,
+                fixedAmount: recipient.fixedAmount,
+                liableForGatewayFee: recipient.liableForGatewayFee,
+                liableForRefund: recipient.liableForRefund,
+                priority: recipient.priority,
+            };
+            const paymentSplitRecipientDtoOut = await this.createPaymentSplitRecipientService.exec(new create_payment_split_recipient_dto_in_1.CreatePaymentSplitRecipientDtoIn(String(paymentSplitDtoOut.paymentSplit._id), recipient.splitRecipientId, this.resolveGatewayRecipientId(recipient.config, params.gatewayProvider), null, recipient.role, recipient.amount, recipient.percentage, recipient.currency, null, null, null, recipient.metadata, recipientConfig, 'created'));
+            recipients.push(paymentSplitRecipientDtoOut.paymentSplitRecipient);
+        }
+        return {
+            paymentSplitId: paymentSplitDtoOut.paymentSplit._id,
+            splitRuleId,
+            calculationBase: calculation.calculationBase,
+            grossAmount: calculation.grossAmount,
+            gatewayFeeAmount: calculation.gatewayFeeAmount,
+            netAmount: calculation.netAmount,
+            baseAmount: calculation.baseAmount,
+            allocatedAmount: calculation.allocatedAmount,
+            unallocatedAmount: calculation.unallocatedAmount,
+            currency: calculation.currency,
+            recipients,
+        };
+    }
+    buildRecurringSplitSnapshot(paymentSplitSnapshot) {
+        return {
+            paymentSplitId: paymentSplitSnapshot.paymentSplitId,
+            splitRuleId: paymentSplitSnapshot.splitRuleId,
+            calculationBase: paymentSplitSnapshot.calculationBase,
+            grossAmount: paymentSplitSnapshot.grossAmount,
+            allocatedAmount: paymentSplitSnapshot.allocatedAmount,
+            currency: paymentSplitSnapshot.currency,
+            recipients: paymentSplitSnapshot.recipients,
+            immutable: true,
+            source: 'ProcessRecurringPaymentUseCase',
+        };
+    }
+    resolveGatewayRecipientId(recipientConfig, gatewayProvider) {
+        const config = this.asObject(recipientConfig);
+        const gatewayAccounts = this.asObject(config.gatewayAccounts);
+        const provider = this.normalizeProviderName(gatewayProvider);
+        const providerAccount = this.asObject(gatewayAccounts[provider] ??
+            (provider === 'pagbank' ? gatewayAccounts.pagseguro : undefined));
+        return (this.toNullableString(providerAccount.accountId) ??
+            this.toNullableString(config.gatewayRecipientId));
+    }
+    toNullableBoolean(value) {
+        if (value === true || value === 'true') {
+            return true;
+        }
+        if (value === false || value === 'false') {
+            return false;
+        }
+        return null;
     }
     validatePaymentMethod(paymentMethod) {
         const allowedPaymentMethods = [
@@ -746,6 +904,9 @@ exports.ProcessRecurringPaymentUseCase = ProcessRecurringPaymentUseCase = __deco
         update_subscription_invoice_service_1.UpdateSubscriptionInvoiceService,
         create_payment_transaction_service_1.CreatePaymentTransactionService,
         update_payment_transaction_service_1.UpdatePaymentTransactionService,
+        calculate_payment_split_service_1.CalculatePaymentSplitService,
+        create_payment_split_service_1.CreatePaymentSplitService,
+        create_payment_split_recipient_service_1.CreatePaymentSplitRecipientService,
         resolve_payment_gateway_credential_service_1.ResolvePaymentGatewayCredentialService,
         dispatch_gateway_recurring_payment_service_1.DispatchGatewayRecurringPaymentService,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])

@@ -362,7 +362,7 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                 name: this.limitText(this.toNullableString(transactionConfig.chargeName) ??
                     this.toNullableString(transactionConfig.charge_name) ??
                     this.toNullableString(dtoIn.paymentTransaction.externalReference) ??
-                    `Cobrança ${dtoIn.paymentTransaction._id}`, 100),
+                    `Cobrança ${dtoIn.paymentTransaction._id}`, 50),
                 description: this.limitText(this.toNullableString(transactionConfig.description) ??
                     this.toNullableString(dtoIn.paymentTransaction.externalReference) ??
                     `Pagamento ${dtoIn.paymentTransaction._id}`, 255),
@@ -370,7 +370,9 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                 redirect_url: redirectUrl,
                 payment: {
                     methods: paymentMethods.methods,
-                    brcode_arrangements: paymentMethods.brcodeArrangements,
+                    ...(paymentMethods.methods.includes('BRCODE')
+                        ? { brcode_arrangements: paymentMethods.brcodeArrangements }
+                        : {}),
                 },
                 amounts: {
                     product: dtoIn.paymentTransaction.amount,
@@ -380,8 +382,12 @@ let PicPayGatewayPaymentProvider = class PicPayGatewayPaymentProvider {
                 },
             },
             options: {
-                allow_create_pix_key: true,
-                card_max_installment_number: installments,
+                ...(paymentMethods.methods.includes('BRCODE')
+                    ? { allow_create_pix_key: true }
+                    : {}),
+                ...(paymentMethods.methods.includes('CREDIT_CARD')
+                    ? { card_max_installment_number: installments }
+                    : {}),
                 expired_at: this.resolvePicPayExpirationDate(dtoIn),
             },
         };

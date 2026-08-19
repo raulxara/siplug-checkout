@@ -22,6 +22,9 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
     async processPayment(dtoIn) {
         try {
             if (dtoIn.paymentTransaction.paymentMethod === 'payment_link') {
+                if (dtoIn.paymentTransaction.hasSplit) {
+                    throw new Error('PagSeguro native split requires a transparent order payment; payment_link is not supported');
+                }
                 return this.processHostedCheckout(dtoIn);
             }
             if (dtoIn.paymentTransaction.paymentMethod === 'pix' ||
@@ -135,6 +138,7 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
             reference_id: referenceId,
             items: this.buildItems(dtoIn),
         };
+        const nativeSplit = this.buildNativeSplit(dtoIn);
         const customer = this.buildCustomer(payerPayload);
         if (customer !== null) {
             payload.customer = customer;
@@ -154,31 +158,89 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
                     amount: {
                         value: dtoIn.paymentTransaction.amount,
                     },
+                    ...(nativeSplit === null ? {} : { splits: nativeSplit }),
                 },
             ];
             return payload;
         }
         if (dtoIn.paymentTransaction.paymentMethod === 'boleto') {
+            const charge = this.buildBoletoCharge({
+                dtoIn,
+                referenceId,
+                payerPayload,
+            });
             payload.charges = [
-                this.buildBoletoCharge({
-                    dtoIn,
-                    referenceId,
-                    payerPayload,
-                }),
+                nativeSplit === null ? charge : { ...charge, splits: nativeSplit },
             ];
             return payload;
         }
         if (dtoIn.paymentTransaction.paymentMethod === 'credit_card') {
+            const charge = this.buildCreditCardCharge({
+                dtoIn,
+                referenceId,
+                payerPayload,
+            });
             payload.charges = [
-                this.buildCreditCardCharge({
-                    dtoIn,
-                    referenceId,
-                    payerPayload,
-                }),
+                nativeSplit === null ? charge : { ...charge, splits: nativeSplit },
             ];
             return payload;
         }
         throw new Error(`PagSeguro transparent order does not support payment method ${dtoIn.paymentTransaction.paymentMethod}`);
+    }
+    buildNativeSplit(dtoIn) {
+        if (!dtoIn.paymentTransaction.hasSplit) {
+            return null;
+        }
+        const providerPayload = dtoIn.providerPayload ?? {};
+        const paymentSplit = this.asObject(providerPayload.split);
+        const recipients = this.asObjectsArray(paymentSplit?.recipients);
+        if (recipients.length === 0) {
+            throw new Error('PagSeguro native split requires the calculated payment split recipients');
+        }
+        const calculationBase = this.toNullableString(paymentSplit?.calculationBase);
+        if (calculationBase !== null && calculationBase !== 'gross_amount') {
+            throw new Error('PagSeguro native split requires a split rule calculated from gross_amount');
+        }
+        const mappedRecipients = recipients.map((recipient) => {
+            const config = this.asObject(recipient.config);
+            const gatewayAccounts = this.asObject(config?.gatewayAccounts);
+            const pagSeguroAccount = this.asObject(gatewayAccounts?.pagseguro);
+            const accountId = this.toNullableString(pagSeguroAccount?.accountId);
+            const splitRecipientId = this.toNullableString(recipient.splitRecipientId) ?? 'unknown';
+            if (accountId === null || !accountId.startsWith('ACCO_')) {
+                throw new Error(`PagSeguro Account_ID is required for split recipient ${splitRecipientId}`);
+            }
+            const amount = Number(recipient.amount);
+            const percentage = this.toNullableNumber(recipient.percentage);
+            if (!Number.isInteger(amount) || amount < 0) {
+                throw new Error('PagSeguro split recipient amount must be a non-negative integer in cents');
+            }
+            return { accountId, amount, percentage };
+        });
+        const canUsePercentage = mappedRecipients.every((recipient) => recipient.percentage !== null);
+        if (canUsePercentage) {
+            const percentageTotal = mappedRecipients.reduce((total, recipient) => total + Number(recipient.percentage), 0);
+            if (Math.round(percentageTotal * 100) === 10000) {
+                return {
+                    method: 'PERCENTAGE',
+                    receivers: mappedRecipients.map((recipient) => ({
+                        account: { id: recipient.accountId },
+                        amount: { value: Number(recipient.percentage) },
+                    })),
+                };
+            }
+        }
+        const totalAmount = mappedRecipients.reduce((total, recipient) => total + recipient.amount, 0);
+        if (totalAmount !== dtoIn.paymentTransaction.amount) {
+            throw new Error('PagSeguro FIXED split recipients must allocate the full gross transaction amount');
+        }
+        return {
+            method: 'FIXED',
+            receivers: mappedRecipients.map((recipient) => ({
+                account: { id: recipient.accountId },
+                amount: { value: recipient.amount },
+            })),
+        };
     }
     buildCreditCardCharge(params) {
         const providerPayload = params.dtoIn.providerPayload ?? {};
@@ -924,6 +986,12 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
             .filter((item) => item !== null);
         return items.length > 0 ? items : null;
     }
+    asObjectsArray(value) {
+        if (!Array.isArray(value)) {
+            return [];
+        }
+        return value.filter((item) => Boolean(item) && typeof item === 'object' && !Array.isArray(item));
+    }
     asObject(value) {
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
             return {};
@@ -936,6 +1004,13 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
         }
         const stringValue = String(value).trim();
         return stringValue === '' ? null : stringValue;
+    }
+    toNullableNumber(value) {
+        if (value === undefined || value === null || value === '') {
+            return null;
+        }
+        const numberValue = Number(value);
+        return Number.isFinite(numberValue) ? numberValue : null;
     }
     toPositiveInteger(value) {
         if (typeof value === 'number' && Number.isInteger(value) && value > 0) {

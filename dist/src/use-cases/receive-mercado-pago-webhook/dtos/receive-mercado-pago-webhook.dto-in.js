@@ -6,6 +6,7 @@ class ReceiveMercadoPagoWebhookDtoIn {
     payload;
     headers;
     queryParams;
+    devSkipSignature;
     xSignature;
     xRequestId;
     constructor(params) {
@@ -13,17 +14,35 @@ class ReceiveMercadoPagoWebhookDtoIn {
         this.payload = this.toObject(params.payload, 'payload');
         this.headers = this.toObject(params.headers, 'headers');
         this.queryParams = this.toObject(params.queryParams, 'queryParams');
+        this.devSkipSignature = params.devSkipSignature === true;
         this.xSignature = String(params.xSignature ?? '').trim();
-        this.xRequestId = String(params.xRequestId ?? '').trim();
+        this.xRequestId = this.resolveXRequestId({
+            xRequestId: params.xRequestId,
+            devSkipSignature: this.devSkipSignature,
+        });
         if (this.apiCredentialId === '') {
             throw new Error('apiCredentialId is required');
         }
-        if (this.xSignature === '') {
+        const appEnv = String(process.env.APP_ENV ?? process.env.NODE_ENV ?? '').toLowerCase();
+        const isLocalEnvironment = ['local', 'development', 'dev', 'test'].includes(appEnv);
+        if (this.xSignature === '' &&
+            !(isLocalEnvironment && this.devSkipSignature === true)) {
             throw new Error('x-signature is required');
         }
-        if (this.xRequestId === '') {
+        if (this.xRequestId === '' &&
+            !(isLocalEnvironment && this.devSkipSignature === true)) {
             throw new Error('x-request-id is required');
         }
+    }
+    resolveXRequestId(params) {
+        const xRequestId = String(params.xRequestId ?? '').trim();
+        if (xRequestId !== '') {
+            return xRequestId;
+        }
+        if (params.devSkipSignature === true) {
+            return `dev-mercado-pago-webhook-${Date.now()}`;
+        }
+        return '';
     }
     toObject(value, field) {
         if (value === undefined || value === null) {

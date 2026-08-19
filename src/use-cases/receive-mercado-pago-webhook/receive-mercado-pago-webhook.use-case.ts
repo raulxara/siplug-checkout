@@ -74,14 +74,16 @@ export class ReceiveMercadoPagoWebhookUseCase {
         queryParams: dtoIn.queryParams,
       });
 
-      await this.validateMercadoPagoWebhookService.exec(
-        new ValidateMercadoPagoWebhookDtoIn({
-          xSignature: dtoIn.xSignature,
-          xRequestId: dtoIn.xRequestId,
-          dataId: this.resolveSignatureDataId(dtoIn.queryParams),
-          webhookSecret: credentialData.webhookSecret,
-        }),
-      );
+      if (this.shouldValidateMercadoPagoSignature(dtoIn)) {
+        await this.validateMercadoPagoWebhookService.exec(
+          new ValidateMercadoPagoWebhookDtoIn({
+            xSignature: dtoIn.xSignature,
+            xRequestId: dtoIn.xRequestId,
+            dataId: this.resolveSignatureDataId(dtoIn.queryParams),
+            webhookSecret: credentialData.webhookSecret,
+          }),
+        );
+      }
 
       const mercadoPagoResource = await this.resolveMercadoPagoResource({
         resourceType,
@@ -243,6 +245,26 @@ export class ReceiveMercadoPagoWebhookUseCase {
 
       throw new Error(message);
     }
+  }
+
+  private shouldValidateMercadoPagoSignature(
+    dtoIn: ReceiveMercadoPagoWebhookDtoIn,
+  ): boolean {
+    if (dtoIn.devSkipSignature !== true) {
+      return true;
+    }
+
+    const appEnv = String(
+      process.env.APP_ENV ?? process.env.NODE_ENV ?? '',
+    )
+      .trim()
+      .toLowerCase();
+
+    const isLocalEnvironment = ['local', 'development', 'dev', 'test'].includes(
+      appEnv,
+    );
+
+    return !isLocalEnvironment;
   }
 
   private resolveResourceType(params: {
