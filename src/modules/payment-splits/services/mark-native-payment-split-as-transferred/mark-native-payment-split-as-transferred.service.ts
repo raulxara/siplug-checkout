@@ -438,7 +438,9 @@ export class MarkNativePaymentSplitAsTransferredService {
 
   private isSupportedNativeProvider(provider: unknown): boolean {
     return (
-      this.isMercadoPagoProvider(provider) || this.isPagSeguroProvider(provider)
+      this.isMercadoPagoProvider(provider) ||
+      this.isPagSeguroProvider(provider) ||
+      this.isStripeProvider(provider)
     );
   }
 
@@ -469,6 +471,10 @@ export class MarkNativePaymentSplitAsTransferredService {
     return ['pagseguro', 'pagbank', 'pag_bank', 'pag-seguro'].includes(
       String(provider ?? '').trim().toLowerCase(),
     );
+  }
+
+  private isStripeProvider(provider: unknown): boolean {
+    return ['stripe'].includes(String(provider ?? '').trim().toLowerCase());
   }
 
   private requiredString(value: unknown, field: string): string {

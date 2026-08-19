@@ -5,6 +5,8 @@ export declare class PagSeguroRecurringPaymentProvider {
     private resolveOrCreatePlan;
     private buildPlanRequest;
     private buildSubscriptionRequest;
+    private buildNativeSplit;
+    private assertSplitCompatibleSubscription;
     private resolveCustomerForSubscription;
     private findCustomerByTaxId;
     private updateCustomerBillingInfoForCreditCard;
@@ -30,6 +32,8 @@ export declare class PagSeguroRecurringPaymentProvider {
     private sanitizeUnknownValue;
     private isSensitiveKey;
     private asObject;
+    private asObjectsArray;
+    private toNullableNumber;
     private ensureRecurringNotificationPreferences;
     private resolveRecurringNotificationUrl;
     private toNullableString;

@@ -11,6 +11,9 @@ import { SubscriptionsModule } from '../../modules/subscriptions/subscriptions.m
 import { ProcessRecurringPaymentController } from './process-recurring-payment.controller';
 import { ProcessRecurringPaymentUseCase } from './process-recurring-payment.use-case';
 import { PaymentCustomersModule } from '../../modules/payment-customers/payment-customers.module';
+import { PaymentSplitRecipientsModule } from '../../modules/payment-split-recipients/payment-split-recipients.module';
+import { PaymentSplitsModule } from '../../modules/payment-splits/payment-splits.module';
+import { SplitCalculationsModule } from '../../modules/split-calculations/split-calculations.module';
 
 @Module({
   imports: [
@@ -21,6 +24,9 @@ import { PaymentCustomersModule } from '../../modules/payment-customers/payment-
     SubscriptionCyclesModule,
     SubscriptionInvoicesModule,
     PaymentTransactionsModule,
+    PaymentSplitsModule,
+    PaymentSplitRecipientsModule,
+    SplitCalculationsModule,
     GatewayOrchestrationModule,
     SecurityModule,
     UseCaseSupportModule,

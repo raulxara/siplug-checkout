@@ -250,6 +250,8 @@ export class ProcessPaymentWebhookEventUseCase {
             canonicalStatus: dtoIn.normalizedEvent.canonicalStatus,
             gatewayTransactionId: dtoIn.normalizedEvent.gatewayTransactionId,
             rawPayload: dtoIn.normalizedEvent.rawPayload,
+            paymentTransactionConfig:
+              updatedTransactionDtoOut.paymentTransaction.config,
         });
 
       const splitProcessingSummary = this.buildSplitProcessingSummary({
@@ -418,7 +420,7 @@ export class ProcessPaymentWebhookEventUseCase {
 
     return {
       provider: params.provider,
-      mode: this.usesNativeSplitSettlement(params.provider)
+      mode: params.splitGatewayDispatchResult.nativeSettled === true
         ? 'native_split'
         : 'external_gateway_dispatch',
 
@@ -480,10 +482,14 @@ export class ProcessPaymentWebhookEventUseCase {
     canonicalStatus: string | null;
     gatewayTransactionId: string | null;
     rawPayload: Record<string, unknown> | null;
+    paymentTransactionConfig: Record<string, unknown> | null;
     }): Promise<Record<string, unknown>> {
 
     if (
-      this.usesNativeSplitSettlement(params.provider) &&
+      this.usesNativeSplitSettlement({
+        provider: params.provider,
+        paymentTransactionConfig: params.paymentTransactionConfig,
+      }) &&
       this.isPaidWebhookStatus(params.canonicalStatus)
     ) {
       return await this.settleNativeSplitFromWebhookSafe({
@@ -815,8 +821,32 @@ export class ProcessPaymentWebhookEventUseCase {
     );
   }
 
-  private usesNativeSplitSettlement(provider: unknown): boolean {
-    return this.isMercadoPagoProvider(provider) || this.isPagSeguroProvider(provider);
+  private usesNativeSplitSettlement(params: {
+    provider: unknown;
+    paymentTransactionConfig: Record<string, unknown> | null;
+  }): boolean {
+    return (
+      this.isMercadoPagoProvider(params.provider) ||
+      this.isPagSeguroProvider(params.provider) ||
+      (String(params.provider ?? '').trim().toLowerCase() === 'stripe' &&
+        this.isStripeNativeRecurringSplitConfig(
+          params.paymentTransactionConfig,
+        ))
+    );
+  }
+
+  private isStripeNativeRecurringSplitTransaction(
+    paymentTransaction: PaymentTransactionRow,
+  ): boolean {
+    return this.isStripeNativeRecurringSplitConfig(paymentTransaction.config);
+  }
+
+  private isStripeNativeRecurringSplitConfig(
+    config: Record<string, unknown> | null,
+  ): boolean {
+    const split = this.toObject(config?.split);
+
+    return split?.mode === 'gateway-native-recurring';
   }
 
   private isPaidWebhookStatus(status: string | null): boolean {
@@ -926,6 +956,17 @@ export class ProcessPaymentWebhookEventUseCase {
 
     switch (normalizedProvider) {
       case 'stripe':
+        if (this.isStripeNativeRecurringSplitTransaction(params.paymentTransaction)) {
+          return {
+            required: false,
+            reason:
+              'stripe recurring destination charge uses native split settlement from webhook; external gateway dispatch is not required',
+            sourceTransactionId: this.resolveGenericSourceTransactionId(params.event),
+            paymentSplitId,
+            authoritativeEvent: true,
+          };
+        }
+
         return this.resolveStripeSplitDispatchDecision({
           event: params.event,
           paymentSplitId,
