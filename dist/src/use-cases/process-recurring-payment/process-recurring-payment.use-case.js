@@ -132,6 +132,8 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                 throw new Error('apiCredentialId is required for recurring payment');
             }
             const resolvedGatewayCredentialDtoOut = await this.resolvePaymentGatewayCredentialService.exec(new resolve_payment_gateway_credential_dto_in_1.ResolvePaymentGatewayCredentialDtoIn({
+                splitRequired: this.resolveSplitRequired(checkoutSession.config, dtoIn.config),
+                environment: checkoutSession.config?.environment === 'production' ? 'production' : 'sandbox',
                 officeId: checkoutSession.officeId,
                 clientId: checkoutSession.clientId,
                 paymentType: 'recurring',

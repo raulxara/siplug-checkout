@@ -1,3 +1,4 @@
+import { VerifyInfinitePayPaymentService } from '../../modules/payment-webhook-gateways/infinitepay/services/verify-infinitepay-payment.service';
 import { Injectable } from '@nestjs/common';
 
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
@@ -25,6 +26,7 @@ import { ReceiveInfinitePayWebhookDtoOut } from './dtos/receive-infinitepay-webh
 @Injectable()
 export class ReceiveInfinitePayWebhookUseCase {
   constructor(
+    private readonly verifyPayment:VerifyInfinitePayPaymentService,
     private readonly normalizeInfinitePayWebhookService: NormalizeInfinitePayWebhookService,
     private readonly registerPaymentWebhookEventService: RegisterPaymentWebhookEventService,
     private readonly processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase,
@@ -50,6 +52,8 @@ export class ReceiveInfinitePayWebhookUseCase {
         await this.enrichNormalizedEventWithPaymentTransactionData(
           normalizedDtoOut.normalizedEvent,
         );
+
+      await this.verifyPayment.exec(normalizedEvent,dtoIn.apiCredentialId);
 
       const registeredDtoOut =
         await this.registerPaymentWebhookEventService.exec(

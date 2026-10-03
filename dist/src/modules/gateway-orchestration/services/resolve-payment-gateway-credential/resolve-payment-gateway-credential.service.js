@@ -31,11 +31,13 @@ let ResolvePaymentGatewayCredentialService = class ResolvePaymentGatewayCredenti
     }
     async exec(dtoIn) {
         try {
-            const allApiCredentials = await this.apiCredentialsRepository.getAll();
+            const allApiCredentials = await this.apiCredentialsRepository.getAllByOfficeId(dtoIn.officeId);
             const apiCredentials = allApiCredentials.filter((apiCredential) => apiCredential.officeId === dtoIn.officeId);
             const candidates = [];
             for (const apiCredential of apiCredentials) {
-                if (apiCredential.status !== 'active') {
+                if (apiCredential.status !== 'active' ||
+                    (apiCredential.expiresAt &&
+                        new Date(apiCredential.expiresAt).getTime() <= Date.now())) {
                     continue;
                 }
                 const credentialBelongsToClient = apiCredential.clientId === dtoIn.clientId ||
@@ -70,19 +72,31 @@ let ResolvePaymentGatewayCredentialService = class ResolvePaymentGatewayCredenti
                     continue;
                 }
                 if (dtoIn.gatewaySlug !== null &&
-                    this.normalizeProvider(gateway.slug) !== this.normalizeProvider(dtoIn.gatewaySlug)) {
+                    this.normalizeProvider(gateway.slug) !==
+                        this.normalizeProvider(dtoIn.gatewaySlug)) {
                     continue;
                 }
                 candidates.push({
                     apiCredential,
                     gateway,
                     priority: this.resolvePriority(apiCredential.config),
-                    isDefault: this.resolveIsDefault(apiCredential.config),
+                    isDefault: apiCredential.config?.managedHosted === true
+                        ? Array.isArray(apiCredential.config.defaultModes) &&
+                            apiCredential.config.defaultModes.includes(this.mode(dtoIn))
+                        : this.resolveIsDefault(apiCredential.config),
                 });
             }
             if (candidates.length === 0) {
                 throw new Error('active gateway credential not found for payment context');
             }
+            if (candidates.length > 1 &&
+                !dtoIn.apiCredentialId &&
+                !dtoIn.gatewayId &&
+                !dtoIn.gatewayProvider &&
+                !dtoIn.gatewaySlug &&
+                candidates.some((c) => c.apiCredential.config?.managedHosted === true) &&
+                candidates.filter((c) => c.isDefault).length !== 1)
+                throw new Error('Select an explicit default gateway for this payment mode');
             const selected = candidates.sort((a, b) => {
                 if (a.isDefault !== b.isDefault) {
                     return a.isDefault ? -1 : 1;
@@ -118,8 +132,24 @@ let ResolvePaymentGatewayCredentialService = class ResolvePaymentGatewayCredenti
             throw new Error(message);
         }
     }
+    mode(dto) {
+        return dto.paymentType === 'recurring'
+            ? dto.splitRequired
+                ? 'split_recurring'
+                : 'recurring'
+            : dto.splitRequired
+                ? 'split'
+                : 'one_time';
+    }
     credentialSupportsPaymentContext(apiCredential, dtoIn) {
         const config = apiCredential.config ?? {};
+        if (config.managedHosted === true) {
+            if (dtoIn.paymentMethod !== 'payment_link' ||
+                apiCredential.environment !== dtoIn.environment ||
+                !Array.isArray(config.enabledModes) ||
+                !config.enabledModes.includes(this.mode(dtoIn)))
+                return false;
+        }
         const paymentTypes = this.asStringArray(config.paymentTypes ?? config.payment_types);
         const paymentMethods = this.asStringArray(config.paymentMethods ?? config.payment_methods);
         if (paymentTypes.length > 0 && !paymentTypes.includes(dtoIn.paymentType)) {

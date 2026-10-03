@@ -184,6 +184,8 @@ export class ProcessPaymentUseCase {
       const resolvedGatewayCredentialDtoOut =
         await this.resolvePaymentGatewayCredentialService.exec(
           new ResolvePaymentGatewayCredentialDtoIn({
+            splitRequired:this.resolveSplitRequired(checkoutSession.config,dtoIn.config),
+            environment:checkoutSession.config?.environment==='production'?'production':'sandbox',
             officeId: checkoutSession.officeId,
             clientId: checkoutSession.clientId,
             paymentType: checkoutSession.paymentType,

@@ -39,7 +39,7 @@ class RegisterApiCredentialDtoOut {
         this.updatedAt = updatedAt;
     }
     static fromCreateApiCredentialDtoOut(dtoOut) {
-        return new RegisterApiCredentialDtoOut(dtoOut.id, dtoOut._id, dtoOut.officeId, dtoOut.clientId, dtoOut.gatewayId, dtoOut.name, dtoOut.slug, dtoOut.provider, dtoOut.providerType, dtoOut.environment, dtoOut.origin, dtoOut.config, dtoOut.expiresAt, dtoOut.changesHistory, dtoOut.status, dtoOut.createdAt, dtoOut.updatedAt);
+        return new RegisterApiCredentialDtoOut(dtoOut.id, dtoOut._id, dtoOut.officeId, dtoOut.clientId, dtoOut.gatewayId, dtoOut.name, dtoOut.slug, dtoOut.provider, dtoOut.providerType, dtoOut.environment, dtoOut.origin, null, dtoOut.expiresAt, null, dtoOut.status, dtoOut.createdAt, dtoOut.updatedAt);
     }
 }
 exports.RegisterApiCredentialDtoOut = RegisterApiCredentialDtoOut;

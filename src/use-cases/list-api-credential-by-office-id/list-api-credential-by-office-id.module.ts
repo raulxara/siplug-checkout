@@ -1,3 +1,4 @@
+import { CredentialAccessModule } from '../../modules/gateway-settings/credential-access.module';
 import { Module } from '@nestjs/common';
 
 import { BuildDecryptedApiCredentialResponseService } from '../../common/services/api-credentials/build-decrypted-api-credential-response/build-decrypted-api-credential-response.service';
@@ -7,7 +8,7 @@ import { ListApiCredentialByOfficeIdController } from './list-api-credential-by-
 import { ListApiCredentialByOfficeIdUseCase } from './list-api-credential-by-office-id.use-case';
 
 @Module({
-  imports: [ApiCredentialsModule, UseCaseSupportModule],
+  imports: [CredentialAccessModule,ApiCredentialsModule, UseCaseSupportModule],
   controllers: [ListApiCredentialByOfficeIdController],
   providers: [
     BuildDecryptedApiCredentialResponseService,

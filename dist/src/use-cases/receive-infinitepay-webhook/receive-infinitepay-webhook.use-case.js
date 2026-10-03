@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReceiveInfinitePayWebhookUseCase = void 0;
+const verify_infinitepay_payment_service_1 = require("../../modules/payment-webhook-gateways/infinitepay/services/verify-infinitepay-payment.service");
 const common_1 = require("@nestjs/common");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
 const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
@@ -26,13 +27,15 @@ const process_payment_webhook_event_dto_in_1 = require("../process-payment-webho
 const process_payment_webhook_event_use_case_1 = require("../process-payment-webhook-event/process-payment-webhook-event.use-case");
 const receive_infinitepay_webhook_dto_out_1 = require("./dtos/receive-infinitepay-webhook.dto-out");
 let ReceiveInfinitePayWebhookUseCase = class ReceiveInfinitePayWebhookUseCase {
+    verifyPayment;
     normalizeInfinitePayWebhookService;
     registerPaymentWebhookEventService;
     processPaymentWebhookEventUseCase;
     findPaymentTransactionByUniqueIdService;
     findPaymentTransactionByGatewayTransactionIdService;
     handleUseCaseExceptionService;
-    constructor(normalizeInfinitePayWebhookService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, handleUseCaseExceptionService) {
+    constructor(verifyPayment, normalizeInfinitePayWebhookService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, findPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService, handleUseCaseExceptionService) {
+        this.verifyPayment = verifyPayment;
         this.normalizeInfinitePayWebhookService = normalizeInfinitePayWebhookService;
         this.registerPaymentWebhookEventService = registerPaymentWebhookEventService;
         this.processPaymentWebhookEventUseCase = processPaymentWebhookEventUseCase;
@@ -47,6 +50,7 @@ let ReceiveInfinitePayWebhookUseCase = class ReceiveInfinitePayWebhookUseCase {
                 headers: dtoIn.headers,
             }));
             const normalizedEvent = await this.enrichNormalizedEventWithPaymentTransactionData(normalizedDtoOut.normalizedEvent);
+            await this.verifyPayment.exec(normalizedEvent, dtoIn.apiCredentialId);
             const registeredDtoOut = await this.registerPaymentWebhookEventService.exec(new register_payment_webhook_event_dto_in_1.RegisterPaymentWebhookEventDtoIn({
                 provider: normalizedEvent.provider,
                 eventId: normalizedEvent.eventId,
@@ -214,7 +218,8 @@ let ReceiveInfinitePayWebhookUseCase = class ReceiveInfinitePayWebhookUseCase {
 exports.ReceiveInfinitePayWebhookUseCase = ReceiveInfinitePayWebhookUseCase;
 exports.ReceiveInfinitePayWebhookUseCase = ReceiveInfinitePayWebhookUseCase = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [normalize_infinitepay_webhook_service_1.NormalizeInfinitePayWebhookService,
+    __metadata("design:paramtypes", [verify_infinitepay_payment_service_1.VerifyInfinitePayPaymentService,
+        normalize_infinitepay_webhook_service_1.NormalizeInfinitePayWebhookService,
         register_payment_webhook_event_service_1.RegisterPaymentWebhookEventService,
         process_payment_webhook_event_use_case_1.ProcessPaymentWebhookEventUseCase,
         find_payment_transaction_by_unique_id_service_1.FindPaymentTransactionByUniqueIdService,

@@ -1,4 +1,6 @@
 export declare class ResolvePaymentGatewayCredentialDtoIn {
+    readonly splitRequired: boolean;
+    readonly environment: string;
     readonly officeId: string;
     readonly clientId: string;
     readonly paymentType: string;
@@ -8,6 +10,8 @@ export declare class ResolvePaymentGatewayCredentialDtoIn {
     readonly gatewayId: string | null;
     readonly apiCredentialId: string | null;
     constructor(params: {
+        splitRequired?: boolean;
+        environment?: string;
         officeId: string;
         clientId: string;
         paymentType: string;

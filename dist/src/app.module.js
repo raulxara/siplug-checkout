@@ -7,6 +7,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
+const gateway_settings_module_1 = require("./use-cases/gateway-settings/gateway-settings.module");
+const provision_company_module_1 = require("./use-cases/provision-company/provision-company.module");
+const get_auth_context_module_1 = require("./use-cases/get-auth-context/get-auth-context.module");
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const app_controller_1 = require("./app.controller");
@@ -122,7 +125,9 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
-        imports: [
+        imports: [gateway_settings_module_1.GatewaySettingsModule,
+            provision_company_module_1.ProvisionCompanyModule,
+            get_auth_context_module_1.GetAuthContextModule,
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
             }),

@@ -1,3 +1,4 @@
+import { VerifyInfinitePayPaymentService } from '../../modules/payment-webhook-gateways/infinitepay/services/verify-infinitepay-payment.service';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
 import { NormalizeInfinitePayWebhookService } from '../../modules/payment-webhook-gateways/infinitepay/services/normalize-infinitepay-webhook/normalize-infinitepay-webhook.service';
 import { RegisterPaymentWebhookEventService } from '../../modules/payment-webhook-events/services/register-payment-webhook-event/register-payment-webhook-event.service';
@@ -7,13 +8,14 @@ import { ProcessPaymentWebhookEventUseCase } from '../process-payment-webhook-ev
 import { ReceiveInfinitePayWebhookDtoIn } from './dtos/receive-infinitepay-webhook.dto-in';
 import { ReceiveInfinitePayWebhookDtoOut } from './dtos/receive-infinitepay-webhook.dto-out';
 export declare class ReceiveInfinitePayWebhookUseCase {
+    private readonly verifyPayment;
     private readonly normalizeInfinitePayWebhookService;
     private readonly registerPaymentWebhookEventService;
     private readonly processPaymentWebhookEventUseCase;
     private readonly findPaymentTransactionByUniqueIdService;
     private readonly findPaymentTransactionByGatewayTransactionIdService;
     private readonly handleUseCaseExceptionService;
-    constructor(normalizeInfinitePayWebhookService: NormalizeInfinitePayWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(verifyPayment: VerifyInfinitePayPaymentService, normalizeInfinitePayWebhookService: NormalizeInfinitePayWebhookService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ReceiveInfinitePayWebhookDtoIn): Promise<ReceiveInfinitePayWebhookDtoOut>;
     private enrichNormalizedEventWithPaymentTransactionData;
     private resolvePaymentTransactionFromEvent;

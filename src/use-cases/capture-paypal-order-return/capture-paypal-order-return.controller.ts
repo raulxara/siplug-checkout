@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import type { Response } from 'express';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Headers,
+  Res,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 
 import { CapturePayPalOrderReturnDtoIn } from './dtos/capture-paypal-order-return.dto-in';
 import { CapturePayPalOrderReturnUseCase } from './capture-paypal-order-return.use-case';
@@ -13,6 +22,8 @@ export class CapturePayPalOrderReturnController {
   async captureReturn(
     @Param('apiCredentialId') apiCredentialId: string,
     @Query('token') token: string,
+    @Headers('accept') accept: string,
+    @Res({ passthrough: true }) response: Response,
   ) {
     const dtoOut = await this.capturePayPalOrderReturnUseCase.exec(
       new CapturePayPalOrderReturnDtoIn({
@@ -21,6 +32,8 @@ export class CapturePayPalOrderReturnController {
       }),
     );
 
+    if (accept?.includes('text/html'))
+      return response.redirect(303, this.returnUrl('retorno'));
     return {
       status: 'success',
       message: 'paypal order captured successfully',
@@ -38,6 +51,8 @@ export class CapturePayPalOrderReturnController {
   async cancelReturn(
     @Param('apiCredentialId') apiCredentialId: string,
     @Query('token') token: string,
+    @Headers('accept') accept: string,
+    @Res({ passthrough: true }) response: Response,
   ) {
     const dtoOut = await this.capturePayPalOrderReturnUseCase.execCancel(
       new CapturePayPalOrderReturnDtoIn({
@@ -46,6 +61,8 @@ export class CapturePayPalOrderReturnController {
       }),
     );
 
+    if (accept?.includes('text/html'))
+      return response.redirect(303, this.returnUrl('cancelado'));
     return {
       status: 'success',
       message: 'paypal payment approval canceled by payer',
@@ -56,5 +73,28 @@ export class CapturePayPalOrderReturnController {
         wasAlreadyRegistered: dtoOut.wasAlreadyRegistered,
       },
     };
+  }
+  private returnUrl(result: string): string {
+    let url: URL;
+    try {
+      url = new URL(process.env.CHECKOUT_FRONTEND_URL ?? '');
+    } catch {
+      throw new ServiceUnavailableException();
+    }
+    if (
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      url.pathname !== '/' ||
+      (url.protocol !== 'https:' &&
+        !(
+          process.env.NODE_ENV !== 'production' &&
+          url.protocol === 'http:' &&
+          ['localhost', '127.0.0.1'].includes(url.hostname)
+        ))
+    )
+      throw new ServiceUnavailableException();
+    return url.origin + '/pagamento/' + result;
   }
 }

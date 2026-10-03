@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReceiveInfinitePayWebhookModule = void 0;
+const verify_infinitepay_payment_service_1 = require("../../modules/payment-webhook-gateways/infinitepay/services/verify-infinitepay-payment.service");
 const common_1 = require("@nestjs/common");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
 const payment_transactions_module_1 = require("../../modules/payment-transactions/payment-transactions.module");
@@ -28,7 +29,7 @@ exports.ReceiveInfinitePayWebhookModule = ReceiveInfinitePayWebhookModule = __de
             process_payment_webhook_event_module_1.ProcessPaymentWebhookEventModule,
         ],
         controllers: [receive_infinitepay_webhook_controller_1.ReceiveInfinitePayWebhookController],
-        providers: [receive_infinitepay_webhook_use_case_1.ReceiveInfinitePayWebhookUseCase],
+        providers: [verify_infinitepay_payment_service_1.VerifyInfinitePayPaymentService, receive_infinitepay_webhook_use_case_1.ReceiveInfinitePayWebhookUseCase],
         exports: [receive_infinitepay_webhook_use_case_1.ReceiveInfinitePayWebhookUseCase],
     })
 ], ReceiveInfinitePayWebhookModule);

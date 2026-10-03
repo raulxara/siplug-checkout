@@ -1,9 +1,12 @@
+import { UseGuards } from '@nestjs/common';
+import { CredentialAccessGuard } from '../../modules/gateway-settings/services/credential-access.guard';
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 
 import { GetApiCredentialsByUniqueIdDtoIn } from './dtos/get-api-credentials-by-unique-id.dto-in';
 import { GetApiCredentialsByUniqueIdUseCase } from './get-api-credentials-by-unique-id.use-case';
 
 @Controller('api-credentials')
+@UseGuards(CredentialAccessGuard)
 export class GetApiCredentialsByUniqueIdController {
   constructor(
     private readonly getApiCredentialsByUniqueIdUseCase: GetApiCredentialsByUniqueIdUseCase,

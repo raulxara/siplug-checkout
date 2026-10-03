@@ -1,3 +1,4 @@
+import { VerifyInfinitePayPaymentService } from '../../modules/payment-webhook-gateways/infinitepay/services/verify-infinitepay-payment.service';
 import { Module } from '@nestjs/common';
 
 import { UseCaseSupportModule } from '../../common/services/use-case-support/use-case-support.module';
@@ -17,7 +18,7 @@ import { ReceiveInfinitePayWebhookUseCase } from './receive-infinitepay-webhook.
     ProcessPaymentWebhookEventModule,
   ],
   controllers: [ReceiveInfinitePayWebhookController],
-  providers: [ReceiveInfinitePayWebhookUseCase],
+  providers: [VerifyInfinitePayPaymentService,ReceiveInfinitePayWebhookUseCase],
   exports: [ReceiveInfinitePayWebhookUseCase],
 })
 export class ReceiveInfinitePayWebhookModule {}

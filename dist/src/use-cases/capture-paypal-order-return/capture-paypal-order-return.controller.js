@@ -21,11 +21,13 @@ let CapturePayPalOrderReturnController = class CapturePayPalOrderReturnControlle
     constructor(capturePayPalOrderReturnUseCase) {
         this.capturePayPalOrderReturnUseCase = capturePayPalOrderReturnUseCase;
     }
-    async captureReturn(apiCredentialId, token) {
+    async captureReturn(apiCredentialId, token, accept, response) {
         const dtoOut = await this.capturePayPalOrderReturnUseCase.exec(new capture_paypal_order_return_dto_in_1.CapturePayPalOrderReturnDtoIn({
             apiCredentialId,
             orderId: token,
         }));
+        if (accept?.includes('text/html'))
+            return response.redirect(303, this.returnUrl('retorno'));
         return {
             status: 'success',
             message: 'paypal order captured successfully',
@@ -38,11 +40,13 @@ let CapturePayPalOrderReturnController = class CapturePayPalOrderReturnControlle
             },
         };
     }
-    async cancelReturn(apiCredentialId, token) {
+    async cancelReturn(apiCredentialId, token, accept, response) {
         const dtoOut = await this.capturePayPalOrderReturnUseCase.execCancel(new capture_paypal_order_return_dto_in_1.CapturePayPalOrderReturnDtoIn({
             apiCredentialId,
             orderId: token,
         }));
+        if (accept?.includes('text/html'))
+            return response.redirect(303, this.returnUrl('cancelado'));
         return {
             status: 'success',
             message: 'paypal payment approval canceled by payer',
@@ -54,22 +58,46 @@ let CapturePayPalOrderReturnController = class CapturePayPalOrderReturnControlle
             },
         };
     }
+    returnUrl(result) {
+        let url;
+        try {
+            url = new URL(process.env.CHECKOUT_FRONTEND_URL ?? '');
+        }
+        catch {
+            throw new common_1.ServiceUnavailableException();
+        }
+        if (url.username ||
+            url.password ||
+            url.search ||
+            url.hash ||
+            url.pathname !== '/' ||
+            (url.protocol !== 'https:' &&
+                !(process.env.NODE_ENV !== 'production' &&
+                    url.protocol === 'http:' &&
+                    ['localhost', '127.0.0.1'].includes(url.hostname))))
+            throw new common_1.ServiceUnavailableException();
+        return url.origin + '/pagamento/' + result;
+    }
 };
 exports.CapturePayPalOrderReturnController = CapturePayPalOrderReturnController;
 __decorate([
     (0, common_1.Get)('return/:apiCredentialId'),
     __param(0, (0, common_1.Param)('apiCredentialId')),
     __param(1, (0, common_1.Query)('token')),
+    __param(2, (0, common_1.Headers)('accept')),
+    __param(3, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, String, Object]),
     __metadata("design:returntype", Promise)
 ], CapturePayPalOrderReturnController.prototype, "captureReturn", null);
 __decorate([
     (0, common_1.Get)('cancel/:apiCredentialId'),
     __param(0, (0, common_1.Param)('apiCredentialId')),
     __param(1, (0, common_1.Query)('token')),
+    __param(2, (0, common_1.Headers)('accept')),
+    __param(3, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, String, Object]),
     __metadata("design:returntype", Promise)
 ], CapturePayPalOrderReturnController.prototype, "cancelReturn", null);
 exports.CapturePayPalOrderReturnController = CapturePayPalOrderReturnController = __decorate([

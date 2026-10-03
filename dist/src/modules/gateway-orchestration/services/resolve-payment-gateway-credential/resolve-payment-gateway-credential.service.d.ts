@@ -9,6 +9,7 @@ export declare class ResolvePaymentGatewayCredentialService {
     private readonly decryptApiCredentialSecretService;
     constructor(apiCredentialsRepository: IApiCredentialsRepository, findGatewayByUniqueIdService: FindGatewayByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService);
     exec(dtoIn: ResolvePaymentGatewayCredentialDtoIn): Promise<ResolvePaymentGatewayCredentialDtoOut>;
+    private mode;
     private credentialSupportsPaymentContext;
     private gatewaySupportsPaymentContext;
     private decryptProviderToken;

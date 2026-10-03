@@ -1,0 +1,1 @@
+export class ProvisionCompanyDtoOut {constructor(public readonly officeId:string,public readonly userId:string,public readonly userCustomerId:string,public readonly token:string,public readonly assignedPositionSlug='customer'){}}

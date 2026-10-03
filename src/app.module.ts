@@ -1,3 +1,6 @@
+import { GatewaySettingsModule } from './use-cases/gateway-settings/gateway-settings.module';
+import {ProvisionCompanyModule} from './use-cases/provision-company/provision-company.module';
+import { GetAuthContextModule } from './use-cases/get-auth-context/get-auth-context.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -111,7 +114,9 @@ import { SimulateMercadoPagoPaymentWebhookModule } from './use-cases/simulate-me
 @Module({
   controllers: [AppController],
   providers: [AppService],
-  imports: [
+  imports: [GatewaySettingsModule,
+    ProvisionCompanyModule,
+    GetAuthContextModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
