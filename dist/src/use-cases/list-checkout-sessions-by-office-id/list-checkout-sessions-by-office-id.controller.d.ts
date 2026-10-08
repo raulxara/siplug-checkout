@@ -6,6 +6,32 @@ export declare class ListCheckoutSessionsByOfficeIdController {
     handle(body: ListCheckoutSessionsByOfficeIdRequest, authorization?: string): Promise<{
         status: string;
         message: string;
-        data: import("./dtos/list-checkout-sessions-by-office-id.dto-out").ListCheckoutSessionsByOfficeIdDtoOut;
+        data: {
+            items: {
+                createdAt: string;
+                items: number;
+                cart: import("../../modules/order-report/entities/order-report.entity").OrderCartItem[];
+                amount: number;
+                id: string;
+                code: string;
+                customer: string;
+                email: string | null;
+                currency: string;
+                method: string;
+                requestedMethod: string | null;
+                actualMethod: string | null;
+                status: string;
+            }[];
+            total: number;
+            page: number;
+            perPage: number;
+            totalPages: number;
+            summary: {
+                total: number;
+                amount: number;
+                average: number;
+            };
+            asOf: string;
+        } | import("./dtos/list-checkout-sessions-by-office-id.dto-out").ListCheckoutSessionsByOfficeIdDtoOut;
     }>;
 }

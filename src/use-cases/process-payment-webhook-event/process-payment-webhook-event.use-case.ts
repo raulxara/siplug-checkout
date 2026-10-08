@@ -1,3 +1,5 @@
+import { ActualPaymentMethodService } from '../../modules/payment-transactions/services/actual-payment-method.service';
+import { assertSettlement } from '../../modules/hosted-orders/services/settlement-policy';
 import { Injectable } from '@nestjs/common';
 
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
@@ -72,7 +74,7 @@ export class ProcessPaymentWebhookEventUseCase {
     dtoIn: ProcessPaymentWebhookEventDtoIn,
   ): Promise<ProcessPaymentWebhookEventDtoOut> {
     try {
-      await this.markPaymentWebhookEventAsProcessingService.exec(
+      const processingEvent = await this.markPaymentWebhookEventAsProcessingService.exec(
         new MarkPaymentWebhookEventAsProcessingDtoIn({
           _id: dtoIn.paymentWebhookEventId,
           source: 'ProcessPaymentWebhookEventUseCase.processing',
@@ -116,6 +118,7 @@ export class ProcessPaymentWebhookEventUseCase {
         );
       }
 
+      assertSettlement(processingEvent.paymentWebhookEvent.metadata,paymentTransaction,dtoIn.normalizedEvent);
       const statusUpdate = this.resolveTransactionStatusUpdate({
         event: dtoIn.normalizedEvent,
         paymentTransaction,
@@ -164,6 +167,7 @@ export class ProcessPaymentWebhookEventUseCase {
             processStatus: statusUpdate.processStatus,
             processMessage: statusUpdate.processMessage,
 
+            config: ActualPaymentMethodService.merge(paymentTransaction.config, dtoIn.normalizedEvent.provider, dtoIn.normalizedEvent.rawPayload),
             providerResponse: this.buildProviderResponse({
               current: paymentTransaction.providerResponse,
               event: dtoIn.normalizedEvent,

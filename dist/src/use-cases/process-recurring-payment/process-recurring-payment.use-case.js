@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProcessRecurringPaymentUseCase = void 0;
+const checkout_general_settings_service_1 = require("../../modules/checkout-settings/services/checkout-general-settings.service");
 const common_1 = require("@nestjs/common");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
 const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
@@ -89,7 +90,7 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
     }
     async exec(dtoIn) {
         try {
-            await this.resolveActorAuthorizationService.exec(new resolve_actor_authorization_dto_in_1.ResolveActorAuthorizationDtoIn({
+            const authorization = await this.resolveActorAuthorizationService.exec(new resolve_actor_authorization_dto_in_1.ResolveActorAuthorizationDtoIn({
                 token: dtoIn.token,
                 requiredAction: 'processRecurringPayment',
                 requiredEntity: 'payments',
@@ -99,6 +100,9 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
             this.assertNoSensitiveFields(dtoIn.config, 'config');
             const checkoutSessionDtoOut = await this.findCheckoutSessionByUniqueIdService.exec(new find_checkout_session_by_unique_id_dto_in_1.FindCheckoutSessionByUniqueIdDtoIn(dtoIn.checkoutSessionId));
             const checkoutSession = checkoutSessionDtoOut.checkoutSession;
+            if (authorization.actor.clientId !== checkoutSession.clientId)
+                throw new Error('checkout session does not belong to authenticated actor');
+            checkout_general_settings_service_1.CheckoutGeneralSettingsService.assertAvailable(checkoutSession, dtoIn.paymentMethod);
             const checkoutConfig = this.asObject(checkoutSession.config);
             const checkoutSubscriptionConfig = this.asObject(checkoutConfig.subscription);
             if (checkoutSession.paymentType !== 'recurring') {
@@ -296,7 +300,7 @@ let ProcessRecurringPaymentUseCase = class ProcessRecurringPaymentUseCase {
                     subscriptionInvoiceId: subscriptionInvoice._id,
                 },
                 config: {
-                    ...(dtoIn.config ?? {}),
+                    ...checkout_general_settings_service_1.CheckoutGeneralSettingsService.transactionConfig(checkoutSession.config, dtoIn.config),
                     recurringMode: 'gateway_native',
                     gatewayProvider: resolvedGateway.provider,
                     gatewaySlug: resolvedGateway.slug,

@@ -1,3 +1,4 @@
+import { SubscriptionRenewalsRepository } from '../../modules/hosted-orders/repositories/subscription-renewals.repository';
 import { BuildChangesHistoryService } from '../../common/services/changes-history/build-changes-history.service';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
 import type { IPaymentWebhookEventsRepository } from '../../modules/payment-webhook-events/entities/payment-webhook-events-repository.interface';
@@ -13,7 +14,8 @@ export declare class ProcessSubscriptionWebhookEventUseCase {
     private readonly subscriptionInvoicesRepository;
     private readonly buildChangesHistoryService;
     private readonly handleUseCaseExceptionService;
-    constructor(paymentWebhookEventsRepository: IPaymentWebhookEventsRepository, subscriptionsRepository: ISubscriptionsRepository, subscriptionCyclesRepository: ISubscriptionCyclesRepository, subscriptionInvoicesRepository: ISubscriptionInvoicesRepository, buildChangesHistoryService: BuildChangesHistoryService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    private readonly renewals;
+    constructor(paymentWebhookEventsRepository: IPaymentWebhookEventsRepository, subscriptionsRepository: ISubscriptionsRepository, subscriptionCyclesRepository: ISubscriptionCyclesRepository, subscriptionInvoicesRepository: ISubscriptionInvoicesRepository, buildChangesHistoryService: BuildChangesHistoryService, handleUseCaseExceptionService: HandleUseCaseExceptionService, renewals: SubscriptionRenewalsRepository);
     exec(dtoIn: ProcessSubscriptionWebhookEventDtoIn): Promise<ProcessSubscriptionWebhookEventDtoOut>;
     private shouldProcessSubscriptionWebhook;
     private resolveSubscriptionEntities;

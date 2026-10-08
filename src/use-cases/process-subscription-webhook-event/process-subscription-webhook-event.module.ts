@@ -1,3 +1,4 @@
+import { SubscriptionRenewalsRepository } from '../../modules/hosted-orders/repositories/subscription-renewals.repository';
 import { Module } from '@nestjs/common';
 
 import { BuildChangesHistoryService } from '../../common/services/changes-history/build-changes-history.service';
@@ -17,6 +18,7 @@ import { ProcessSubscriptionWebhookEventUseCase } from './process-subscription-w
     SubscriptionInvoicesModule,
   ],
   providers: [
+    SubscriptionRenewalsRepository,
     BuildChangesHistoryService,
     ProcessSubscriptionWebhookEventUseCase,
   ],

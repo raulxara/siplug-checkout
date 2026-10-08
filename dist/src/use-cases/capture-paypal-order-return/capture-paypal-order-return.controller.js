@@ -13,6 +13,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CapturePayPalOrderReturnController = void 0;
+const checkout_general_settings_service_1 = require("../../modules/checkout-settings/services/checkout-general-settings.service");
 const common_1 = require("@nestjs/common");
 const capture_paypal_order_return_dto_in_1 = require("./dtos/capture-paypal-order-return.dto-in");
 const capture_paypal_order_return_use_case_1 = require("./capture-paypal-order-return.use-case");
@@ -27,7 +28,7 @@ let CapturePayPalOrderReturnController = class CapturePayPalOrderReturnControlle
             orderId: token,
         }));
         if (accept?.includes('text/html'))
-            return response.redirect(303, this.returnUrl('retorno'));
+            return response.redirect(303, this.returnUrl('retorno', dtoOut.paymentTransaction));
         return {
             status: 'success',
             message: 'paypal order captured successfully',
@@ -46,7 +47,7 @@ let CapturePayPalOrderReturnController = class CapturePayPalOrderReturnControlle
             orderId: token,
         }));
         if (accept?.includes('text/html'))
-            return response.redirect(303, this.returnUrl('cancelado'));
+            return response.redirect(303, this.returnUrl('cancelado', dtoOut.paymentTransaction));
         return {
             status: 'success',
             message: 'paypal payment approval canceled by payer',
@@ -58,7 +59,11 @@ let CapturePayPalOrderReturnController = class CapturePayPalOrderReturnControlle
             },
         };
     }
-    returnUrl(result) {
+    returnUrl(result, transaction) {
+        const config = transaction?.config;
+        const snapshot = config?.checkoutSettingsSnapshot;
+        if (snapshot)
+            return checkout_general_settings_service_1.CheckoutGeneralSettingsService.url(result === 'retorno' ? snapshot.successUrl : snapshot.cancelUrl);
         let url;
         try {
             url = new URL(process.env.CHECKOUT_FRONTEND_URL ?? '');

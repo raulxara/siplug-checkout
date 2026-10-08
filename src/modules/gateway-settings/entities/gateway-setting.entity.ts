@@ -21,6 +21,7 @@ export type PublicGatewaySetting = {
   name: string;
   provider: string;
   definition: GatewayDefinition;
+  supportedPaymentMethods: string[];
   credentials: Array<{
     id: string;
     environment: Environment;
@@ -28,6 +29,7 @@ export type PublicGatewaySetting = {
     values: Record<string, string>;
     configuredSecrets: string[];
     modes: PaymentMode[];
+    paymentMethods: string[];
     defaultModes: PaymentMode[];
     urls: Record<string, string>;
     version: string;

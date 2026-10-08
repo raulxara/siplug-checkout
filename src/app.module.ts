@@ -1,3 +1,5 @@
+import { HostedOrdersModule } from './use-cases/hosted-orders/hosted-orders.module';
+import { CheckoutGeneralSettingsModule } from './use-cases/checkout-general-settings/checkout-general-settings.module';
 import { GatewaySettingsModule } from './use-cases/gateway-settings/gateway-settings.module';
 import {ProvisionCompanyModule} from './use-cases/provision-company/provision-company.module';
 import { GetAuthContextModule } from './use-cases/get-auth-context/get-auth-context.module';
@@ -114,7 +116,8 @@ import { SimulateMercadoPagoPaymentWebhookModule } from './use-cases/simulate-me
 @Module({
   controllers: [AppController],
   providers: [AppService],
-  imports: [GatewaySettingsModule,
+  imports: [
+    HostedOrdersModule,CheckoutGeneralSettingsModule, GatewaySettingsModule,
     ProvisionCompanyModule,
     GetAuthContextModule,
     ConfigModule.forRoot({

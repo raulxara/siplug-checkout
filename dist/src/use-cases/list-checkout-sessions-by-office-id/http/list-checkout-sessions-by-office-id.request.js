@@ -12,10 +12,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListCheckoutSessionsByOfficeIdRequest = void 0;
 const class_validator_1 = require("class-validator");
 class ListCheckoutSessionsByOfficeIdRequest {
+    report;
+    filters;
     token;
     officeId;
 }
 exports.ListCheckoutSessionsByOfficeIdRequest = ListCheckoutSessionsByOfficeIdRequest;
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], ListCheckoutSessionsByOfficeIdRequest.prototype, "report", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], ListCheckoutSessionsByOfficeIdRequest.prototype, "filters", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),

@@ -1,3 +1,5 @@
+import { GatewayPaymentMethodsService } from './gateway-payment-methods.service';
+import { GatewayPaymentModesService } from './gateway-payment-modes.service';
 import { Injectable } from '@nestjs/common';
 import { ApiCredential, Gateway } from '@prisma/client';
 import {
@@ -20,6 +22,9 @@ export class GatewaySettingViewService {
       name: gateway.name,
       provider: definition.provider,
       definition,
+      supportedPaymentMethods: GatewayPaymentMethodsService.supported(
+        gateway.config,
+      ),
       credentials: rows
         .filter((r) => r.gateway_id === gateway.unique_id)
         .map((row) => {
@@ -36,11 +41,9 @@ export class GatewaySettingViewService {
               if (value) configuredSecrets.push(f.key);
             } else if (typeof value === 'string') values[f.key] = value;
           }
-          const modes = Array.isArray(c.enabledModes)
-            ? (c.enabledModes.filter((m) =>
-                definition.modes.includes(m as PaymentMode),
-              ) as PaymentMode[])
-            : [];
+          const modes = GatewayPaymentModesService.enabled(c).filter((mode) =>
+            definition.modes.includes(mode),
+          );
           return {
             id: row.unique_id,
             environment: env as Environment,
@@ -48,6 +51,10 @@ export class GatewaySettingViewService {
             values,
             configuredSecrets,
             modes,
+            paymentMethods: GatewayPaymentMethodsService.selected(
+              gateway.config,
+              c,
+            ),
             defaultModes: Array.isArray(c.defaultModes)
               ? (c.defaultModes.filter((m) =>
                   modes.includes(m as PaymentMode),

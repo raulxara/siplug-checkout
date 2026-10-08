@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { GetAuthContextUseCase } from '../get-auth-context/get-auth-context.use-case';
+import { OrderReportRepository } from '../../modules/order-report/repositories/order-report.repository';
+import { Injectable, ForbiddenException, HttpException } from '@nestjs/common';
 
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
@@ -19,15 +21,15 @@ import { ListCheckoutSessionsByOfficeIdDtoOut } from './dtos/list-checkout-sessi
 @Injectable()
 export class ListCheckoutSessionsByOfficeIdUseCase {
   constructor(
+    private readonly identity: GetAuthContextUseCase,
+    private readonly report: OrderReportRepository,
     private readonly resolveActorAuthorizationService: ResolveActorAuthorizationService,
     private readonly getAllCheckoutSessionsByOfficeIdService: GetAllCheckoutSessionsByOfficeIdService,
     private readonly findOfficeByUniqueIdService: FindOfficeByUniqueIdService,
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
   ) {}
 
-  async exec(
-    dtoIn: ListCheckoutSessionsByOfficeIdDtoIn,
-  ): Promise<ListCheckoutSessionsByOfficeIdDtoOut> {
+  async exec(dtoIn: ListCheckoutSessionsByOfficeIdDtoIn) {
     try {
       await this.resolveActorAuthorizationService.exec(
         new ResolveActorAuthorizationDtoIn({
@@ -37,6 +39,15 @@ export class ListCheckoutSessionsByOfficeIdUseCase {
         }),
       );
 
+      const context = await this.identity.exec(dtoIn.token);
+      if (context.officeId !== dtoIn.officeId)
+        throw new ForbiddenException('office not authorized');
+      if (dtoIn.report)
+        return this.report.list(
+          context.officeId,
+          context.clientId,
+          dtoIn.filters,
+        );
       const officeDtoOut = await this.findOfficeByUniqueIdService.exec(
         new FindOfficeByUniqueIdDtoIn(dtoIn.officeId),
       );
@@ -75,6 +86,7 @@ export class ListCheckoutSessionsByOfficeIdUseCase {
         }),
       );
 
+      if (error instanceof HttpException) throw error;
       const message =
         error instanceof Error
           ? error.message

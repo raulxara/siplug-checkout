@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegisterCheckoutSessionUseCase = void 0;
+const checkout_general_settings_service_1 = require("../../modules/checkout-settings/services/checkout-general-settings.service");
 const common_1 = require("@nestjs/common");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
 const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
@@ -58,11 +59,13 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
     async exec(dtoIn) {
         let createdCheckoutSessionId = null;
         try {
-            await this.resolveActorAuthorizationService.exec(new resolve_actor_authorization_dto_in_1.ResolveActorAuthorizationDtoIn({
+            const authorization = await this.resolveActorAuthorizationService.exec(new resolve_actor_authorization_dto_in_1.ResolveActorAuthorizationDtoIn({
                 token: dtoIn.token,
                 requiredAction: 'registerCheckoutSession',
                 requiredEntity: 'checkout_sessions',
             }));
+            if (authorization.actor.clientId !== dtoIn.clientId)
+                throw new Error('client does not belong to authenticated actor');
             this.validatePaymentType(dtoIn.paymentType);
             this.validateItemsTotal(dtoIn.amount, dtoIn.items);
             const officeDtoOut = await this.findOfficeByUniqueIdService.exec(new find_office_by_unique_id_dto_in_1.FindOfficeByUniqueIdDtoIn(dtoIn.officeId));
@@ -103,6 +106,8 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
                 }
                 const apiCredentialDtoOut = await this.findApiCredentialByUniqueIdService.exec(new find_api_credential_by_unique_id_dto_in_1.FindApiCredentialByUniqueIdDtoIn(dtoIn.apiCredentialId));
                 const apiCredential = apiCredentialDtoOut.apiCredential;
+                if (apiCredential.officeId !== dtoIn.officeId || (apiCredential.clientId && apiCredential.clientId !== dtoIn.clientId))
+                    throw new Error('api credential does not belong to client office');
                 if (apiCredential.status !== 'active') {
                     throw new Error('api credential is not active');
                 }
@@ -117,6 +122,7 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
                     gatewayConfig: resolvedGateway.config,
                 });
             }
+            const settings = checkout_general_settings_service_1.CheckoutGeneralSettingsService.apply(officeDtoOut.office.config, dtoIn);
             const checkoutSessionDtoOut = await this.createCheckoutSessionService.exec(new create_checkout_session_dto_in_1.CreateCheckoutSessionDtoIn({
                 officeId: dtoIn.officeId,
                 clientId: dtoIn.clientId,
@@ -128,11 +134,11 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
                 idempotencyKey: dtoIn.idempotencyKey,
                 paymentType: dtoIn.paymentType,
                 amount: dtoIn.amount,
-                currency: dtoIn.currency,
+                currency: settings.currency,
                 description: dtoIn.description,
-                successUrl: dtoIn.successUrl,
-                cancelUrl: dtoIn.cancelUrl,
-                expiresAt: dtoIn.expiresAt,
+                successUrl: settings.successUrl,
+                cancelUrl: settings.cancelUrl,
+                expiresAt: settings.expiresAt,
                 metadata: {
                     ...(dtoIn.metadata ?? {}),
                     ...(resolvedGateway !== null
@@ -143,7 +149,7 @@ let RegisterCheckoutSessionUseCase = class RegisterCheckoutSessionUseCase {
                         : {}),
                     source: 'RegisterCheckoutSessionUseCase',
                 },
-                config: dtoIn.config,
+                config: settings.config,
                 status: dtoIn.status,
             }));
             createdCheckoutSessionId = checkoutSessionDtoOut._id;

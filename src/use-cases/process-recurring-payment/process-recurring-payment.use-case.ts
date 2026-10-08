@@ -1,3 +1,4 @@
+import { CheckoutGeneralSettingsService } from '../../modules/checkout-settings/services/checkout-general-settings.service';
 import { Injectable } from '@nestjs/common';
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
@@ -83,7 +84,7 @@ export class ProcessRecurringPaymentUseCase {
     dtoIn: ProcessRecurringPaymentDtoIn,
   ): Promise<ProcessRecurringPaymentDtoOut> {
     try {
-      await this.resolveActorAuthorizationService.exec(
+      const authorization = await this.resolveActorAuthorizationService.exec(
         new ResolveActorAuthorizationDtoIn({
           token: dtoIn.token,
           requiredAction: 'processRecurringPayment',
@@ -101,6 +102,8 @@ export class ProcessRecurringPaymentUseCase {
         );
 
       const checkoutSession = checkoutSessionDtoOut.checkoutSession;
+      if (authorization.actor.clientId !== checkoutSession.clientId) throw new Error('checkout session does not belong to authenticated actor');
+      CheckoutGeneralSettingsService.assertAvailable(checkoutSession, dtoIn.paymentMethod);
       const checkoutConfig = this.asObject(checkoutSession.config);
       const checkoutSubscriptionConfig = this.asObject(
         checkoutConfig.subscription,
@@ -442,7 +445,7 @@ export class ProcessRecurringPaymentUseCase {
             },
 
             config: {
-              ...(dtoIn.config ?? {}),
+              ...CheckoutGeneralSettingsService.transactionConfig(checkoutSession.config, dtoIn.config),
               recurringMode: 'gateway_native',
               gatewayProvider: resolvedGateway.provider,
               gatewaySlug: resolvedGateway.slug,

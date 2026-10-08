@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  Matches,
 } from 'class-validator';
 import type {
   Environment,
@@ -28,5 +29,12 @@ export class SaveGatewaySettingDtoIn {
   @ArrayMaxSize(4)
   @IsIn(['one_time', 'recurring', 'split', 'split_recurring'], { each: true })
   defaultModes!: PaymentMode[];
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(32)
+  @IsString({ each: true })
+  @Matches(/^[a-z][a-z0-9_]{0,63}$/, { each: true })
+  paymentMethods?: string[];
   @IsObject() fields!: Record<string, string>;
 }

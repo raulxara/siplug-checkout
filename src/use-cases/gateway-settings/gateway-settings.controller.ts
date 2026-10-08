@@ -1,3 +1,5 @@
+import { ImportGatewaySettingUseCase } from './import-gateway-setting.use-case';
+import { ImportGatewaySettingDtoIn } from './dtos/import-gateway-setting.dto-in';
 import {
   Body,
   Controller,
@@ -26,10 +28,20 @@ import { SaveGatewaySettingDtoIn } from './dtos/save-gateway-setting.dto-in';
 )
 export class GatewaySettingsController {
   constructor(
+    private readonly importing: ImportGatewaySettingUseCase,
     private readonly listing: ListGatewaySettingsUseCase,
     private readonly saving: SaveGatewaySettingUseCase,
     private readonly verifying: VerifyGatewaySettingUseCase,
   ) {}
+  @Post('import/:gatewayId')
+  @Header('Cache-Control', 'no-store')
+  importCopy(
+    @Param('gatewayId', new ParseUUIDPipe()) id: string,
+    @Body() input: ImportGatewaySettingDtoIn,
+    @Headers('authorization') auth?: string,
+  ) {
+    return this.importing.exec(this.token(auth), id, input);
+  }
   private token(header?: string) {
     const m = /^Bearer ([^\s]{1,4096})$/i.exec(header ?? '');
     if (!m) throw new UnauthorizedException();

@@ -1,3 +1,4 @@
+import { CheckoutGeneralSettingsService } from '../../modules/checkout-settings/services/checkout-general-settings.service';
 import { Injectable } from '@nestjs/common';
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
@@ -73,7 +74,7 @@ export class ProcessPaymentUseCase {
 
   async exec(dtoIn: ProcessPaymentDtoIn): Promise<ProcessPaymentDtoOut> {
     try {
-      await this.resolveActorAuthorizationService.exec(
+      const authorization = await this.resolveActorAuthorizationService.exec(
         new ResolveActorAuthorizationDtoIn({
           token: dtoIn.token,
           requiredAction: 'processPayment',
@@ -96,6 +97,8 @@ export class ProcessPaymentUseCase {
         );
 
       const checkoutSession = checkoutSessionDtoOut.checkoutSession;
+      if (authorization.actor.clientId !== checkoutSession.clientId) throw new Error('checkout session does not belong to authenticated actor');
+      CheckoutGeneralSettingsService.assertAvailable(checkoutSession, dtoIn.paymentMethod);
 
       if (!['created', 'processing'].includes(checkoutSession.status)) {
         throw new Error('checkout session is not available for payment');
@@ -219,6 +222,8 @@ export class ProcessPaymentUseCase {
           amount: checkoutSession.amount,
           currency: checkoutSession.currency,
           description: checkoutSession.description,
+          successUrl: checkoutSession.successUrl,
+          cancelUrl: checkoutSession.cancelUrl,
         },
         payer: dtoIn.payer,
         paymentData: dtoIn.paymentData,
@@ -295,10 +300,7 @@ export class ProcessPaymentUseCase {
             source: 'ProcessPaymentUseCase',
           },
 
-          config: {
-            ...(checkoutSession.config ?? {}),
-            ...(dtoIn.config ?? {}),
-          },
+          config: CheckoutGeneralSettingsService.transactionConfig(checkoutSession.config, dtoIn.config),
         }),
       );
 

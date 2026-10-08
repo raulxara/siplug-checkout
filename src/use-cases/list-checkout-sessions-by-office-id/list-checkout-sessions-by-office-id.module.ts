@@ -1,3 +1,5 @@
+import { GetAuthContextModule } from '../get-auth-context/get-auth-context.module';
+import { OrderReportRepository } from '../../modules/order-report/repositories/order-report.repository';
 import { Module } from '@nestjs/common';
 
 import { UseCaseSupportModule } from '../../common/services/use-case-support/use-case-support.module';
@@ -9,13 +11,14 @@ import { ListCheckoutSessionsByOfficeIdUseCase } from './list-checkout-sessions-
 
 @Module({
   imports: [
+    GetAuthContextModule,
     CheckoutSessionsModule,
     OfficesModule,
     SecurityModule,
     UseCaseSupportModule,
   ],
   controllers: [ListCheckoutSessionsByOfficeIdController],
-  providers: [ListCheckoutSessionsByOfficeIdUseCase],
+  providers: [ListCheckoutSessionsByOfficeIdUseCase, OrderReportRepository],
   exports: [ListCheckoutSessionsByOfficeIdUseCase],
 })
 export class ListCheckoutSessionsByOfficeIdModule {}

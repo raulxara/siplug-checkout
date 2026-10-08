@@ -270,7 +270,7 @@ export class ReceiveMercadoPagoWebhookUseCase {
   private resolveResourceType(params: {
     payload: Record<string, unknown>;
     queryParams: Record<string, unknown>;
-  }): 'payment' | 'preapproval' {
+  }): 'payment' | 'preapproval' | 'authorized_payment' {
     const type =
       this.extractString(params.payload, 'type') ??
       this.extractString(params.queryParams, 'type') ??
@@ -284,12 +284,12 @@ export class ReceiveMercadoPagoWebhookUseCase {
 
     if (
       normalized === 'preapproval' ||
-      normalized === 'subscription_preapproval' ||
-      normalized === 'authorized_payment'
+      normalized === 'subscription_preapproval'
     ) {
       return 'preapproval';
     }
 
+    if (['authorized_payment', 'subscription_authorized_payment'].includes(normalized)) return 'authorized_payment';
     return 'payment';
   }
 
@@ -326,7 +326,7 @@ export class ReceiveMercadoPagoWebhookUseCase {
   }
 
   private async resolveMercadoPagoResource(params: {
-    resourceType: 'payment' | 'preapproval';
+    resourceType: 'payment' | 'preapproval' | 'authorized_payment';
     resourceId: string;
     accessToken: string;
     baseUrl: string;
@@ -335,6 +335,17 @@ export class ReceiveMercadoPagoWebhookUseCase {
     preapproval: Record<string, unknown> | null;
     providerResponse: Record<string, unknown>;
   }> {
+    if (params.resourceType === 'authorized_payment') {
+      const response = await fetch(`${params.baseUrl}/authorized_payments/${encodeURIComponent(params.resourceId)}`, {
+        headers: { Authorization: `Bearer ${params.accessToken}` }, signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error(`Mercado Pago invoice request failed: ${response.status}`);
+      const invoice = await response.json() as Record<string, unknown>;
+      const paymentId = this.extractString(this.extractObject(invoice, 'payment'), 'id');
+      if (!paymentId) throw new Error('Recurring invoice has no payment yet');
+      const result = await this.getMercadoPagoPaymentService.exec(new GetMercadoPagoPaymentDtoIn({ paymentId, accessToken: params.accessToken }));
+      return { payment: { ...result.payment, preapproval_id: invoice.preapproval_id, invoice_id: String(invoice.id) }, preapproval: null, providerResponse: result.providerResponse };
+    }
     if (params.resourceType === 'payment') {
       const paymentDtoOut = await this.getMercadoPagoPaymentService.exec(
         new GetMercadoPagoPaymentDtoIn({

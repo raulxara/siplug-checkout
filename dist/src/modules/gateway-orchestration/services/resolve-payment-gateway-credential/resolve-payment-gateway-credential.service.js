@@ -13,6 +13,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResolvePaymentGatewayCredentialService = void 0;
+const gateway_payment_modes_service_1 = require("../../../gateway-settings/services/gateway-payment-modes.service");
 const common_1 = require("@nestjs/common");
 const decrypt_api_credential_secret_dto_in_1 = require("../../../../common/services/crypto/decrypt-api-credential-secret/dtos/decrypt-api-credential-secret.dto-in");
 const decrypt_api_credential_secret_service_1 = require("../../../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service");
@@ -144,11 +145,9 @@ let ResolvePaymentGatewayCredentialService = class ResolvePaymentGatewayCredenti
     credentialSupportsPaymentContext(apiCredential, dtoIn) {
         const config = apiCredential.config ?? {};
         if (config.managedHosted === true) {
-            if (dtoIn.paymentMethod !== 'payment_link' ||
-                apiCredential.environment !== dtoIn.environment ||
-                !Array.isArray(config.enabledModes) ||
-                !config.enabledModes.includes(this.mode(dtoIn)))
-                return false;
+            return (dtoIn.paymentMethod === 'payment_link' &&
+                apiCredential.environment === dtoIn.environment &&
+                gateway_payment_modes_service_1.GatewayPaymentModesService.enabled(config).includes(this.mode(dtoIn)));
         }
         const paymentTypes = this.asStringArray(config.paymentTypes ?? config.payment_types);
         const paymentMethods = this.asStringArray(config.paymentMethods ?? config.payment_methods);

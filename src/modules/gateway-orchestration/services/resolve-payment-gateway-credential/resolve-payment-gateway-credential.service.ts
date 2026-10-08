@@ -1,3 +1,5 @@
+import { GatewayPaymentModesService } from '../../../gateway-settings/services/gateway-payment-modes.service';
+import { PaymentMode } from '../../../gateway-settings/entities/gateway-setting.entity';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { DecryptApiCredentialSecretDtoIn } from '../../../../common/services/crypto/decrypt-api-credential-secret/dtos/decrypt-api-credential-secret.dto-in';
@@ -195,7 +197,7 @@ export class ResolvePaymentGatewayCredentialService {
     }
   }
 
-  private mode(dto: ResolvePaymentGatewayCredentialDtoIn): string {
+  private mode(dto: ResolvePaymentGatewayCredentialDtoIn): PaymentMode {
     return dto.paymentType === 'recurring'
       ? dto.splitRequired
         ? 'split_recurring'
@@ -211,13 +213,11 @@ export class ResolvePaymentGatewayCredentialService {
   ): boolean {
     const config = apiCredential.config ?? {};
     if (config.managedHosted === true) {
-      if (
-        dtoIn.paymentMethod !== 'payment_link' ||
-        apiCredential.environment !== dtoIn.environment ||
-        !Array.isArray(config.enabledModes) ||
-        !config.enabledModes.includes(this.mode(dtoIn))
-      )
-        return false;
+      return (
+        dtoIn.paymentMethod === 'payment_link' &&
+        apiCredential.environment === dtoIn.environment &&
+        GatewayPaymentModesService.enabled(config).includes(this.mode(dtoIn))
+      );
     }
 
     const paymentTypes = this.asStringArray(

@@ -41,17 +41,15 @@ function setup() {
   ] as unknown as ApiCredentialRow[];
   const repository = { getAllByOfficeId: jest.fn().mockResolvedValue(rows) };
   const gateways = {
-    exec: jest
-      .fn()
-      .mockResolvedValue({
-        gateway: {
-          _id: 'gateway',
-          status: 'active',
-          provider: 'stripe',
-          slug: 'stripe',
-          config: {},
-        },
-      }),
+    exec: jest.fn().mockResolvedValue({
+      gateway: {
+        _id: 'gateway',
+        status: 'active',
+        provider: 'stripe',
+        slug: 'stripe',
+        config: {},
+      },
+    }),
   };
   const decrypt = {
     exec: jest
@@ -90,7 +88,10 @@ describe('Hosted gateway routing', () => {
     ).rejects.toThrow('not found');
   });
   it('rejects direct card capture on managed credentials', async () => {
-    const { service } = setup();
+    const { service, rows } = setup();
+    rows.forEach((r) => {
+      r.config!.paymentMethods = ['payment_link', 'credit_card'];
+    });
     await expect(
       service.exec(input({ paymentMethod: 'credit_card' })),
     ).rejects.toThrow('not found');
@@ -102,6 +103,24 @@ describe('Hosted gateway routing', () => {
     ).rejects.toThrow('not found');
     rows.forEach((r) => (r.status = 'inactive'));
     await expect(service.exec(input())).rejects.toThrow('not found');
+  });
+  it('honors credential booleans over stale enabledModes when charging', async () => {
+    const { service, rows } = setup();
+    rows.forEach((r) => {
+      r.config!.supportsOneTimePayment = false;
+    });
+    await expect(service.exec(input())).rejects.toThrow('not found');
+    expect(
+      (await service.exec(input({ splitRequired: true }))).apiCredential._id,
+    ).toBe('b');
+  });
+  it('routes a flag-only credential without the legacy mode list', async () => {
+    const { service, rows } = setup();
+    rows.forEach((r) => {
+      delete r.config!.enabledModes;
+      r.config!.supportsOneTimePayment = true;
+    });
+    expect((await service.exec(input())).apiCredential._id).toBe('a');
   });
   it('requires an explicit default when several gateways compete', async () => {
     const { service, rows } = setup();

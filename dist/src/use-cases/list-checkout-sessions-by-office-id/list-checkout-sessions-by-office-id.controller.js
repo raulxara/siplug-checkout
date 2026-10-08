@@ -28,6 +28,8 @@ let ListCheckoutSessionsByOfficeIdController = class ListCheckoutSessionsByOffic
             const dtoOut = await this.listCheckoutSessionsByOfficeIdUseCase.exec(new list_checkout_sessions_by_office_id_dto_in_1.ListCheckoutSessionsByOfficeIdDtoIn({
                 token,
                 officeId: body.officeId,
+                report: body.report,
+                filters: body.filters,
             }));
             return {
                 status: 'success',
@@ -36,12 +38,11 @@ let ListCheckoutSessionsByOfficeIdController = class ListCheckoutSessionsByOffic
             };
         }
         catch (error) {
-            const message = error instanceof Error
-                ? error.message
-                : 'error on list checkout sessions by office id controller';
+            if (error instanceof common_1.HttpException)
+                throw error;
             throw new common_1.BadRequestException({
                 status: 'error',
-                message,
+                message: 'Não foi possível consultar os pedidos.',
             });
         }
     }

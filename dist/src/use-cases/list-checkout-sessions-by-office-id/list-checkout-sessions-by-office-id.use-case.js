@@ -10,6 +10,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListCheckoutSessionsByOfficeIdUseCase = void 0;
+const get_auth_context_use_case_1 = require("../get-auth-context/get-auth-context.use-case");
+const order_report_repository_1 = require("../../modules/order-report/repositories/order-report.repository");
 const common_1 = require("@nestjs/common");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
 const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
@@ -21,11 +23,15 @@ const resolve_actor_authorization_dto_in_1 = require("../../modules/security/ser
 const resolve_actor_authorization_service_1 = require("../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service");
 const list_checkout_sessions_by_office_id_dto_out_1 = require("./dtos/list-checkout-sessions-by-office-id.dto-out");
 let ListCheckoutSessionsByOfficeIdUseCase = class ListCheckoutSessionsByOfficeIdUseCase {
+    identity;
+    report;
     resolveActorAuthorizationService;
     getAllCheckoutSessionsByOfficeIdService;
     findOfficeByUniqueIdService;
     handleUseCaseExceptionService;
-    constructor(resolveActorAuthorizationService, getAllCheckoutSessionsByOfficeIdService, findOfficeByUniqueIdService, handleUseCaseExceptionService) {
+    constructor(identity, report, resolveActorAuthorizationService, getAllCheckoutSessionsByOfficeIdService, findOfficeByUniqueIdService, handleUseCaseExceptionService) {
+        this.identity = identity;
+        this.report = report;
         this.resolveActorAuthorizationService = resolveActorAuthorizationService;
         this.getAllCheckoutSessionsByOfficeIdService = getAllCheckoutSessionsByOfficeIdService;
         this.findOfficeByUniqueIdService = findOfficeByUniqueIdService;
@@ -38,6 +44,11 @@ let ListCheckoutSessionsByOfficeIdUseCase = class ListCheckoutSessionsByOfficeId
                 requiredAction: 'listCheckoutSessionsByOfficeId',
                 requiredEntity: 'checkout_sessions',
             }));
+            const context = await this.identity.exec(dtoIn.token);
+            if (context.officeId !== dtoIn.officeId)
+                throw new common_1.ForbiddenException('office not authorized');
+            if (dtoIn.report)
+                return this.report.list(context.officeId, context.clientId, dtoIn.filters);
             const officeDtoOut = await this.findOfficeByUniqueIdService.exec(new find_office_by_unique_id_dto_in_1.FindOfficeByUniqueIdDtoIn(dtoIn.officeId));
             if (officeDtoOut.office.status !== 'active') {
                 throw new Error('office is not active');
@@ -56,6 +67,8 @@ let ListCheckoutSessionsByOfficeIdUseCase = class ListCheckoutSessionsByOfficeId
                     officeId: dtoIn.officeId,
                 },
             }));
+            if (error instanceof common_1.HttpException)
+                throw error;
             const message = error instanceof Error
                 ? error.message
                 : 'error on list checkout sessions by office id use case';
@@ -66,7 +79,9 @@ let ListCheckoutSessionsByOfficeIdUseCase = class ListCheckoutSessionsByOfficeId
 exports.ListCheckoutSessionsByOfficeIdUseCase = ListCheckoutSessionsByOfficeIdUseCase;
 exports.ListCheckoutSessionsByOfficeIdUseCase = ListCheckoutSessionsByOfficeIdUseCase = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [resolve_actor_authorization_service_1.ResolveActorAuthorizationService,
+    __metadata("design:paramtypes", [get_auth_context_use_case_1.GetAuthContextUseCase,
+        order_report_repository_1.OrderReportRepository,
+        resolve_actor_authorization_service_1.ResolveActorAuthorizationService,
         get_all_checkout_sessions_by_office_id_service_1.GetAllCheckoutSessionsByOfficeIdService,
         find_office_by_unique_id_service_1.FindOfficeByUniqueIdService,
         handle_use_case_exception_service_1.HandleUseCaseExceptionService])

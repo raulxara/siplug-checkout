@@ -1,3 +1,4 @@
+import { ImportGatewaySettingUseCase } from './import-gateway-setting.use-case';
 import { Module } from '@nestjs/common';
 import { ApiCredentialsModule } from '../../modules/api-credentials/api-credentials.module';
 import { SecurityModule } from '../../modules/security/security.module';
@@ -17,6 +18,7 @@ import { GatewaySettingAuthorizationService } from '../../modules/gateway-settin
   imports: [ApiCredentialsModule, SecurityModule, GetAuthContextModule],
   controllers: [GatewaySettingsController],
   providers: [
+    ImportGatewaySettingUseCase,
     GatewaySettingsRepository,
     GatewayDefinitionService,
     GatewaySettingSecurityService,

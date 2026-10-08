@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Body,
   Controller,
   Headers,
@@ -32,6 +33,8 @@ export class ListCheckoutSessionsByOfficeIdController {
         new ListCheckoutSessionsByOfficeIdDtoIn({
           token,
           officeId: body.officeId,
+          report: body.report,
+          filters: body.filters,
         }),
       );
 
@@ -41,14 +44,10 @@ export class ListCheckoutSessionsByOfficeIdController {
         data: dtoOut,
       };
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'error on list checkout sessions by office id controller';
-
+      if (error instanceof HttpException) throw error;
       throw new BadRequestException({
         status: 'error',
-        message,
+        message: 'Não foi possível consultar os pedidos.',
       });
     }
   }

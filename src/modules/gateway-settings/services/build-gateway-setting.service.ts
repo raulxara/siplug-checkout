@@ -1,3 +1,5 @@
+import { GatewayPaymentMethodsService } from './gateway-payment-methods.service';
+import { GatewayPaymentModesService } from './gateway-payment-modes.service';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Prisma, ApiCredential, Gateway } from '@prisma/client';
@@ -43,10 +45,15 @@ export class BuildGatewaySettingService {
       {
         environment: input.environment,
         managedHosted: true,
+        ...GatewayPaymentModesService.flags(input.modes),
         enabledModes: input.modes,
         defaultModes: input.status === 'active' ? input.defaultModes : [],
         paymentTypes: types,
-        paymentMethods: ['payment_link'],
+        paymentMethods: GatewayPaymentMethodsService.forSave(
+          gateway.config,
+          input.paymentMethods,
+          previous,
+        ),
         useOAuth: true,
         webhookAuthMode: 'required',
         webhookSignatureMode: 'required',
@@ -61,13 +68,14 @@ export class BuildGatewaySettingService {
     else if (previous.previousConfigurationEncrypted)
       config.previousConfigurationEncrypted =
         previous.previousConfigurationEncrypted;
+    if (previous.importedFrom) config.importedFrom = previous.importedFrom;
     const history = Array.isArray(old?.changes_history)
       ? old.changes_history
       : [];
     return {
       unique_id: id,
       office_id: actor.officeId,
-      client_id: null,
+      client_id: old?.client_id ?? null,
       gateway_id: gatewayId,
       name: gateway.name,
       slug: old?.slug ?? `hosted-${gatewayId}-${input.environment}`,

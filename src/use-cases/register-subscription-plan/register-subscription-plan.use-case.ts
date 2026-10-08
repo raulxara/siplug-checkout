@@ -37,7 +37,7 @@ export class RegisterSubscriptionPlanUseCase {
     dtoIn: RegisterSubscriptionPlanDtoIn,
   ): Promise<RegisterSubscriptionPlanDtoOut> {
     try {
-      await this.resolveActorAuthorizationService.exec(
+      const authorization = await this.resolveActorAuthorizationService.exec(
         new ResolveActorAuthorizationDtoIn({
           token: dtoIn.token,
           requiredAction: 'registerSubscriptionPlan',
@@ -45,6 +45,7 @@ export class RegisterSubscriptionPlanUseCase {
         }),
       );
 
+      if (authorization.actor.clientId !== dtoIn.clientId) throw new Error('client does not belong to authenticated actor');
       this.validateBillingInterval(dtoIn.billingInterval);
       this.validateStatus(dtoIn.status);
       this.validateCurrency(dtoIn.currency);

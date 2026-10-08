@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PayPalGatewayPaymentProvider = void 0;
+const checkout_general_settings_service_1 = require("../../../checkout-settings/services/checkout-general-settings.service");
 const common_1 = require("@nestjs/common");
 const gateway_payment_dto_out_1 = require("../../dtos/gateway-payment.dto-out");
 let PayPalGatewayPaymentProvider = class PayPalGatewayPaymentProvider {
@@ -204,7 +205,9 @@ let PayPalGatewayPaymentProvider = class PayPalGatewayPaymentProvider {
         const currencyCode = String(dtoIn.paymentTransaction.currency ?? 'BRL').toUpperCase();
         const items = this.buildItems(dtoIn, currencyCode);
         const amountValue = this.formatAmountFromCents(dtoIn.paymentTransaction.amount);
-        const returnUrl = this.toNullableString(transactionConfig.returnUrl) ??
+        const returnUrl = (transactionConfig.checkoutSettingsSnapshot ? checkout_general_settings_service_1.CheckoutGeneralSettingsService.paypalCaptureUrl(dtoIn.apiCredential?._id ?? '') : null) ??
+            (apiCredentialConfig.managedHosted === true ? this.toNullableString(apiCredentialConfig.returnUrl) : null) ??
+            this.toNullableString(transactionConfig.returnUrl) ??
             this.toNullableString(transactionConfig.return_url) ??
             this.toNullableString(transactionConfig.successUrl) ??
             this.toNullableString(transactionConfig.success_url) ??

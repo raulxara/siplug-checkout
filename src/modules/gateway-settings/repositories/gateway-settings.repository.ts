@@ -122,6 +122,25 @@ export class GatewaySettingsRepository {
       return { credential: await credential, updatedDefaults };
     });
   }
+  async importCopy(
+    officeId: string,
+    slug: string,
+    build: () => Prisma.ApiCredentialUncheckedCreateInput,
+  ) {
+    return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT _id FROM offices WHERE _id = ${officeId} FOR UPDATE`;
+      const existing = await tx.apiCredential.findUnique({
+        where: { office_id_slug: { office_id: officeId, slug } },
+      });
+      if (existing) return { credential: existing, created: false };
+      return {
+        credential: await tx.apiCredential.create({
+          data: { ...build(), office_id: officeId, slug },
+        }),
+        created: true,
+      };
+    });
+  }
   async connection(
     officeId: string,
     id: string,

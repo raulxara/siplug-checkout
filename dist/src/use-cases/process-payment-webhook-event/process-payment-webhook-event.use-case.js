@@ -10,6 +10,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProcessPaymentWebhookEventUseCase = void 0;
+const actual_payment_method_service_1 = require("../../modules/payment-transactions/services/actual-payment-method.service");
+const settlement_policy_1 = require("../../modules/hosted-orders/services/settlement-policy");
 const common_1 = require("@nestjs/common");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
 const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
@@ -65,7 +67,7 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
     }
     async exec(dtoIn) {
         try {
-            await this.markPaymentWebhookEventAsProcessingService.exec(new mark_payment_webhook_event_as_processing_dto_in_1.MarkPaymentWebhookEventAsProcessingDtoIn({
+            const processingEvent = await this.markPaymentWebhookEventAsProcessingService.exec(new mark_payment_webhook_event_as_processing_dto_in_1.MarkPaymentWebhookEventAsProcessingDtoIn({
                 _id: dtoIn.paymentWebhookEventId,
                 source: 'ProcessPaymentWebhookEventUseCase.processing',
             }));
@@ -91,6 +93,7 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
                 }));
                 return new process_payment_webhook_event_dto_out_1.ProcessPaymentWebhookEventDtoOut(webhookDtoOut.paymentWebhookEvent, null, false, false, processingResult);
             }
+            (0, settlement_policy_1.assertSettlement)(processingEvent.paymentWebhookEvent.metadata, paymentTransaction, dtoIn.normalizedEvent);
             const statusUpdate = this.resolveTransactionStatusUpdate({
                 event: dtoIn.normalizedEvent,
                 paymentTransaction,
@@ -120,6 +123,7 @@ let ProcessPaymentWebhookEventUseCase = class ProcessPaymentWebhookEventUseCase 
                 status: statusUpdate.status,
                 processStatus: statusUpdate.processStatus,
                 processMessage: statusUpdate.processMessage,
+                config: actual_payment_method_service_1.ActualPaymentMethodService.merge(paymentTransaction.config, dtoIn.normalizedEvent.provider, dtoIn.normalizedEvent.rawPayload),
                 providerResponse: this.buildProviderResponse({
                     current: paymentTransaction.providerResponse,
                     event: dtoIn.normalizedEvent,
