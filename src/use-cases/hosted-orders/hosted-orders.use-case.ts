@@ -36,6 +36,16 @@ export class HostedOrdersUseCase {
       input.items.reduce((n, i) => n + i.totalAmount, 0) !== input.amount
     )
       throw new BadRequestException('Valores inconsistentes.');
+    if ((input.discount ?? 0) > 0 && !input.cuponId)
+      throw new BadRequestException('Cupom obrigatório para desconto.');
+    if (input.amount + (input.discount ?? 0) > 999999999)
+      throw new BadRequestException('Valor fora do limite.');
+    if (
+      input.cuponId &&
+      input.paymentType === 'recurring' &&
+      !input.couponRecurrence
+    )
+      throw new BadRequestException('COUPON_RECURRENCE_REQUIRED');
     const hash = createHash('sha256')
       .update(JSON.stringify(input))
       .digest('hex');
@@ -57,6 +67,13 @@ export class HostedOrdersUseCase {
           actor.clientId,
           input.paymentType,
         );
+        if (
+          input.cuponId &&
+          input.couponRecurrence === 'first_payment' &&
+          input.paymentType === 'recurring' &&
+          gateway.gateway?.provider !== 'mercadopago'
+        )
+          throw new BadRequestException('COUPON_FIRST_PAYMENT_UNSUPPORTED');
         let subscriptionPlanId: string | undefined;
         if (input.paymentType === 'recurring') {
           const slug = 'pedido-' + input.orderId;
@@ -96,9 +113,25 @@ export class HostedOrdersUseCase {
             amount: input.amount,
             currency: 'BRL',
             items: input.items,
-            config: subscriptionPlanId
-              ? { subscription: { subscriptionPlanId } }
-              : {},
+            config: {
+              ...(subscriptionPlanId
+                ? { subscription: { subscriptionPlanId } }
+                : {}),
+              ...(input.cuponId
+                ? {
+                    cuponId: input.cuponId,
+                    discount: input.discount ?? 0,
+                    couponRecurrence: input.couponRecurrence ?? null,
+                    ...(input.paymentType === 'recurring' &&
+                    input.couponRecurrence === 'first_payment'
+                      ? {
+                          couponAdjustmentStatus: 'pending',
+                          renewalAmount: input.amount + (input.discount ?? 0),
+                        }
+                      : {}),
+                  }
+                : {}),
+            },
             metadata: { orderId: input.orderId },
           }),
         );

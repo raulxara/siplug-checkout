@@ -1,3 +1,7 @@
+import { CouponRenewalsRepository } from '../../modules/hosted-orders/repositories/coupon-renewals.repository';
+import { MercadoPagoRenewalService } from '../../modules/hosted-orders/services/mercado-pago-renewal.service';
+import { RestoreCouponRenewalsUseCase } from './restore-coupon-renewals.use-case';
+import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
 import { Module } from '@nestjs/common';
 import { GetAuthContextModule } from '../get-auth-context/get-auth-context.module';
 import { RegisterCheckoutSessionModule } from '../register-checkout-session/register-checkout-session.module';
@@ -15,7 +19,14 @@ import { HostedOrdersController } from './hosted-orders.controller';
     ProcessPaymentModule,
     ProcessRecurringPaymentModule,
   ],
-  providers: [HostedOrdersRepository, HostedOrdersUseCase],
+  providers: [
+    HostedOrdersRepository,
+    HostedOrdersUseCase,
+    CouponRenewalsRepository,
+    MercadoPagoRenewalService,
+    RestoreCouponRenewalsUseCase,
+    DecryptApiCredentialSecretService,
+  ],
   controllers: [HostedOrdersController],
 })
 export class HostedOrdersModule {}

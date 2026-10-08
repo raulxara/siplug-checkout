@@ -60,7 +60,15 @@ export class GatewaySettingViewService {
                   modes.includes(m as PaymentMode),
                 ) as PaymentMode[])
               : [],
-            urls: this.security.urls(definition.provider, env, row.unique_id),
+            urls: {
+              ...this.security.urls(definition.provider, env, row.unique_id),
+              ...(typeof c.notificationUrl === 'string'
+                ? {
+                    notificationUrl: c.notificationUrl,
+                    webhookUrl: c.notificationUrl,
+                  }
+                : {}),
+            },
             version: row.updated_at.toISOString(),
             connectionStatus:
               typeof c.connectionStatus === 'string'

@@ -14,7 +14,7 @@ export declare class ListCheckoutSessionsByOfficeIdUseCase {
     private readonly findOfficeByUniqueIdService;
     private readonly handleUseCaseExceptionService;
     constructor(identity: GetAuthContextUseCase, report: OrderReportRepository, resolveActorAuthorizationService: ResolveActorAuthorizationService, getAllCheckoutSessionsByOfficeIdService: GetAllCheckoutSessionsByOfficeIdService, findOfficeByUniqueIdService: FindOfficeByUniqueIdService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
-    exec(dtoIn: ListCheckoutSessionsByOfficeIdDtoIn): Promise<{
+    exec(dtoIn: ListCheckoutSessionsByOfficeIdDtoIn): Promise<ListCheckoutSessionsByOfficeIdDtoOut | {
         items: {
             createdAt: string;
             items: number;
@@ -22,13 +22,13 @@ export declare class ListCheckoutSessionsByOfficeIdUseCase {
             amount: number;
             id: string;
             code: string;
-            customer: string;
-            email: string | null;
             currency: string;
+            status: string;
             method: string;
+            email: string | null;
+            customer: string;
             requestedMethod: string | null;
             actualMethod: string | null;
-            status: string;
         }[];
         total: number;
         page: number;
@@ -40,5 +40,5 @@ export declare class ListCheckoutSessionsByOfficeIdUseCase {
             average: number;
         };
         asOf: string;
-    } | ListCheckoutSessionsByOfficeIdDtoOut>;
+    }>;
 }

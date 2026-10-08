@@ -78,6 +78,7 @@ export class HostedOrdersRepository {
         OR: [{ client_id: clientId }, { client_id: null }],
         gateway: { status: 'active' },
       },
+      include: { gateway: true },
     });
     const flag =
       mode === 'recurring'

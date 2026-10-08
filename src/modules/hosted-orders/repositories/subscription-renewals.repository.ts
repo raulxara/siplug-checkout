@@ -55,18 +55,22 @@ export class SubscriptionRenewalsRepository {
       )
         return null;
       await tx.$queryRaw`SELECT id FROM subscriptions WHERE id = ${sub.id} FOR UPDATE`;
-      if (
-        event.amount !== sub.amount ||
-        event.currency?.toUpperCase() !== sub.currency.toUpperCase()
-      )
-        throw new Error('Subscription invoice amount or currency mismatch');
       const existing = await tx.subscriptionInvoice.findFirst({
         where: {
           subscription_id: sub.unique_id,
           gateway_invoice_id: invoiceKey,
         },
       });
-      if (existing) return existing.unique_id;
+      if (existing) {
+        if (event.amount !== existing.amount || event.currency?.toUpperCase() !== existing.currency.toUpperCase()) throw new Error('Subscription invoice amount or currency mismatch');
+        return existing.unique_id;
+      }
+      if (
+        event.amount !== sub.amount ||
+        event.currency?.toUpperCase() !== sub.currency.toUpperCase()
+      )
+        throw new Error('Subscription invoice amount or currency mismatch');
+
       const first = await tx.subscriptionInvoice.findFirst({
         where: { subscription_id: sub.unique_id },
         orderBy: { id: 'asc' },

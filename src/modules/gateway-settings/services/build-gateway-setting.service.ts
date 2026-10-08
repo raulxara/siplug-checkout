@@ -60,6 +60,22 @@ export class BuildGatewaySettingService {
         connectionStatus: 'not_tested',
       },
     );
+    const supplied = input.notificationUrl?.trim();
+    if (supplied) {
+      const webhook = this.security.notificationUrl(
+        supplied,
+        definition.provider,
+        id,
+      );
+      config.notificationUrl = webhook;
+      config.webhookUrl = webhook;
+    } else if (
+      input.notificationUrl === undefined &&
+      typeof previous.notificationUrl === 'string'
+    ) {
+      config.notificationUrl = previous.notificationUrl;
+      config.webhookUrl = previous.notificationUrl;
+    }
     // Preserve unrelated metadata without copying arbitrary URL/secret aliases into provider config.
     if (Object.keys(previous).length && !previous.managedHosted)
       config.previousConfigurationEncrypted = this.security.encrypt(
@@ -91,7 +107,10 @@ export class BuildGatewaySettingService {
           action: old ? 'updated' : 'created',
           actor: actor.userCustomerId,
           at: new Date().toISOString(),
-          fields: Object.keys(input.fields),
+          fields: [
+            ...Object.keys(input.fields),
+            ...(input.notificationUrl !== undefined ? ['notificationUrl'] : []),
+          ],
         },
       ] as Prisma.InputJsonValue,
     };

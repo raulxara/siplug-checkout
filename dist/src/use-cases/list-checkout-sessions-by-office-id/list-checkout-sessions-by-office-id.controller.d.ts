@@ -6,7 +6,7 @@ export declare class ListCheckoutSessionsByOfficeIdController {
     handle(body: ListCheckoutSessionsByOfficeIdRequest, authorization?: string): Promise<{
         status: string;
         message: string;
-        data: {
+        data: import("./dtos/list-checkout-sessions-by-office-id.dto-out").ListCheckoutSessionsByOfficeIdDtoOut | {
             items: {
                 createdAt: string;
                 items: number;
@@ -14,13 +14,13 @@ export declare class ListCheckoutSessionsByOfficeIdController {
                 amount: number;
                 id: string;
                 code: string;
-                customer: string;
-                email: string | null;
                 currency: string;
+                status: string;
                 method: string;
+                email: string | null;
+                customer: string;
                 requestedMethod: string | null;
                 actualMethod: string | null;
-                status: string;
             }[];
             total: number;
             page: number;
@@ -32,6 +32,6 @@ export declare class ListCheckoutSessionsByOfficeIdController {
                 average: number;
             };
             asOf: string;
-        } | import("./dtos/list-checkout-sessions-by-office-id.dto-out").ListCheckoutSessionsByOfficeIdDtoOut;
+        };
     }>;
 }

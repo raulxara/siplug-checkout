@@ -36,5 +36,6 @@ export class SaveGatewaySettingDtoIn {
   @IsString({ each: true })
   @Matches(/^[a-z][a-z0-9_]{0,63}$/, { each: true })
   paymentMethods?: string[];
+  @IsOptional() @IsString() @MaxLength(2048) notificationUrl?: string;
   @IsObject() fields!: Record<string, string>;
 }

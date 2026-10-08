@@ -97,6 +97,42 @@ export class GatewaySettingSecurityService {
       throw new BadRequestException('Handle inválido.');
     return result;
   }
+  notificationUrl(value: string, provider: string, id: string): string {
+    if (value.length > 2048 || /[\s\\]/.test(value))
+      throw new BadRequestException('Endereço de webhook inválido.');
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      throw new BadRequestException('Endereço de webhook inválido.');
+    }
+    const path =
+      provider === 'stripe'
+        ? `/api/v1/webhooks/stripe/${id}`
+        : `/api/v1/webhooks/gateways/${provider === 'mercadopago' ? 'mercado-pago' : provider}/${id}`;
+    if (
+      url.protocol !== 'https:' ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      url.pathname !== path ||
+      url.port ||
+      url.hostname === 'localhost' ||
+      /^[0-9.]+$/.test(url.hostname) ||
+      url.hostname.includes(':') ||
+      !url.hostname.includes('.') ||
+      url.hostname.endsWith('.localhost') ||
+      url.hostname.endsWith('.local')
+    )
+      throw new BadRequestException(
+        'Use HTTPS e o caminho de webhook desta credencial.',
+      );
+    for (const key of url.searchParams.keys())
+      if (key !== 'source_news')
+        throw new BadRequestException('Parâmetro de webhook não permitido.');
+    return url.toString();
+  }
+
   urls(
     provider: string,
     environment: Environment,
@@ -122,7 +158,7 @@ export class GatewaySettingSecurityService {
     const webhook =
       provider === 'stripe'
         ? `${root}/api/v1/webhooks/stripe/${id}`
-        : `${root}/api/v1/webhooks/gateways/${provider}/${id}`;
+        : `${root}/api/v1/webhooks/gateways/${provider === 'mercadopago' ? 'mercado-pago' : provider}/${id}`;
     const success = `${front}/pagamento/retorno`;
     const cancel = `${front}/pagamento/cancelado`;
     const result: Record<string, string> = {

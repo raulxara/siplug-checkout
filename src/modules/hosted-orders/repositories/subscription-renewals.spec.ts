@@ -29,7 +29,7 @@ describe('subscription renewal reconciliation', () => {
             ({ where }: { where: { gateway_invoice_id?: string } }) =>
               where.gateway_invoice_id
                 ? existing
-                  ? { unique_id: 'already' }
+                  ? { unique_id: 'already', amount: 100, currency: 'BRL' }
                   : null
                 : { gateway_invoice_id: 'payment:payment-1' },
           ),
@@ -84,4 +84,10 @@ describe('subscription renewal reconciliation', () => {
     await expect(f.repo.ensure('webhook', event)).rejects.toThrow('mismatch');
     expect(f.tx.subscriptionInvoice.create).not.toHaveBeenCalled();
   });
+  it('accepts a replay of the discounted invoice after the subscription returns to full price', async () => {
+    const f = fixture(true, 200);
+    expect(await f.repo.ensure('webhook', event)).toBe('already');
+    expect(f.tx.subscriptionCycle.create).not.toHaveBeenCalled();
+  });
+
 });

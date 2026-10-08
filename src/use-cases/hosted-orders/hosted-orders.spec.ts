@@ -75,4 +75,110 @@ describe('hosted purchases', () => {
     );
     expect(f.payments.exec).not.toHaveBeenCalled();
   });
+  it('persists Commerce coupon metadata with the discounted session', async () => {
+    const sessions = { exec: jest.fn() };
+    const repo = {
+      reserve: jest.fn().mockResolvedValue(1),
+      release: jest.fn(),
+      gateway: jest
+        .fn()
+        .mockResolvedValue({ gateway_id: 'gateway', unique_id: 'credential' }),
+      session: jest
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue({
+          unique_id: 'session',
+          items: [{ total_amount: 100 }],
+        }),
+      result: jest.fn().mockResolvedValue({ transactionId: 'existing' }),
+    };
+    const u = new HostedOrdersUseCase(
+      {
+        exec: jest
+          .fn()
+          .mockResolvedValue({ officeId: 'office', clientId: 'client' }),
+      } as never,
+      repo as never,
+      sessions as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    await u.start('token', {
+      ...input,
+      paymentType: 'one_time',
+      cuponId: 'coupon',
+      discount: 10,
+    });
+    expect(sessions.exec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 100,
+        config: expect.objectContaining({ cuponId: 'coupon', discount: 10 }),
+      }),
+    );
+  });
+  it('records a first-payment adjustment only for Mercado Pago', async () => {
+    const sessions = { exec: jest.fn() };
+    const repo = {
+      reserve: jest.fn().mockResolvedValue(1),
+      release: jest.fn(),
+      gateway: jest
+        .fn()
+        .mockResolvedValue({
+          gateway_id: 'gateway',
+          unique_id: 'credential',
+          gateway: { provider: 'mercadopago' },
+        }),
+      plan: jest.fn().mockResolvedValue({ unique_id: 'plan' }),
+      session: jest
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue({
+          unique_id: 'session',
+          items: [{ total_amount: 100 }],
+        }),
+      result: jest.fn().mockResolvedValue({ transactionId: 'existing' }),
+    };
+    const u = new HostedOrdersUseCase(
+      {
+        exec: jest
+          .fn()
+          .mockResolvedValue({ officeId: 'office', clientId: 'client' }),
+      } as never,
+      repo as never,
+      sessions as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    await u.start('token', {
+      ...input,
+      cuponId: 'coupon',
+      discount: 10,
+      couponRecurrence: 'first_payment',
+    });
+    expect(sessions.exec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          couponAdjustmentStatus: 'pending',
+          renewalAmount: 110,
+          couponRecurrence: 'first_payment',
+        }),
+      }),
+    );
+    repo.session.mockResolvedValueOnce(null);
+    repo.gateway.mockResolvedValueOnce({
+      gateway_id: 'gateway',
+      unique_id: 'credential',
+      gateway: { provider: 'stripe' },
+    });
+    await expect(
+      u.start('token', {
+        ...input,
+        cuponId: 'coupon',
+        discount: 10,
+        couponRecurrence: 'first_payment',
+      }),
+    ).rejects.toThrow('COUPON_FIRST_PAYMENT_UNSUPPORTED');
+  });
 });
