@@ -17,16 +17,22 @@ export declare class ListCheckoutSessionsByOfficeIdUseCase {
     exec(dtoIn: ListCheckoutSessionsByOfficeIdDtoIn): Promise<ListCheckoutSessionsByOfficeIdDtoOut | {
         items: {
             createdAt: string;
+            lastActivityAt: string;
+            everPaid: boolean;
+            paidAt: string | null;
             items: number;
             cart: import("../../modules/order-report/entities/order-report.entity").OrderCartItem[];
             amount: number;
             id: string;
-            code: string;
-            currency: string;
             status: string;
-            method: string;
+            currency: string;
             email: string | null;
+            phone?: string | null | undefined;
+            code: string;
+            method: string;
+            paymentCustomerId?: string | null | undefined;
             customer: string;
+            orderRef?: string | null | undefined;
             requestedMethod: string | null;
             actualMethod: string | null;
         }[];

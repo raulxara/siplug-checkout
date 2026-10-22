@@ -8,6 +8,12 @@ export type OrderCartItem = {
   totalAmount: number;
 };
 export type OrderReportRow = {
+  phone?: string | null;
+  paymentCustomerId?: string | null;
+  orderRef?: string | null;
+  everPaid?: boolean;
+  paidAt?: string | null;
+  lastActivityAt?: string;
   id: string;
   code: string;
   customer: string;

@@ -174,7 +174,7 @@ export class HostedOrdersRepository {
           : (tx?.status ?? 'pending'),
       amount: session.amount,
       currency: session.currency,
-      checkoutUrl: tx?.checkout_url ?? null,
+      checkoutUrl: invoice || tx?.status === 'paid' || sub?.status === 'active' ? null : (tx?.checkout_url ?? null),
       paidAt:
         invoice?.paid_at?.toISOString() ?? tx?.paid_at?.toISOString() ?? null,
       validUntil: cycle?.period_end?.toISOString() ?? null,

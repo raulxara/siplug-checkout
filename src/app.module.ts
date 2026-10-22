@@ -1,3 +1,5 @@
+import { SyncCompanyProfileModule } from './use-cases/sync-company-profile/sync-company-profile.module';
+import {SyncOwnProfileModule} from './use-cases/sync-own-profile/sync-own-profile.module';
 import { HostedOrdersModule } from './use-cases/hosted-orders/hosted-orders.module';
 import { CheckoutGeneralSettingsModule } from './use-cases/checkout-general-settings/checkout-general-settings.module';
 import { GatewaySettingsModule } from './use-cases/gateway-settings/gateway-settings.module';
@@ -116,7 +118,8 @@ import { SimulateMercadoPagoPaymentWebhookModule } from './use-cases/simulate-me
 @Module({
   controllers: [AppController],
   providers: [AppService],
-  imports: [
+  imports: [SyncCompanyProfileModule,
+    SyncOwnProfileModule,
     HostedOrdersModule,CheckoutGeneralSettingsModule, GatewaySettingsModule,
     ProvisionCompanyModule,
     GetAuthContextModule,

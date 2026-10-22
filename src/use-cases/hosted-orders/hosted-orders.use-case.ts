@@ -1,5 +1,9 @@
+import { ResolveActorAuthorizationService } from '../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service';
+import { ResolveActorAuthorizationDtoIn } from '../../modules/security/services/resolve-actor-authorization/dtos/resolve-actor-authorization.dto-in';
+import { MixedBillingService } from '../../modules/hosted-orders/services/mixed-billing.service';
 import {
   Injectable,
+  Logger,
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
@@ -17,6 +21,7 @@ import { HostedOrdersRepository } from '../../modules/hosted-orders/repositories
 import { HostedOrderRequest } from './dtos/hosted-order.request';
 @Injectable()
 export class HostedOrdersUseCase {
+  private readonly logger = new Logger(HostedOrdersUseCase.name);
   constructor(
     private readonly auth: GetAuthContextUseCase,
     private readonly orders: HostedOrdersRepository,
@@ -24,12 +29,101 @@ export class HostedOrdersUseCase {
     private readonly plans: RegisterSubscriptionPlanUseCase,
     private readonly payments: ProcessPaymentUseCase,
     private readonly recurring: ProcessRecurringPaymentUseCase,
+    private readonly authorization: ResolveActorAuthorizationService,
   ) {}
   async status(token: string, orderId: string) {
     const actor = await this.auth.exec(token);
-    return this.orders.result(actor.officeId, actor.clientId, orderId);
+    const first = await this.orders.result(
+      actor.officeId,
+      actor.clientId,
+      orderId,
+    );
+    const session = await this.orders.session(
+      actor.officeId,
+      actor.clientId,
+      orderId,
+    );
+    const config = session?.config as Record<string, unknown> | null;
+    if (config?.mixedBilling === true) {
+      const child = await this.orders.session(
+        actor.officeId,
+        actor.clientId,
+        MixedBillingService.childId(orderId),
+      );
+      const second = child
+        ? await this.orders.result(
+            actor.officeId,
+            actor.clientId,
+            MixedBillingService.childId(orderId),
+          )
+        : null;
+      return MixedBillingService.combine(
+        first,
+        second,
+        Number(config.initialTotal),
+      );
+    }
+    return first;
   }
   async start(token: string, input: HostedOrderRequest) {
+    const capabilities = [['registerCheckoutSession','checkout_sessions'], ...(input.paymentType !== 'recurring' ? [['processPayment','payment_transactions']] : []), ...(input.paymentType !== 'one_time' ? [['registerSubscriptionPlan','subscription_plans'],['processRecurringPayment','payments']] : [])];
+    for (const [requiredAction, requiredEntity] of capabilities) {
+      await this.authorization.exec(new ResolveActorAuthorizationDtoIn({token,requiredAction,requiredEntity}));
+    }
+    if (input.paymentType !== 'mixed') return this.startSingle(token, input);
+    const [once, recurring] = MixedBillingService.split(input);
+    const actor = await this.auth.exec(token);
+    // Resolve both capabilities before creating any provider operation.
+    await this.orders.gateway(actor.officeId, actor.clientId, 'one_time');
+    const gateway = await this.orders.gateway(
+      actor.officeId,
+      actor.clientId,
+      'recurring',
+    );
+    if (
+      recurring.cuponId &&
+      (!recurring.couponRecurrence ||
+        (recurring.couponRecurrence === 'first_payment' &&
+          gateway.gateway?.provider !== 'mercadopago'))
+    )
+      throw new BadRequestException('COUPON_FIRST_PAYMENT_UNSUPPORTED');
+    const lease = await this.orders.reserve(
+      actor.officeId,
+      actor.clientId,
+      'mixed:' + input.orderId,
+      createHash('sha256').update(JSON.stringify(input)).digest('hex'),
+    );
+    try {
+      await this.startSingle(token, once, {
+        mixedBilling: true,
+        billingPart: 'one_time',
+        initialTotal: input.amount,
+        parentOrderId: input.orderId,
+      });
+      try {
+        await this.startSingle(token, recurring, {
+          parentOrderId: input.orderId,
+          billingPart: 'recurring',
+        });
+      } catch (error) {
+        // Return the persisted first stage so the buyer can resume the same purchase.
+        // A missing second session is exposed as processing, never as paid.
+        if (error instanceof BadRequestException) throw error;
+        this.logger.warn(
+          'Mixed order recurring stage pending reconciliation: ' +
+            input.orderId,
+        );
+      }
+      return this.status(token, input.orderId);
+    } finally {
+      await this.orders.release(lease);
+    }
+  }
+  private async startSingle(
+    token: string,
+    input: HostedOrderRequest,
+    billingConfig: Record<string, unknown> = {},
+  ) {
     const actor = await this.auth.exec(token);
     if (
       input.items.some((i) => i.totalAmount !== i.quantity * i.unitAmount) ||
@@ -94,7 +188,7 @@ export class HostedOrdersUseCase {
                 billingInterval: input.interval,
                 billingIntervalCount: input.intervalCount,
                 paymentMethods: ['payment_link'],
-                metadata: { orderId: input.orderId },
+                metadata: { orderId: input.orderId, ...billingConfig },
               }),
             );
             subscriptionPlanId = result.subscriptionPlan._id;
@@ -114,6 +208,7 @@ export class HostedOrdersUseCase {
             currency: 'BRL',
             items: input.items,
             config: {
+              ...billingConfig,
               ...(subscriptionPlanId
                 ? { subscription: { subscriptionPlanId } }
                 : {}),
@@ -132,7 +227,7 @@ export class HostedOrdersUseCase {
                   }
                 : {}),
             },
-            metadata: { orderId: input.orderId },
+            metadata: { orderId: input.orderId, ...billingConfig },
           }),
         );
         session = await this.orders.session(

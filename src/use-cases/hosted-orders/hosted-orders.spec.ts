@@ -1,3 +1,4 @@
+import { MixedBillingService } from '../../modules/hosted-orders/services/mixed-billing.service';
 import { HostedOrdersUseCase } from './hosted-orders.use-case';
 import { HostedOrderRequest } from './dtos/hosted-order.request';
 describe('hosted purchases', () => {
@@ -30,6 +31,7 @@ describe('hosted purchases', () => {
     };
     const payments = { exec: jest.fn() };
     const recurring = { exec: jest.fn() };
+    const authorization = { exec: jest.fn().mockResolvedValue({}) };
     const useCase = new HostedOrdersUseCase(
       {
         exec: jest
@@ -41,9 +43,18 @@ describe('hosted purchases', () => {
       {} as never,
       payments as never,
       recurring as never,
+      authorization as never,
     );
-    return { repo, payments, recurring, useCase };
+    return { repo, payments, recurring, useCase, authorization };
   }
+  it('checks recurring permission before reserving or dispatching a mixed order', async () => {
+    const f = fixture({});
+    f.authorization.exec.mockRejectedValue(new Error('actor does not have permission'));
+    await expect(f.useCase.start('token', {...input, paymentType:'mixed'})).rejects.toThrow('permission');
+    expect(f.repo.reserve).not.toHaveBeenCalled();
+    expect(f.payments.exec).not.toHaveBeenCalled();
+    expect(f.recurring.exec).not.toHaveBeenCalled();
+  });
   it('does not dispatch again when a transaction already exists', async () => {
     const f = fixture({ transactionId: 'existing' });
     await f.useCase.start('token', input);
@@ -103,6 +114,7 @@ describe('hosted purchases', () => {
       {} as never,
       {} as never,
       {} as never,
+      { exec: jest.fn().mockResolvedValue({}) } as never,
     );
     await u.start('token', {
       ...input,
@@ -122,13 +134,11 @@ describe('hosted purchases', () => {
     const repo = {
       reserve: jest.fn().mockResolvedValue(1),
       release: jest.fn(),
-      gateway: jest
-        .fn()
-        .mockResolvedValue({
-          gateway_id: 'gateway',
-          unique_id: 'credential',
-          gateway: { provider: 'mercadopago' },
-        }),
+      gateway: jest.fn().mockResolvedValue({
+        gateway_id: 'gateway',
+        unique_id: 'credential',
+        gateway: { provider: 'mercadopago' },
+      }),
       plan: jest.fn().mockResolvedValue({ unique_id: 'plan' }),
       session: jest
         .fn()
@@ -150,6 +160,7 @@ describe('hosted purchases', () => {
       {} as never,
       {} as never,
       {} as never,
+      { exec: jest.fn().mockResolvedValue({}) } as never,
     );
     await u.start('token', {
       ...input,
@@ -180,5 +191,61 @@ describe('hosted purchases', () => {
         couponRecurrence: 'first_payment',
       }),
     ).rejects.toThrow('COUPON_FIRST_PAYMENT_UNSUPPORTED');
+  });
+  it('resumes a mixed order using existing transactions without dispatching either twice', async () => {
+    const f = fixture({});
+    const child = MixedBillingService.childId('parent');
+    Object.assign(f.repo, {
+      gateway: jest
+        .fn()
+        .mockResolvedValue({ gateway: { provider: 'mercadopago' } }),
+    });
+    f.repo.session.mockImplementation(
+      async (_office: string, _client: string, id: string) => ({
+        unique_id: id,
+        config:
+          id === 'parent'
+            ? { mixedBilling: true, initialTotal: 300 }
+            : { parentOrderId: 'parent' },
+        items: [{ total_amount: id === 'parent' ? 200 : 100 }],
+      }),
+    );
+    f.repo.result.mockImplementation(
+      async (_office: string, _client: string, id: string) => ({
+        transactionId: 'tx-' + id,
+        subscriptionId: id === child ? 'sub' : null,
+        status: id === 'parent' ? 'paid' : 'pending',
+        amount: id === 'parent' ? 200 : 100,
+        currency: 'BRL',
+        checkoutUrl:
+          id === child ? 'https://gateway/sub' : 'https://gateway/old',
+      }),
+    );
+    const mixed: HostedOrderRequest = {
+      ...input,
+      orderId: 'parent',
+      amount: 300,
+      paymentType: 'mixed',
+      items: [
+        { ...input.items[0], paymentType: 'recurring' },
+        {
+          ...input.items[0],
+          itemRef: 'addon',
+          paymentType: 'one_time',
+          unitAmount: 200,
+          totalAmount: 200,
+        },
+      ],
+    };
+    expect(await f.useCase.start('token', mixed)).toMatchObject({
+      status: 'partially_paid',
+      amount: 300,
+      checkoutUrl: 'https://gateway/sub',
+    });
+    expect(await f.useCase.start('token', mixed)).toMatchObject({
+      status: 'partially_paid',
+    });
+    expect(f.recurring.exec).not.toHaveBeenCalled();
+    expect(f.payments.exec).not.toHaveBeenCalled();
   });
 });

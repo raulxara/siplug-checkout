@@ -7,6 +7,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
+const sync_company_profile_module_1 = require("./use-cases/sync-company-profile/sync-company-profile.module");
+const sync_own_profile_module_1 = require("./use-cases/sync-own-profile/sync-own-profile.module");
 const hosted_orders_module_1 = require("./use-cases/hosted-orders/hosted-orders.module");
 const checkout_general_settings_module_1 = require("./use-cases/checkout-general-settings/checkout-general-settings.module");
 const gateway_settings_module_1 = require("./use-cases/gateway-settings/gateway-settings.module");
@@ -127,7 +129,8 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
-        imports: [
+        imports: [sync_company_profile_module_1.SyncCompanyProfileModule,
+            sync_own_profile_module_1.SyncOwnProfileModule,
             hosted_orders_module_1.HostedOrdersModule, checkout_general_settings_module_1.CheckoutGeneralSettingsModule, gateway_settings_module_1.GatewaySettingsModule,
             provision_company_module_1.ProvisionCompanyModule,
             get_auth_context_module_1.GetAuthContextModule,

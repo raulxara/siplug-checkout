@@ -1,3 +1,4 @@
+import {grantCustomerPermissions} from './customer-permissions.repository';
 import {ConflictException,ForbiddenException,Injectable} from '@nestjs/common';
 import {PrismaService} from '../../infra/database/prisma/prisma.service';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
@@ -33,6 +34,7 @@ export class ProvisionCompanyRepository {
    await tx.position.create({data:{unique_id:positionId,office_id:key,name:'Cliente',slug:'customer'}});
    await tx.userCustomer.create({data:{unique_id:customerId,client_id:userId,profile_id:profileId,token}});
    await tx.userPosition.create({data:{unique_id:randomUUID(),user_customer_id:customerId,position_id:positionId}});
+   await grantCustomerPermissions(tx,key,positionId);
    return new ProvisionCompanyDtoOut(key,userId,customerId,token);
   });
  }

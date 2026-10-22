@@ -15,6 +15,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 export class HostedOrderItem {
+  @IsOptional() @IsIn(['one_time', 'recurring']) paymentType?:
+    | 'one_time'
+    | 'recurring';
   @IsUUID() itemRef!: string;
   @IsString() @MaxLength(255) name!: string;
   @IsInt() @Min(1) @Max(10) quantity!: number;
@@ -26,7 +29,11 @@ export class HostedOrderIdentity {
 }
 export class HostedOrderRequest extends HostedOrderIdentity {
   @IsInt() @Min(1) @Max(999999999) amount!: number;
-  @IsIn(['one_time', 'recurring']) paymentType!: 'one_time' | 'recurring';
+  @IsIn(['one_time', 'recurring', 'mixed']) paymentType!:
+    | 'one_time'
+    | 'recurring'
+    | 'mixed';
+  @IsOptional() @IsInt() @Min(0) @Max(999999999) recurringDiscount?: number;
   @IsIn(['month', 'year']) interval!: string;
   @IsInt() @Min(1) @Max(12) intervalCount!: number;
   @IsArray()

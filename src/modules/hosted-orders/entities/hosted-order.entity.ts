@@ -1,4 +1,6 @@
 export type HostedOrderResult = {
+  paymentSteps?: { kind: string; amount: number; status: string }[];
+  nextPaymentType?: string | null;
   checkoutSessionId: string;
   transactionId: string | null;
   subscriptionId: string | null;

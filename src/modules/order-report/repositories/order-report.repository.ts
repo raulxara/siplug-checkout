@@ -18,13 +18,23 @@ export class OrderReportRepository {
     const f = validateOrderFilters(input);
     // Both the session and related transaction/customer are scoped to the authorized tenant.
     const base = Prisma.sql`WITH ranked AS (
-      SELECT t.*, ROW_NUMBER() OVER (PARTITION BY checkout_session_id ORDER BY
+      SELECT t.*,
+        MAX(CASE WHEN t.paid_at IS NOT NULL OR t.status IN ('paid','approved','completed','refunded','chargeback') OR EXISTS (
+          SELECT 1 FROM payment_transaction_events pe WHERE pe.payment_transaction_id=t._id
+          AND (pe.old_status IN ('paid','approved','completed') OR pe.new_status IN ('paid','approved','completed'))
+        ) THEN 1 ELSE 0 END) OVER (PARTITION BY checkout_session_id) AS ever_paid,
+        MAX(t.paid_at) OVER (PARTITION BY checkout_session_id) AS historical_paid_at,
+        ROW_NUMBER() OVER (PARTITION BY checkout_session_id ORDER BY
         ${transactionPriority}, id DESC) AS rn
       FROM payment_transactions t WHERE office_id = ${officeId} AND client_id = ${clientId}
     ), report AS (
       SELECT s._id AS id, COALESCE(NULLIF(s.code,''),s._id) AS code,
         COALESCE(NULLIF(pc.name,''), NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.name')),'null'), NULLIF(TRIM(CONCAT_WS(' ',NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.first_name')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.last_name')),'null'))),''),'Não informado') AS customer,
         COALESCE(pc.email,NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.email')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer_email')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.customer_email')),'null')) AS email,
+        pc.phone AS phone, pc._id AS paymentCustomerId,
+        COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(s.config,'$.parentOrderId')),'null'),s.external_reference,s._id) AS orderRef,
+        COALESCE(t.ever_paid,0) AS everPaid, t.historical_paid_at AS paidAt,
+        GREATEST(s.created_at,COALESCE(t.updated_at,s.created_at)) AS lastActivityAt,
         s.created_at AS createdAt, COALESCE(i.quantity,0) AS items, s.amount, s.currency,
         t.payment_method AS requestedMethod,
         NULLIF(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.config,'$.actualPaymentMethod')),'null'),'') AS actualMethod,
@@ -93,6 +103,9 @@ export class OrderReportRepository {
       items: rows.map((r) => ({
         ...r,
         createdAt: new Date(r.createdAt).toISOString(),
+        lastActivityAt: new Date(r.lastActivityAt ?? r.createdAt).toISOString(),
+        everPaid: Boolean(Number(r.everPaid)),
+        paidAt: r.paidAt ? new Date(r.paidAt).toISOString() : null,
         items: Number(r.items),
         cart: carts.get(r.id) ?? [],
         amount: Number(r.amount),

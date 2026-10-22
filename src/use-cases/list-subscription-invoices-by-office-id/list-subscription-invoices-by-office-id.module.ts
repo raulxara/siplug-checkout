@@ -1,3 +1,4 @@
+import { GetAuthContextModule } from '../get-auth-context/get-auth-context.module';
 import { Module } from '@nestjs/common';
 
 import { SecurityModule } from '../../modules/security/security.module';
@@ -6,7 +7,7 @@ import { ListSubscriptionInvoicesByOfficeIdController } from './list-subscriptio
 import { ListSubscriptionInvoicesByOfficeIdUseCase } from './list-subscription-invoices-by-office-id.use-case';
 
 @Module({
-  imports: [SubscriptionInvoicesModule, SecurityModule],
+  imports: [GetAuthContextModule, SubscriptionInvoicesModule, SecurityModule],
   controllers: [ListSubscriptionInvoicesByOfficeIdController],
   providers: [ListSubscriptionInvoicesByOfficeIdUseCase],
   exports: [ListSubscriptionInvoicesByOfficeIdUseCase],
