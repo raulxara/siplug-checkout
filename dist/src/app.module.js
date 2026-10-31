@@ -7,6 +7,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
+const order_refunds_module_1 = require("./modules/order-refunds/order-refunds.module");
+const fiscal_payments_module_1 = require("./modules/fiscal-payments/fiscal-payments.module");
 const sync_company_profile_module_1 = require("./use-cases/sync-company-profile/sync-company-profile.module");
 const sync_own_profile_module_1 = require("./use-cases/sync-own-profile/sync-own-profile.module");
 const hosted_orders_module_1 = require("./use-cases/hosted-orders/hosted-orders.module");
@@ -129,9 +131,14 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
-        imports: [sync_company_profile_module_1.SyncCompanyProfileModule,
+        imports: [
+            order_refunds_module_1.OrderRefundsModule,
+            fiscal_payments_module_1.FiscalPaymentsModule,
+            sync_company_profile_module_1.SyncCompanyProfileModule,
             sync_own_profile_module_1.SyncOwnProfileModule,
-            hosted_orders_module_1.HostedOrdersModule, checkout_general_settings_module_1.CheckoutGeneralSettingsModule, gateway_settings_module_1.GatewaySettingsModule,
+            hosted_orders_module_1.HostedOrdersModule,
+            checkout_general_settings_module_1.CheckoutGeneralSettingsModule,
+            gateway_settings_module_1.GatewaySettingsModule,
             provision_company_module_1.ProvisionCompanyModule,
             get_auth_context_module_1.GetAuthContextModule,
             config_1.ConfigModule.forRoot({
