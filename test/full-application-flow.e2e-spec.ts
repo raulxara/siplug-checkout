@@ -13,7 +13,6 @@ import { PrismaService } from '../src/infra/database/prisma/prisma.service';
 
 // pegar token da pagseguro : http://localhost:8085/api/v1/dev/pagseguro/encrypted-card-page/84df07fe-3c59-4f76-b63a-dc0f7afd3d59
 
-
 /* supertest exposes response.body as any; assertions below validate its runtime shape. */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 
@@ -2297,6 +2296,291 @@ describe('Full application flow (steps 1 to 4)', () => {
     }
   }, 180_000);
 
+  it('processes one-time and recurring native split flows without card tokens', async () => {
+    const producerRecipientId = randomUUID();
+    const platformRecipientId = randomUUID();
+    const splitRuleId = randomUUID();
+
+    await prisma.splitRecipient.createMany({
+      data: [
+        {
+          unique_id: producerRecipientId,
+          office_id: officeId,
+          client_id: userClientId,
+          name: `Split producer ${tag}`,
+          document_type: 'cpf',
+          document_value: '12345678909',
+          email: `split-producer-${runId}@example.test`,
+          metadata: { role: 'producer', testRun: tag },
+          config: {
+            allowSplit: true,
+            defaultRole: 'producer',
+            gatewayAccounts: {
+              pagseguro: { accountId: 'ACCO_E2E_PRODUCER' },
+              stripe: { accountId: 'acct_e2e_producer' },
+            },
+          },
+          status: 'active',
+        },
+        {
+          unique_id: platformRecipientId,
+          office_id: officeId,
+          client_id: userClientId,
+          name: `Split platform ${tag}`,
+          document_type: 'cnpj',
+          document_value: '12345678000199',
+          email: `split-platform-${runId}@example.test`,
+          metadata: { role: 'platform', testRun: tag },
+          config: {
+            allowSplit: true,
+            defaultRole: 'platform',
+            gatewayAccounts: {
+              pagseguro: { accountId: 'ACCO_E2E_PLATFORM' },
+              stripe: { accountId: 'acct_e2e_platform' },
+            },
+          },
+          status: 'active',
+        },
+      ],
+    });
+
+    await prisma.splitRule.create({
+      data: {
+        unique_id: splitRuleId,
+        office_id: officeId,
+        client_id: userClientId,
+        name: `Native split 80/20 ${tag}`,
+        slug: `native-split-${runId}`,
+        split_type: 'percentage',
+        calculation_base: 'gross_amount',
+        status: 'active',
+      },
+    });
+    await prisma.splitRuleRecipient.createMany({
+      data: [
+        {
+          unique_id: randomUUID(),
+          split_rule_id: splitRuleId,
+          split_recipient_id: producerRecipientId,
+          role: 'producer',
+          percentage: 80,
+          liable_for_refund: true,
+          status: 'active',
+        },
+        {
+          unique_id: randomUUID(),
+          split_rule_id: splitRuleId,
+          split_recipient_id: platformRecipientId,
+          role: 'platform',
+          percentage: 20,
+          liable_for_refund: true,
+          status: 'active',
+        },
+      ],
+    });
+
+    const fetchSpy = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(async (input) => {
+        const url = String(input);
+
+        if (url.endsWith('/orders')) {
+          return new Response(
+            JSON.stringify({
+              id: 'ORDER_SPLIT_E2E',
+              status: 'WAITING',
+              qr_codes: [{ id: 'QR_SPLIT_E2E', text: 'pix-e2e-copy-paste' }],
+            }),
+            { status: 201 },
+          );
+        }
+
+        if (url.endsWith('/preferences/notifications')) {
+          return new Response(JSON.stringify({}), { status: 200 });
+        }
+
+        if (url.endsWith('/plans')) {
+          return new Response(JSON.stringify({ id: 'PLAN_SPLIT_E2E' }), {
+            status: 201,
+          });
+        }
+
+        if (url.includes('/customers')) {
+          return new Response(
+            JSON.stringify({ customers: [{ id: 'CUST_SPLIT_E2E' }] }),
+            { status: 200 },
+          );
+        }
+
+        if (url.endsWith('/subscriptions')) {
+          return new Response(
+            JSON.stringify({ id: 'SUB_SPLIT_E2E', status: 'ACTIVE' }),
+            { status: 201 },
+          );
+        }
+
+        if (url.endsWith('/checkout/sessions')) {
+          return new Response(
+            JSON.stringify({
+              id: 'cs_split_e2e',
+              url: 'https://checkout.example.test/stripe-split',
+              status: 'open',
+              payment_status: 'unpaid',
+            }),
+            { status: 200 },
+          );
+        }
+
+        throw new Error(`unexpected split E2E gateway request: ${url}`);
+      });
+
+    try {
+      const pagSeguroCheckout = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          code: `pagseguro-pix-split-${runId}`,
+          externalReference: `pagseguro-pix-split-${runId}`,
+          idempotencyKey: `pagseguro-pix-split-${runId}`,
+          paymentType: 'one_time',
+          amount: 10000,
+          currency: 'BRL',
+          description: 'PagSeguro PIX native split E2E',
+          successUrl: 'https://siplug.com/success',
+          cancelUrl: 'https://siplug.com/cancel',
+          items: [
+            {
+              itemRef: `pagseguro-pix-split-item-${runId}`,
+              itemType: 'product',
+              name: 'PagSeguro PIX split E2E',
+              quantity: 1,
+              unitAmount: 10000,
+              totalAmount: 10000,
+            },
+          ],
+          config: { requiresSplit: true, splitRuleId },
+        })
+        .expect(201);
+      const pagSeguroCheckoutSessionId = asString(
+        pagSeguroCheckout.body.data.checkoutSession._id,
+      );
+      const pagSeguroPayment = await api()
+        .post('/api/v1/payments/process')
+        .send({
+          checkoutSessionId: pagSeguroCheckoutSessionId,
+          paymentMethod: 'pix',
+          gatewayProvider: 'pagseguro',
+          gatewayId: pagSeguroGatewayId,
+          apiCredentialId: pagSeguroApiCredentialId,
+          payer: {
+            name: 'Cliente Split E2E',
+            email: `split-buyer-${runId}@example.test`,
+            documentValue: '12345678909',
+          },
+          paymentData: { method: 'pix' },
+          config: { splitRequired: true, splitRuleId },
+        })
+        .expect(200);
+      expect(pagSeguroPayment.body.data.paymentTransaction).toEqual(
+        expect.objectContaining({
+          hasSplit: true,
+          qrCode: 'pix-e2e-copy-paste',
+        }),
+      );
+
+      const stripeCheckout = await api()
+        .post('/api/v1/checkout-sessions/register')
+        .send({
+          officeId,
+          clientId: userClientId,
+          paymentCustomerId,
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          code: `stripe-recurring-split-${runId}`,
+          externalReference: `stripe-recurring-split-${runId}`,
+          idempotencyKey: `stripe-recurring-split-${runId}`,
+          paymentType: 'recurring',
+          amount: 2990,
+          currency: 'BRL',
+          description: 'Stripe recurring native split E2E',
+          successUrl:
+            'https://siplug.com/success?session_id={CHECKOUT_SESSION_ID}',
+          cancelUrl: 'https://siplug.com/cancel',
+          items: [
+            {
+              itemRef: `stripe-recurring-split-item-${runId}`,
+              itemType: 'subscription_plan',
+              name: 'Stripe recurring split E2E',
+              quantity: 1,
+              unitAmount: 2990,
+              totalAmount: 2990,
+            },
+          ],
+          config: {
+            requiresSplit: true,
+            splitRuleId,
+            subscription: {
+              subscriptionPlanId,
+              recurringMode: 'gateway_native',
+            },
+          },
+        })
+        .expect(201);
+      const stripeCheckoutSessionId = asString(
+        stripeCheckout.body.data.checkoutSession._id,
+      );
+      const stripeRecurring = await api()
+        .post('/api/v1/payments/process-recurring')
+        .send({
+          checkoutSessionId: stripeCheckoutSessionId,
+          paymentMethod: 'boleto',
+          gatewayProvider: 'stripe',
+          gatewayId: stripeGatewayId,
+          apiCredentialId: stripeApiCredentialId,
+          payer: {
+            name: 'Cliente Split E2E',
+            email: `split-buyer-${runId}@example.test`,
+          },
+          paymentData: { method: 'boleto' },
+          config: { splitRequired: true, splitRuleId },
+        })
+        .expect(200);
+      expect(stripeRecurring.body.data.paymentTransaction).toEqual(
+        expect.objectContaining({ hasSplit: true, paymentType: 'recurring' }),
+      );
+
+      const splits = await prisma.paymentSplit.findMany({
+        where: { office_id: officeId, split_rule_id: splitRuleId },
+        include: { recipients: true },
+      });
+      expect(splits).toHaveLength(2);
+      expect(splits).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            amount: 10000,
+            recipients: expect.arrayContaining([
+              expect.objectContaining({ amount: 8000, role: 'producer' }),
+              expect.objectContaining({ amount: 2000, role: 'platform' }),
+            ]),
+          }),
+          expect.objectContaining({
+            amount: 2990,
+            recipients: expect.arrayContaining([
+              expect.objectContaining({ amount: 2392, role: 'producer' }),
+              expect.objectContaining({ amount: 598, role: 'platform' }),
+            ]),
+          }),
+        ]),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   afterAll(async () => {
     try {
       await removeE2eData();
@@ -2329,9 +2613,18 @@ describe('Full application flow (steps 1 to 4)', () => {
       where: { payment_transaction: { office_id: officeId } },
     });
     await prisma.paymentRefund.deleteMany({ where: { office_id: officeId } });
+    await prisma.splitTransferEvent.deleteMany({
+      where: { payment_split: { office_id: officeId } },
+    });
     await prisma.paymentSplitRecipient.deleteMany({
       where: { payment_split: { office_id: officeId } },
     });
+    await prisma.paymentSplit.deleteMany({ where: { office_id: officeId } });
+    await prisma.splitRuleRecipient.deleteMany({
+      where: { split_rule: { office_id: officeId } },
+    });
+    await prisma.splitRule.deleteMany({ where: { office_id: officeId } });
+    await prisma.splitRecipient.deleteMany({ where: { office_id: officeId } });
     await prisma.paymentIdempotencyKey.deleteMany({
       where: { office_id: officeId },
     });

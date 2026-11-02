@@ -32,6 +32,7 @@ let ReceiveMercadoPagoWebhookController = class ReceiveMercadoPagoWebhookControl
             headers: this.normalizeHeaders(headers),
             xSignature: this.resolveHeader(headers, 'x-signature'),
             xRequestId: this.resolveHeader(headers, 'x-request-id'),
+            devSkipSignature: this.resolveDevSkipSignature(queryParams),
         }));
         return {
             status: 'success',
@@ -68,6 +69,17 @@ let ReceiveMercadoPagoWebhookController = class ReceiveMercadoPagoWebhookControl
             normalized[key] = Array.isArray(value) ? value[0] : value;
         }
         return normalized;
+    }
+    resolveDevSkipSignature(queryParams) {
+        const value = this.extractString(queryParams, 'dev_skip_signature') ??
+            this.extractString(queryParams, 'devSkipSignature') ??
+            this.extractString(queryParams, 'skip_signature') ??
+            this.extractString(queryParams, 'skipSignature');
+        if (value === null) {
+            return false;
+        }
+        const normalized = value.trim().toLowerCase();
+        return ['true', '1', 'yes', 'y', 'sim', 's'].includes(normalized);
     }
     extractString(object, key) {
         const value = object[key];

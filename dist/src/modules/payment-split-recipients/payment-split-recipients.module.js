@@ -9,11 +9,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentSplitRecipientsModule = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_module_1 = require("../../infra/database/prisma/prisma.module");
-const payment_split_recipients_repository_1 = require("./repositories/payment-split-recipients.repository");
-const create_payment_split_recipient_service_1 = require("./services/create-payment-split-recipient/create-payment-split-recipient.service");
-const payment_split_recipients_tokens_1 = require("./tokens/payment-split-recipients.tokens");
-const get_all_payment_split_recipients_by_payment_split_id_service_1 = require("./services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service");
 const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
+const split_recipients_module_1 = require("../split-recipients/split-recipients.module");
+const payment_split_recipients_repository_1 = require("./repositories/payment-split-recipients.repository");
+const payment_split_recipients_tokens_1 = require("./tokens/payment-split-recipients.tokens");
+const create_payment_split_recipient_service_1 = require("./services/create-payment-split-recipient/create-payment-split-recipient.service");
+const get_all_payment_split_recipients_by_payment_split_id_service_1 = require("./services/get-all-payment-split-recipients-by-payment-split-id/get-all-payment-split-recipients-by-payment-split-id.service");
 const update_payment_split_recipient_status_service_1 = require("./services/update-payment-split-recipient-status/update-payment-split-recipient-status.service");
 const update_payment_split_recipient_service_1 = require("./services/update-payment-split-recipient/update-payment-split-recipient.service");
 let PaymentSplitRecipientsModule = class PaymentSplitRecipientsModule {
@@ -21,7 +22,7 @@ let PaymentSplitRecipientsModule = class PaymentSplitRecipientsModule {
 exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule;
 exports.PaymentSplitRecipientsModule = PaymentSplitRecipientsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [prisma_module_1.PrismaModule, split_recipients_module_1.SplitRecipientsModule],
         providers: [
             {
                 provide: payment_split_recipients_tokens_1.PAYMENT_SPLIT_RECIPIENTS_REPOSITORY,

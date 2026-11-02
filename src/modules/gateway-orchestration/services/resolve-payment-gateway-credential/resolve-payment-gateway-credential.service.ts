@@ -1,3 +1,5 @@
+import { GatewayPaymentModesService } from '../../../gateway-settings/services/gateway-payment-modes.service';
+import { PaymentMode } from '../../../gateway-settings/entities/gateway-setting.entity';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { DecryptApiCredentialSecretDtoIn } from '../../../../common/services/crypto/decrypt-api-credential-secret/dtos/decrypt-api-credential-secret.dto-in';
@@ -37,7 +39,8 @@ export class ResolvePaymentGatewayCredentialService {
     dtoIn: ResolvePaymentGatewayCredentialDtoIn,
   ): Promise<ResolvePaymentGatewayCredentialDtoOut> {
     try {
-      const allApiCredentials = await this.apiCredentialsRepository.getAll();
+      const allApiCredentials =
+        await this.apiCredentialsRepository.getAllByOfficeId(dtoIn.officeId);
 
       const apiCredentials = allApiCredentials.filter(
         (apiCredential) => apiCredential.officeId === dtoIn.officeId,
@@ -46,7 +49,11 @@ export class ResolvePaymentGatewayCredentialService {
       const candidates: Candidate[] = [];
 
       for (const apiCredential of apiCredentials) {
-        if (apiCredential.status !== 'active') {
+        if (
+          apiCredential.status !== 'active' ||
+          (apiCredential.expiresAt &&
+            new Date(apiCredential.expiresAt).getTime() <= Date.now())
+        ) {
           continue;
         }
 
@@ -101,7 +108,8 @@ export class ResolvePaymentGatewayCredentialService {
 
         if (
           dtoIn.gatewaySlug !== null &&
-          this.normalizeProvider(gateway.slug) !== this.normalizeProvider(dtoIn.gatewaySlug)
+          this.normalizeProvider(gateway.slug) !==
+            this.normalizeProvider(dtoIn.gatewaySlug)
         ) {
           continue;
         }
@@ -110,7 +118,11 @@ export class ResolvePaymentGatewayCredentialService {
           apiCredential,
           gateway,
           priority: this.resolvePriority(apiCredential.config),
-          isDefault: this.resolveIsDefault(apiCredential.config),
+          isDefault:
+            apiCredential.config?.managedHosted === true
+              ? Array.isArray(apiCredential.config.defaultModes) &&
+                apiCredential.config.defaultModes.includes(this.mode(dtoIn))
+              : this.resolveIsDefault(apiCredential.config),
         });
       }
 
@@ -120,6 +132,20 @@ export class ResolvePaymentGatewayCredentialService {
         );
       }
 
+      if (
+        candidates.length > 1 &&
+        !dtoIn.apiCredentialId &&
+        !dtoIn.gatewayId &&
+        !dtoIn.gatewayProvider &&
+        !dtoIn.gatewaySlug &&
+        candidates.some(
+          (c) => c.apiCredential.config?.managedHosted === true,
+        ) &&
+        candidates.filter((c) => c.isDefault).length !== 1
+      )
+        throw new Error(
+          'Select an explicit default gateway for this payment mode',
+        );
       const selected = candidates.sort((a, b) => {
         if (a.isDefault !== b.isDefault) {
           return a.isDefault ? -1 : 1;
@@ -171,11 +197,28 @@ export class ResolvePaymentGatewayCredentialService {
     }
   }
 
+  private mode(dto: ResolvePaymentGatewayCredentialDtoIn): PaymentMode {
+    return dto.paymentType === 'recurring'
+      ? dto.splitRequired
+        ? 'split_recurring'
+        : 'recurring'
+      : dto.splitRequired
+        ? 'split'
+        : 'one_time';
+  }
+
   private credentialSupportsPaymentContext(
     apiCredential: ApiCredentialRow,
     dtoIn: ResolvePaymentGatewayCredentialDtoIn,
   ): boolean {
     const config = apiCredential.config ?? {};
+    if (config.managedHosted === true) {
+      return (
+        dtoIn.paymentMethod === 'payment_link' &&
+        apiCredential.environment === dtoIn.environment &&
+        GatewayPaymentModesService.enabled(config).includes(this.mode(dtoIn))
+      );
+    }
 
     const paymentTypes = this.asStringArray(
       config.paymentTypes ?? config.payment_types,

@@ -1,3 +1,4 @@
+import { CheckoutGeneralSettingsService } from '../../modules/checkout-settings/services/checkout-general-settings.service';
 import { Injectable } from '@nestjs/common';
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
@@ -56,7 +57,7 @@ export class RegisterCheckoutSessionUseCase {
     let createdCheckoutSessionId: string | null = null;
 
     try {
-      await this.resolveActorAuthorizationService.exec(
+      const authorization = await this.resolveActorAuthorizationService.exec(
         new ResolveActorAuthorizationDtoIn({
           token: dtoIn.token,
           requiredAction: 'registerCheckoutSession',
@@ -64,6 +65,7 @@ export class RegisterCheckoutSessionUseCase {
         }),
       );
 
+      if (authorization.actor.clientId !== dtoIn.clientId) throw new Error('client does not belong to authenticated actor');
       this.validatePaymentType(dtoIn.paymentType);
       this.validateItemsTotal(dtoIn.amount, dtoIn.items);
 
@@ -142,6 +144,8 @@ export class RegisterCheckoutSessionUseCase {
 
         const apiCredential = apiCredentialDtoOut.apiCredential;
 
+        if (apiCredential.officeId !== dtoIn.officeId || (apiCredential.clientId && apiCredential.clientId !== dtoIn.clientId)) throw new Error('api credential does not belong to client office');
+
         if (apiCredential.status !== 'active') {
           throw new Error('api credential is not active');
         }
@@ -161,6 +165,7 @@ export class RegisterCheckoutSessionUseCase {
         });
       }
 
+      const settings = CheckoutGeneralSettingsService.apply(officeDtoOut.office.config, dtoIn);
       const checkoutSessionDtoOut =
         await this.createCheckoutSessionService.exec(
           new CreateCheckoutSessionServiceDtoIn({
@@ -176,12 +181,12 @@ export class RegisterCheckoutSessionUseCase {
 
             paymentType: dtoIn.paymentType,
             amount: dtoIn.amount,
-            currency: dtoIn.currency,
+            currency: settings.currency,
             description: dtoIn.description,
 
-            successUrl: dtoIn.successUrl,
-            cancelUrl: dtoIn.cancelUrl,
-            expiresAt: dtoIn.expiresAt,
+            successUrl: settings.successUrl,
+            cancelUrl: settings.cancelUrl,
+            expiresAt: settings.expiresAt,
 
             metadata: {
               ...(dtoIn.metadata ?? {}),
@@ -193,7 +198,7 @@ export class RegisterCheckoutSessionUseCase {
                 : {}),
               source: 'RegisterCheckoutSessionUseCase',
             },
-            config: dtoIn.config,
+            config: settings.config,
 
             status: dtoIn.status,
           }),

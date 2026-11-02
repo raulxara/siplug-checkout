@@ -10,19 +10,25 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListSubscriptionInvoicesByOfficeIdUseCase = void 0;
+const get_auth_context_use_case_1 = require("../get-auth-context/get-auth-context.use-case");
 const common_1 = require("@nestjs/common");
 const get_all_subscription_invoices_by_office_id_dto_in_1 = require("../../modules/subscription-invoices/services/get-all-subscription-invoices-by-office-id/dtos/get-all-subscription-invoices-by-office-id.dto-in");
 const get_all_subscription_invoices_by_office_id_service_1 = require("../../modules/subscription-invoices/services/get-all-subscription-invoices-by-office-id/get-all-subscription-invoices-by-office-id.service");
 const resolve_actor_authorization_service_1 = require("../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service");
 const list_subscription_invoices_by_office_id_dto_out_1 = require("./dtos/list-subscription-invoices-by-office-id.dto-out");
 let ListSubscriptionInvoicesByOfficeIdUseCase = class ListSubscriptionInvoicesByOfficeIdUseCase {
+    identity;
     getAllSubscriptionInvoicesByOfficeIdService;
     resolveActorAuthorizationService;
-    constructor(getAllSubscriptionInvoicesByOfficeIdService, resolveActorAuthorizationService) {
+    constructor(identity, getAllSubscriptionInvoicesByOfficeIdService, resolveActorAuthorizationService) {
+        this.identity = identity;
         this.getAllSubscriptionInvoicesByOfficeIdService = getAllSubscriptionInvoicesByOfficeIdService;
         this.resolveActorAuthorizationService = resolveActorAuthorizationService;
     }
     async exec(dtoIn) {
+        const context = await this.identity.exec(dtoIn.token);
+        if (context.officeId !== dtoIn.officeId)
+            throw new common_1.ForbiddenException('office not authorized');
         await this.resolveActorAuthorizationService.exec({
             token: dtoIn.token,
             requiredEntity: 'subscription_invoices',
@@ -35,7 +41,8 @@ let ListSubscriptionInvoicesByOfficeIdUseCase = class ListSubscriptionInvoicesBy
 exports.ListSubscriptionInvoicesByOfficeIdUseCase = ListSubscriptionInvoicesByOfficeIdUseCase;
 exports.ListSubscriptionInvoicesByOfficeIdUseCase = ListSubscriptionInvoicesByOfficeIdUseCase = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [get_all_subscription_invoices_by_office_id_service_1.GetAllSubscriptionInvoicesByOfficeIdService,
+    __metadata("design:paramtypes", [get_auth_context_use_case_1.GetAuthContextUseCase,
+        get_all_subscription_invoices_by_office_id_service_1.GetAllSubscriptionInvoicesByOfficeIdService,
         resolve_actor_authorization_service_1.ResolveActorAuthorizationService])
 ], ListSubscriptionInvoicesByOfficeIdUseCase);
 //# sourceMappingURL=list-subscription-invoices-by-office-id.use-case.js.map

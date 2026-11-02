@@ -55,6 +55,23 @@ let RegisterPaymentSplitUseCase = class RegisterPaymentSplitUseCase {
         const paymentSplitId = String(paymentSplitDtoOut.paymentSplit._id);
         const paymentSplitRecipients = [];
         for (const recipient of calculation.recipients) {
+            const retainOnPlatform = this.shouldRetainRecipientOnPlatform({
+                role: recipient.role,
+                metadata: recipient.metadata,
+                config: recipient.config,
+            });
+            const recipientMetadata = {
+                ...(recipient.metadata ?? {}),
+                ...(retainOnPlatform
+                    ? {
+                        retainOnPlatform: true,
+                        gatewayTransferMode: 'retained_on_platform',
+                    }
+                    : {
+                        retainOnPlatform: false,
+                        gatewayTransferMode: 'gateway_transfer',
+                    }),
+            };
             const recipientConfig = {
                 ...(recipient.config ?? {}),
                 splitRuleRecipientId: recipient.splitRuleRecipientId,
@@ -62,11 +79,69 @@ let RegisterPaymentSplitUseCase = class RegisterPaymentSplitUseCase {
                 liableForGatewayFee: recipient.liableForGatewayFee,
                 liableForRefund: recipient.liableForRefund,
                 priority: recipient.priority,
+                retainOnPlatform,
+                transferToGateway: !retainOnPlatform,
+                gatewayTransferMode: retainOnPlatform
+                    ? 'retained_on_platform'
+                    : 'gateway_transfer',
             };
-            const paymentSplitRecipientDtoOut = await this.createPaymentSplitRecipientService.exec(new create_payment_split_recipient_dto_in_1.CreatePaymentSplitRecipientDtoIn(paymentSplitId, recipient.splitRecipientId, null, null, recipient.role, recipient.amount, recipient.percentage, recipient.currency, null, null, null, recipient.metadata, recipientConfig, 'created'));
+            const paymentSplitRecipientDtoOut = await this.createPaymentSplitRecipientService.exec(new create_payment_split_recipient_dto_in_1.CreatePaymentSplitRecipientDtoIn(paymentSplitId, recipient.splitRecipientId, null, null, recipient.role, recipient.amount, recipient.percentage, recipient.currency, null, null, null, recipientMetadata, recipientConfig, 'created'));
             paymentSplitRecipients.push(paymentSplitRecipientDtoOut.paymentSplitRecipient);
         }
         return new register_payment_split_dto_out_1.RegisterPaymentSplitDtoOut(paymentSplitDtoOut.paymentSplit, paymentSplitRecipients);
+    }
+    shouldRetainRecipientOnPlatform(params) {
+        const metadata = this.toObject(params.metadata);
+        const config = this.toObject(params.config);
+        const explicitTransferToGateway = this.extractBoolean(config, 'transferToGateway') ??
+            this.extractBoolean(config, 'transfer_to_gateway') ??
+            this.extractBoolean(metadata, 'transferToGateway') ??
+            this.extractBoolean(metadata, 'transfer_to_gateway');
+        if (explicitTransferToGateway === true) {
+            return false;
+        }
+        const explicitRetainOnPlatform = this.extractBoolean(config, 'retainOnPlatform') ??
+            this.extractBoolean(config, 'retain_on_platform') ??
+            this.extractBoolean(metadata, 'retainOnPlatform') ??
+            this.extractBoolean(metadata, 'retain_on_platform');
+        if (explicitRetainOnPlatform !== null) {
+            return explicitRetainOnPlatform;
+        }
+        const role = String(params.role ?? '').trim().toLowerCase();
+        return ['platform', 'commission', 'application_fee'].includes(role);
+    }
+    toObject(value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return null;
+        }
+        return value;
+    }
+    extractBoolean(object, key) {
+        if (object === null) {
+            return null;
+        }
+        const value = object[key];
+        if (value === true || value === false) {
+            return value;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+                return true;
+            }
+            if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+                return false;
+            }
+        }
+        if (typeof value === 'number') {
+            if (value === 1) {
+                return true;
+            }
+            if (value === 0) {
+                return false;
+            }
+        }
+        return null;
     }
 };
 exports.RegisterPaymentSplitUseCase = RegisterPaymentSplitUseCase;

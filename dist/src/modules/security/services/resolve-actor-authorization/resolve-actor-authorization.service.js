@@ -28,7 +28,7 @@ let ResolveActorAuthorizationService = class ResolveActorAuthorizationService {
             const userCustomerDtoOut = await this.findUserCustomerByTokenService.exec(new find_user_customer_by_token_dto_in_1.FindUserCustomerByTokenDtoIn(dtoIn.token));
             const actor = userCustomerDtoOut.userCustomer;
             if (actor.status !== 'active') {
-                throw new Error('actor is not active');
+                throw new common_1.ForbiddenException('ACTOR_INACTIVE');
             }
             const permissionDtoOut = await this.checkUserPermissionService.exec(new check_user_permission_dto_in_1.CheckUserPermissionDtoIn({
                 userCustomerId: actor._id,
@@ -36,11 +36,13 @@ let ResolveActorAuthorizationService = class ResolveActorAuthorizationService {
                 requiredEntity: dtoIn.requiredEntity,
             }));
             if (!permissionDtoOut.allowed) {
-                throw new Error('actor does not have permission');
+                throw new common_1.ForbiddenException('ACTOR_PERMISSION_DENIED');
             }
             return new resolve_actor_authorization_dto_out_1.ResolveActorAuthorizationDtoOut(permissionDtoOut.allowed, permissionDtoOut.isAdministrator, dtoIn.requiredAction, dtoIn.requiredEntity, actor, permissionDtoOut.positions, permissionDtoOut.permissions, permissionDtoOut.matchedPermission);
         }
         catch (error) {
+            if (error instanceof common_1.HttpException)
+                throw error;
             const message = error instanceof Error
                 ? error.message
                 : 'error on resolve actor authorization';

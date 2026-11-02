@@ -1,4 +1,6 @@
 export class ResolvePaymentGatewayCredentialDtoIn {
+  public readonly splitRequired:boolean;
+  public readonly environment:string;
   public readonly officeId: string;
   public readonly clientId: string;
   public readonly paymentType: string;
@@ -9,6 +11,8 @@ export class ResolvePaymentGatewayCredentialDtoIn {
   public readonly apiCredentialId: string | null;
 
   constructor(params: {
+    splitRequired?:boolean;
+    environment?:string;
     officeId: string;
     clientId: string;
     paymentType: string;
@@ -18,6 +22,8 @@ export class ResolvePaymentGatewayCredentialDtoIn {
     gatewayId?: unknown;
     apiCredentialId?: unknown;
   }) {
+    this.splitRequired=params.splitRequired===true;
+    this.environment=params.environment??'sandbox';
     this.officeId = params.officeId;
     this.clientId = params.clientId;
     this.paymentType = params.paymentType;

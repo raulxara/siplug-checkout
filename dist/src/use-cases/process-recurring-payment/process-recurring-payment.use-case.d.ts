@@ -5,6 +5,9 @@ import { DispatchGatewayRecurringPaymentService } from '../../modules/gateway-or
 import { ResolvePaymentGatewayCredentialService } from '../../modules/gateway-orchestration/services/resolve-payment-gateway-credential/resolve-payment-gateway-credential.service';
 import { CreatePaymentTransactionService } from '../../modules/payment-transactions/services/create-payment-transaction/create-payment-transaction.service';
 import { UpdatePaymentTransactionService } from '../../modules/payment-transactions/services/update-payment-transaction/update-payment-transaction.service';
+import { CreatePaymentSplitRecipientService } from '../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service';
+import { CreatePaymentSplitService } from '../../modules/payment-splits/services/create-payment-split/create-payment-split.service';
+import { CalculatePaymentSplitService } from '../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service';
 import { ResolveActorAuthorizationService } from '../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service';
 import { CreateSubscriptionCycleService } from '../../modules/subscription-cycles/services/create-subscription-cycle/create-subscription-cycle.service';
 import { CreateSubscriptionInvoiceService } from '../../modules/subscription-invoices/services/create-subscription-invoice/create-subscription-invoice.service';
@@ -28,10 +31,13 @@ export declare class ProcessRecurringPaymentUseCase {
     private readonly updateSubscriptionInvoiceService;
     private readonly createPaymentTransactionService;
     private readonly updatePaymentTransactionService;
+    private readonly calculatePaymentSplitService;
+    private readonly createPaymentSplitService;
+    private readonly createPaymentSplitRecipientService;
     private readonly resolvePaymentGatewayCredentialService;
     private readonly dispatchGatewayRecurringPaymentService;
     private readonly handleUseCaseExceptionService;
-    constructor(resolveActorAuthorizationService: ResolveActorAuthorizationService, findCheckoutSessionByUniqueIdService: FindCheckoutSessionByUniqueIdService, updateCheckoutSessionService: UpdateCheckoutSessionService, findSubscriptionPlanByUniqueIdService: FindSubscriptionPlanByUniqueIdService, createPaymentCustomerService: CreatePaymentCustomerService, createSubscriptionService: CreateSubscriptionService, updateSubscriptionService: UpdateSubscriptionService, createSubscriptionCycleService: CreateSubscriptionCycleService, createSubscriptionInvoiceService: CreateSubscriptionInvoiceService, updateSubscriptionInvoiceService: UpdateSubscriptionInvoiceService, createPaymentTransactionService: CreatePaymentTransactionService, updatePaymentTransactionService: UpdatePaymentTransactionService, resolvePaymentGatewayCredentialService: ResolvePaymentGatewayCredentialService, dispatchGatewayRecurringPaymentService: DispatchGatewayRecurringPaymentService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(resolveActorAuthorizationService: ResolveActorAuthorizationService, findCheckoutSessionByUniqueIdService: FindCheckoutSessionByUniqueIdService, updateCheckoutSessionService: UpdateCheckoutSessionService, findSubscriptionPlanByUniqueIdService: FindSubscriptionPlanByUniqueIdService, createPaymentCustomerService: CreatePaymentCustomerService, createSubscriptionService: CreateSubscriptionService, updateSubscriptionService: UpdateSubscriptionService, createSubscriptionCycleService: CreateSubscriptionCycleService, createSubscriptionInvoiceService: CreateSubscriptionInvoiceService, updateSubscriptionInvoiceService: UpdateSubscriptionInvoiceService, createPaymentTransactionService: CreatePaymentTransactionService, updatePaymentTransactionService: UpdatePaymentTransactionService, calculatePaymentSplitService: CalculatePaymentSplitService, createPaymentSplitService: CreatePaymentSplitService, createPaymentSplitRecipientService: CreatePaymentSplitRecipientService, resolvePaymentGatewayCredentialService: ResolvePaymentGatewayCredentialService, dispatchGatewayRecurringPaymentService: DispatchGatewayRecurringPaymentService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ProcessRecurringPaymentDtoIn): Promise<ProcessRecurringPaymentDtoOut>;
     private resolveInitialNextBillingAt;
     private calculatePeriodEnd;
@@ -40,6 +46,12 @@ export declare class ProcessRecurringPaymentUseCase {
     private resolveSubscriptionStatus;
     private resolveInvoiceStatus;
     private resolveCheckoutSessionStatus;
+    private resolveSplitRequired;
+    private resolveSplitRuleId;
+    private registerPaymentSplitForTransaction;
+    private buildRecurringSplitSnapshot;
+    private resolveGatewayRecipientId;
+    private toNullableBoolean;
     private validatePaymentMethod;
     private assertNoForbiddenRawCardData;
     private normalizeProviderName;

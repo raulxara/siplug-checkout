@@ -14,6 +14,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateApiCredentialController = void 0;
 const common_1 = require("@nestjs/common");
+const credential_access_guard_1 = require("../../modules/gateway-settings/services/credential-access.guard");
+const common_2 = require("@nestjs/common");
 const update_api_credential_dto_in_1 = require("./dtos/update-api-credential.dto-in");
 const update_api_credential_request_1 = require("./http/update-api-credential.request");
 const update_api_credential_use_case_1 = require("./update-api-credential.use-case");
@@ -55,7 +57,7 @@ let UpdateApiCredentialController = class UpdateApiCredentialController {
             const message = error instanceof Error
                 ? error.message
                 : 'error on update api credential controller';
-            throw new common_1.BadRequestException({
+            throw new common_2.BadRequestException({
                 status: 'error',
                 message,
             });
@@ -64,15 +66,16 @@ let UpdateApiCredentialController = class UpdateApiCredentialController {
 };
 exports.UpdateApiCredentialController = UpdateApiCredentialController;
 __decorate([
-    (0, common_1.Put)('update'),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Headers)('authorization')),
+    (0, common_2.Put)('update'),
+    __param(0, (0, common_2.Body)()),
+    __param(1, (0, common_2.Headers)('authorization')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [update_api_credential_request_1.UpdateApiCredentialRequest, String]),
     __metadata("design:returntype", Promise)
 ], UpdateApiCredentialController.prototype, "handle", null);
 exports.UpdateApiCredentialController = UpdateApiCredentialController = __decorate([
-    (0, common_1.Controller)('api-credentials'),
+    (0, common_2.Controller)('api-credentials'),
+    (0, common_1.UseGuards)(credential_access_guard_1.CredentialAccessGuard),
     __metadata("design:paramtypes", [update_api_credential_use_case_1.UpdateApiCredentialUseCase])
 ], UpdateApiCredentialController);
 //# sourceMappingURL=update-api-credential.controller.js.map

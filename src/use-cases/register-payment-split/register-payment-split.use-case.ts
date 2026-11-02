@@ -87,6 +87,25 @@ export class RegisterPaymentSplitUseCase {
     const paymentSplitRecipients: Array<Record<string, unknown>> = [];
 
     for (const recipient of calculation.recipients) {
+      const retainOnPlatform = this.shouldRetainRecipientOnPlatform({
+        role: recipient.role,
+        metadata: recipient.metadata,
+        config: recipient.config,
+      });
+
+      const recipientMetadata = {
+        ...(recipient.metadata ?? {}),
+        ...(retainOnPlatform
+          ? {
+              retainOnPlatform: true,
+              gatewayTransferMode: 'retained_on_platform',
+            }
+          : {
+              retainOnPlatform: false,
+              gatewayTransferMode: 'gateway_transfer',
+            }),
+      };
+
       const recipientConfig = {
         ...(recipient.config ?? {}),
         splitRuleRecipientId: recipient.splitRuleRecipientId,
@@ -94,6 +113,12 @@ export class RegisterPaymentSplitUseCase {
         liableForGatewayFee: recipient.liableForGatewayFee,
         liableForRefund: recipient.liableForRefund,
         priority: recipient.priority,
+
+        retainOnPlatform,
+        transferToGateway: !retainOnPlatform,
+        gatewayTransferMode: retainOnPlatform
+          ? 'retained_on_platform'
+          : 'gateway_transfer',
       };
 
       const paymentSplitRecipientDtoOut =
@@ -113,7 +138,7 @@ export class RegisterPaymentSplitUseCase {
             null,
             null,
             null,
-            recipient.metadata,
+            recipientMetadata,
             recipientConfig,
 
             'created',
@@ -129,5 +154,85 @@ export class RegisterPaymentSplitUseCase {
       paymentSplitDtoOut.paymentSplit,
       paymentSplitRecipients,
     );
+  }
+
+  private shouldRetainRecipientOnPlatform(params: {
+    role: unknown;
+    metadata: unknown;
+    config: unknown;
+  }): boolean {
+    const metadata = this.toObject(params.metadata);
+    const config = this.toObject(params.config);
+
+    const explicitTransferToGateway =
+      this.extractBoolean(config, 'transferToGateway') ??
+      this.extractBoolean(config, 'transfer_to_gateway') ??
+      this.extractBoolean(metadata, 'transferToGateway') ??
+      this.extractBoolean(metadata, 'transfer_to_gateway');
+
+    if (explicitTransferToGateway === true) {
+      return false;
+    }
+
+    const explicitRetainOnPlatform =
+      this.extractBoolean(config, 'retainOnPlatform') ??
+      this.extractBoolean(config, 'retain_on_platform') ??
+      this.extractBoolean(metadata, 'retainOnPlatform') ??
+      this.extractBoolean(metadata, 'retain_on_platform');
+
+    if (explicitRetainOnPlatform !== null) {
+      return explicitRetainOnPlatform;
+    }
+
+    const role = String(params.role ?? '').trim().toLowerCase();
+
+    return ['platform', 'commission', 'application_fee'].includes(role);
+  }
+
+  private toObject(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private extractBoolean(
+    object: Record<string, unknown> | null,
+    key: string,
+  ): boolean | null {
+    if (object === null) {
+      return null;
+    }
+
+    const value = object[key];
+
+    if (value === true || value === false) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+
+      if (normalized === 'true' || normalized === '1' || normalized === 'yes') {
+        return true;
+      }
+
+      if (normalized === 'false' || normalized === '0' || normalized === 'no') {
+        return false;
+      }
+    }
+
+    if (typeof value === 'number') {
+      if (value === 1) {
+        return true;
+      }
+
+      if (value === 0) {
+        return false;
+      }
+    }
+
+    return null;
   }
 }

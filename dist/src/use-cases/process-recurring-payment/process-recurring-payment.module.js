@@ -20,6 +20,9 @@ const subscriptions_module_1 = require("../../modules/subscriptions/subscription
 const process_recurring_payment_controller_1 = require("./process-recurring-payment.controller");
 const process_recurring_payment_use_case_1 = require("./process-recurring-payment.use-case");
 const payment_customers_module_1 = require("../../modules/payment-customers/payment-customers.module");
+const payment_split_recipients_module_1 = require("../../modules/payment-split-recipients/payment-split-recipients.module");
+const payment_splits_module_1 = require("../../modules/payment-splits/payment-splits.module");
+const split_calculations_module_1 = require("../../modules/split-calculations/split-calculations.module");
 let ProcessRecurringPaymentModule = class ProcessRecurringPaymentModule {
 };
 exports.ProcessRecurringPaymentModule = ProcessRecurringPaymentModule;
@@ -33,6 +36,9 @@ exports.ProcessRecurringPaymentModule = ProcessRecurringPaymentModule = __decora
             subscription_cycles_module_1.SubscriptionCyclesModule,
             subscription_invoices_module_1.SubscriptionInvoicesModule,
             payment_transactions_module_1.PaymentTransactionsModule,
+            payment_splits_module_1.PaymentSplitsModule,
+            payment_split_recipients_module_1.PaymentSplitRecipientsModule,
+            split_calculations_module_1.SplitCalculationsModule,
             gateway_orchestration_module_1.GatewayOrchestrationModule,
             security_module_1.SecurityModule,
             use_case_support_module_1.UseCaseSupportModule,

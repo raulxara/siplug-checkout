@@ -25,6 +25,12 @@ export declare class DispatchPaymentSplitToGatewayUseCase {
     private extractRecipients;
     private buildRecipientsForGateway;
     private resolveDestinationAccountId;
+    private markRetainedRecipientsBeforeGatewayDispatch;
+    private buildRetainedRecipientData;
+    private shouldRetainRecipientOnPlatform;
+    private mergeProviderResponseWithRetainedRecipients;
+    private mergeGatewayResponseWithRetainedRecipients;
+    private extractBoolean;
     private updateRecipientsAfterGatewayDispatch;
     private markSplitAsFailedSafe;
     private buildIdempotencyKey;

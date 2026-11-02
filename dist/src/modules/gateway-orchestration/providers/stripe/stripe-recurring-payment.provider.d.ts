@@ -3,6 +3,11 @@ import { GatewayRecurringPaymentDtoOut } from '../../dtos/gateway-recurring-paym
 export declare class StripeRecurringPaymentProvider {
     createSubscription(dtoIn: GatewayRecurringPaymentDtoIn): Promise<GatewayRecurringPaymentDtoOut>;
     private buildCheckoutSessionRequest;
+    private buildNativeRecurringSplit;
+    private isPlatformRecipient;
+    private resolveStripeConnectedAccountId;
+    private toRequiredInteger;
+    private formatStripePercentage;
     private resolveStripePaymentMethodType;
     private buildHeaders;
     private resolveStripePriceId;
@@ -21,6 +26,7 @@ export declare class StripeRecurringPaymentProvider {
     private sanitizeUnknownValue;
     private isSensitiveKey;
     private asObject;
+    private asObjectsArray;
     private toNullableString;
     private limitText;
 }

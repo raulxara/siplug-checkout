@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListApiCredentialByOfficeIdModule = void 0;
+const credential_access_module_1 = require("../../modules/gateway-settings/credential-access.module");
 const common_1 = require("@nestjs/common");
 const build_decrypted_api_credential_response_service_1 = require("../../common/services/api-credentials/build-decrypted-api-credential-response/build-decrypted-api-credential-response.service");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
@@ -18,7 +19,7 @@ let ListApiCredentialByOfficeIdModule = class ListApiCredentialByOfficeIdModule 
 exports.ListApiCredentialByOfficeIdModule = ListApiCredentialByOfficeIdModule;
 exports.ListApiCredentialByOfficeIdModule = ListApiCredentialByOfficeIdModule = __decorate([
     (0, common_1.Module)({
-        imports: [api_credentials_module_1.ApiCredentialsModule, use_case_support_module_1.UseCaseSupportModule],
+        imports: [credential_access_module_1.CredentialAccessModule, api_credentials_module_1.ApiCredentialsModule, use_case_support_module_1.UseCaseSupportModule],
         controllers: [list_api_credential_by_office_id_controller_1.ListApiCredentialByOfficeIdController],
         providers: [
             build_decrypted_api_credential_response_service_1.BuildDecryptedApiCredentialResponseService,

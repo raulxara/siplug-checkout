@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProcessSubscriptionWebhookEventModule = void 0;
+const subscription_renewals_repository_1 = require("../../modules/hosted-orders/repositories/subscription-renewals.repository");
 const common_1 = require("@nestjs/common");
 const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
@@ -28,6 +29,7 @@ exports.ProcessSubscriptionWebhookEventModule = ProcessSubscriptionWebhookEventM
             subscription_invoices_module_1.SubscriptionInvoicesModule,
         ],
         providers: [
+            subscription_renewals_repository_1.SubscriptionRenewalsRepository,
             build_changes_history_service_1.BuildChangesHistoryService,
             process_subscription_webhook_event_use_case_1.ProcessSubscriptionWebhookEventUseCase,
         ],

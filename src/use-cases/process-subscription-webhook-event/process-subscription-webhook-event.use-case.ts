@@ -1,3 +1,5 @@
+import { assertSettlement } from '../../modules/hosted-orders/services/settlement-policy';
+import { SubscriptionRenewalsRepository } from '../../modules/hosted-orders/repositories/subscription-renewals.repository';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { BuildChangesHistoryDtoIn } from '../../common/services/changes-history/dtos/build-changes-history.dto-in';
@@ -69,13 +71,16 @@ export class ProcessSubscriptionWebhookEventUseCase {
 
     private readonly buildChangesHistoryService: BuildChangesHistoryService,
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
+    private readonly renewals: SubscriptionRenewalsRepository,
   ) {}
 
   async exec(
     dtoIn: ProcessSubscriptionWebhookEventDtoIn,
   ): Promise<ProcessSubscriptionWebhookEventDtoOut> {
     try {
-      const event = dtoIn.normalizedEvent;
+      let event = dtoIn.normalizedEvent;
+      const invoiceId = await this.renewals.ensure(dtoIn.paymentWebhookEventId,event);
+      if(invoiceId) event = new NormalizedPaymentWebhookEventDto({...event,subscriptionInvoiceId:invoiceId});
 
       if (!this.shouldProcessSubscriptionWebhook(event)) {
         const processingResult = this.buildIgnoredProcessingResult({
@@ -134,6 +139,9 @@ export class ProcessSubscriptionWebhookEventUseCase {
         );
       }
 
+      const webhookRecord = await this.paymentWebhookEventsRepository.findByUniqueId(dtoIn.paymentWebhookEventId);
+      assertSettlement(webhookRecord?.metadata,resolution.subscription,event);
+      if(resolution.subscriptionInvoice && resolution.subscriptionInvoice.subscriptionId!==resolution.subscription._id) throw new Error('Invoice does not belong to subscription');
       const statusUpdate = this.resolveSubscriptionStatusUpdate({
         event,
         resolution,

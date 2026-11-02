@@ -33,7 +33,8 @@ let ReceivePagSeguroShortWebhookController = class ReceivePagSeguroShortWebhookC
             received: true,
             provider: 'pagseguro',
             eventId: this.extractString(dtoOut.processingResult, 'eventId'),
-            processed: true,
+            processed: dtoOut.processingResult.deferred !== true,
+            queued: dtoOut.processingResult.deferred === true,
             wasAlreadyRegistered: dtoOut.wasAlreadyRegistered,
         };
     }
@@ -41,7 +42,7 @@ let ReceivePagSeguroShortWebhookController = class ReceivePagSeguroShortWebhookC
         if (request.rawBody instanceof Buffer) {
             return request.rawBody.toString('utf8');
         }
-        return JSON.stringify(body);
+        throw new Error('PAGBANK_RAW_BODY_REQUIRED');
     }
     resolveHeader(headers, key) {
         const value = headers[key];
@@ -53,7 +54,7 @@ let ReceivePagSeguroShortWebhookController = class ReceivePagSeguroShortWebhookC
     normalizeHeaders(headers) {
         const normalized = {};
         for (const [key, value] of Object.entries(headers)) {
-            normalized[key] = Array.isArray(value) ? value[0] : value;
+            normalized[key] = value;
         }
         return normalized;
     }

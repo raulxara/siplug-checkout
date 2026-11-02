@@ -12,9 +12,11 @@ import { UpdatePaymentSplitStatusService } from './services/update-payment-split
 import { ResolvePaymentSplitDispatchEligibilityService } from './services/resolve-payment-split-dispatch-eligibility/resolve-payment-split-dispatch-eligibility.service';
 import { ReservePaymentSplitDispatchService } from './services/reserve-payment-split-dispatch/reserve-payment-split-dispatch.service';
 import { UpdatePaymentSplitService } from './services/update-payment-split/update-payment-split.service';
+import { PaymentSplitRecipientsModule } from '../payment-split-recipients/payment-split-recipients.module';
+import { MarkNativePaymentSplitAsTransferredService } from './services/mark-native-payment-split-as-transferred/mark-native-payment-split-as-transferred.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, PaymentSplitRecipientsModule],
   providers: [
     {
       provide: PAYMENT_SPLITS_REPOSITORY,
@@ -30,6 +32,7 @@ import { UpdatePaymentSplitService } from './services/update-payment-split/updat
     ResolvePaymentSplitDispatchEligibilityService,
     ReservePaymentSplitDispatchService,
     UpdatePaymentSplitService,
+    MarkNativePaymentSplitAsTransferredService,
   ],
   exports: [
     PAYMENT_SPLITS_REPOSITORY,
@@ -42,6 +45,7 @@ import { UpdatePaymentSplitService } from './services/update-payment-split/updat
     ResolvePaymentSplitDispatchEligibilityService,
     ReservePaymentSplitDispatchService,
     UpdatePaymentSplitService,
+    MarkNativePaymentSplitAsTransferredService,
   ],
 })
 export class PaymentSplitsModule {}

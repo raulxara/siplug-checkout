@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResolvePaymentGatewayCredentialDtoIn = void 0;
 class ResolvePaymentGatewayCredentialDtoIn {
+    splitRequired;
+    environment;
     officeId;
     clientId;
     paymentType;
@@ -11,6 +13,8 @@ class ResolvePaymentGatewayCredentialDtoIn {
     gatewayId;
     apiCredentialId;
     constructor(params) {
+        this.splitRequired = params.splitRequired === true;
+        this.environment = params.environment ?? 'sandbox';
         this.officeId = params.officeId;
         this.clientId = params.clientId;
         this.paymentType = params.paymentType;

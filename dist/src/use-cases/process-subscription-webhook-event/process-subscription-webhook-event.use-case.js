@@ -13,12 +13,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProcessSubscriptionWebhookEventUseCase = void 0;
+const settlement_policy_1 = require("../../modules/hosted-orders/services/settlement-policy");
+const subscription_renewals_repository_1 = require("../../modules/hosted-orders/repositories/subscription-renewals.repository");
 const common_1 = require("@nestjs/common");
 const build_changes_history_dto_in_1 = require("../../common/services/changes-history/dtos/build-changes-history.dto-in");
 const build_changes_history_service_1 = require("../../common/services/changes-history/build-changes-history.service");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
 const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
 const payment_webhook_events_tokens_1 = require("../../modules/payment-webhook-events/tokens/payment-webhook-events.tokens");
+const normalized_payment_webhook_event_dto_1 = require("../../modules/payment-webhook-events/dtos/normalized-payment-webhook-event.dto");
 const subscription_cycles_tokens_1 = require("../../modules/subscription-cycles/tokens/subscription-cycles.tokens");
 const subscription_invoices_tokens_1 = require("../../modules/subscription-invoices/tokens/subscription-invoices.tokens");
 const subscriptions_tokens_1 = require("../../modules/subscriptions/tokens/subscriptions.tokens");
@@ -30,17 +33,22 @@ let ProcessSubscriptionWebhookEventUseCase = class ProcessSubscriptionWebhookEve
     subscriptionInvoicesRepository;
     buildChangesHistoryService;
     handleUseCaseExceptionService;
-    constructor(paymentWebhookEventsRepository, subscriptionsRepository, subscriptionCyclesRepository, subscriptionInvoicesRepository, buildChangesHistoryService, handleUseCaseExceptionService) {
+    renewals;
+    constructor(paymentWebhookEventsRepository, subscriptionsRepository, subscriptionCyclesRepository, subscriptionInvoicesRepository, buildChangesHistoryService, handleUseCaseExceptionService, renewals) {
         this.paymentWebhookEventsRepository = paymentWebhookEventsRepository;
         this.subscriptionsRepository = subscriptionsRepository;
         this.subscriptionCyclesRepository = subscriptionCyclesRepository;
         this.subscriptionInvoicesRepository = subscriptionInvoicesRepository;
         this.buildChangesHistoryService = buildChangesHistoryService;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
+        this.renewals = renewals;
     }
     async exec(dtoIn) {
         try {
-            const event = dtoIn.normalizedEvent;
+            let event = dtoIn.normalizedEvent;
+            const invoiceId = await this.renewals.ensure(dtoIn.paymentWebhookEventId, event);
+            if (invoiceId)
+                event = new normalized_payment_webhook_event_dto_1.NormalizedPaymentWebhookEventDto({ ...event, subscriptionInvoiceId: invoiceId });
             if (!this.shouldProcessSubscriptionWebhook(event)) {
                 const processingResult = this.buildIgnoredProcessingResult({
                     reason: 'webhook event is not related to subscription processing',
@@ -71,6 +79,10 @@ let ProcessSubscriptionWebhookEventUseCase = class ProcessSubscriptionWebhookEve
                 });
                 return new process_subscription_webhook_event_dto_out_1.ProcessSubscriptionWebhookEventDtoOut(paymentWebhookEvent, dtoIn.paymentTransaction, null, resolution.subscriptionCycle, resolution.subscriptionInvoice, false, false, false, processingResult);
             }
+            const webhookRecord = await this.paymentWebhookEventsRepository.findByUniqueId(dtoIn.paymentWebhookEventId);
+            (0, settlement_policy_1.assertSettlement)(webhookRecord?.metadata, resolution.subscription, event);
+            if (resolution.subscriptionInvoice && resolution.subscriptionInvoice.subscriptionId !== resolution.subscription._id)
+                throw new Error('Invoice does not belong to subscription');
             const statusUpdate = this.resolveSubscriptionStatusUpdate({
                 event,
                 resolution,
@@ -651,6 +663,7 @@ exports.ProcessSubscriptionWebhookEventUseCase = ProcessSubscriptionWebhookEvent
     __param(2, (0, common_1.Inject)(subscription_cycles_tokens_1.SUBSCRIPTION_CYCLES_REPOSITORY)),
     __param(3, (0, common_1.Inject)(subscription_invoices_tokens_1.SUBSCRIPTION_INVOICES_REPOSITORY)),
     __metadata("design:paramtypes", [Object, Object, Object, Object, build_changes_history_service_1.BuildChangesHistoryService,
-        handle_use_case_exception_service_1.HandleUseCaseExceptionService])
+        handle_use_case_exception_service_1.HandleUseCaseExceptionService,
+        subscription_renewals_repository_1.SubscriptionRenewalsRepository])
 ], ProcessSubscriptionWebhookEventUseCase);
 //# sourceMappingURL=process-subscription-webhook-event.use-case.js.map

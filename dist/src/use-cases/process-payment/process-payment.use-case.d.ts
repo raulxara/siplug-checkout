@@ -14,6 +14,7 @@ import { ProcessPaymentDtoIn } from './dtos/process-payment.dto-in';
 import { ProcessPaymentDtoOut } from './dtos/process-payment.dto-out';
 import { CreatePaymentSplitRecipientService } from '../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service';
 import { CreatePaymentSplitService } from '../../modules/payment-splits/services/create-payment-split/create-payment-split.service';
+import { UpdatePaymentSplitService } from '../../modules/payment-splits/services/update-payment-split/update-payment-split.service';
 import { CalculatePaymentSplitService } from '../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service';
 export declare class ProcessPaymentUseCase {
     private readonly resolveActorAuthorizationService;
@@ -29,9 +30,10 @@ export declare class ProcessPaymentUseCase {
     private readonly updatePaymentTransactionService;
     private readonly calculatePaymentSplitService;
     private readonly createPaymentSplitService;
+    private readonly updatePaymentSplitService;
     private readonly createPaymentSplitRecipientService;
     private readonly handleUseCaseExceptionService;
-    constructor(resolveActorAuthorizationService: ResolveActorAuthorizationService, findCheckoutSessionByUniqueIdService: FindCheckoutSessionByUniqueIdService, getAllCheckoutSessionItemsByCheckoutSessionIdService: GetAllCheckoutSessionItemsByCheckoutSessionIdService, updateCheckoutSessionService: UpdateCheckoutSessionService, findOfficeByUniqueIdService: FindOfficeByUniqueIdService, findClientByUniqueIdService: FindClientByUniqueIdService, findPaymentCustomerByUniqueIdService: FindPaymentCustomerByUniqueIdService, resolvePaymentGatewayCredentialService: ResolvePaymentGatewayCredentialService, dispatchGatewayPaymentService: DispatchGatewayPaymentService, createPaymentTransactionService: CreatePaymentTransactionService, updatePaymentTransactionService: UpdatePaymentTransactionService, calculatePaymentSplitService: CalculatePaymentSplitService, createPaymentSplitService: CreatePaymentSplitService, createPaymentSplitRecipientService: CreatePaymentSplitRecipientService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    constructor(resolveActorAuthorizationService: ResolveActorAuthorizationService, findCheckoutSessionByUniqueIdService: FindCheckoutSessionByUniqueIdService, getAllCheckoutSessionItemsByCheckoutSessionIdService: GetAllCheckoutSessionItemsByCheckoutSessionIdService, updateCheckoutSessionService: UpdateCheckoutSessionService, findOfficeByUniqueIdService: FindOfficeByUniqueIdService, findClientByUniqueIdService: FindClientByUniqueIdService, findPaymentCustomerByUniqueIdService: FindPaymentCustomerByUniqueIdService, resolvePaymentGatewayCredentialService: ResolvePaymentGatewayCredentialService, dispatchGatewayPaymentService: DispatchGatewayPaymentService, createPaymentTransactionService: CreatePaymentTransactionService, updatePaymentTransactionService: UpdatePaymentTransactionService, calculatePaymentSplitService: CalculatePaymentSplitService, createPaymentSplitService: CreatePaymentSplitService, updatePaymentSplitService: UpdatePaymentSplitService, createPaymentSplitRecipientService: CreatePaymentSplitRecipientService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
     exec(dtoIn: ProcessPaymentDtoIn): Promise<ProcessPaymentDtoOut>;
     private validatePaymentType;
     private validatePaymentMethod;
@@ -45,6 +47,10 @@ export declare class ProcessPaymentUseCase {
     private resolveSplitRequired;
     private registerPaymentSplitForTransaction;
     private resolveSplitRuleId;
+    private persistPagSeguroGatewaySplitId;
+    private extractPagSeguroSplitId;
+    private resolveGatewayRecipientId;
+    private isPagSeguroProvider;
     private getStringFromConfig;
     private assertResolvedGatewayMatchesCheckoutSession;
     private getBooleanFromConfig;

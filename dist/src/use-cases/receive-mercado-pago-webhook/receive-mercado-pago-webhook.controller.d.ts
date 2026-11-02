@@ -15,5 +15,6 @@ export declare class ReceiveMercadoPagoWebhookController {
     private resolveApiCredentialId;
     private resolveHeader;
     private normalizeHeaders;
+    private resolveDevSkipSignature;
     private extractString;
 }

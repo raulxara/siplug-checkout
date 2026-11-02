@@ -41,11 +41,13 @@ let RegisterSubscriptionPlanUseCase = class RegisterSubscriptionPlanUseCase {
     }
     async exec(dtoIn) {
         try {
-            await this.resolveActorAuthorizationService.exec(new resolve_actor_authorization_dto_in_1.ResolveActorAuthorizationDtoIn({
+            const authorization = await this.resolveActorAuthorizationService.exec(new resolve_actor_authorization_dto_in_1.ResolveActorAuthorizationDtoIn({
                 token: dtoIn.token,
                 requiredAction: 'registerSubscriptionPlan',
                 requiredEntity: 'subscription_plans',
             }));
+            if (authorization.actor.clientId !== dtoIn.clientId)
+                throw new Error('client does not belong to authenticated actor');
             this.validateBillingInterval(dtoIn.billingInterval);
             this.validateStatus(dtoIn.status);
             this.validateCurrency(dtoIn.currency);

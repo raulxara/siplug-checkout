@@ -14,6 +14,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetApiCredentialsByUniqueIdController = void 0;
 const common_1 = require("@nestjs/common");
+const credential_access_guard_1 = require("../../modules/gateway-settings/services/credential-access.guard");
+const common_2 = require("@nestjs/common");
 const get_api_credentials_by_unique_id_dto_in_1 = require("./dtos/get-api-credentials-by-unique-id.dto-in");
 const get_api_credentials_by_unique_id_use_case_1 = require("./get-api-credentials-by-unique-id.use-case");
 let GetApiCredentialsByUniqueIdController = class GetApiCredentialsByUniqueIdController {
@@ -37,15 +39,16 @@ let GetApiCredentialsByUniqueIdController = class GetApiCredentialsByUniqueIdCon
 };
 exports.GetApiCredentialsByUniqueIdController = GetApiCredentialsByUniqueIdController;
 __decorate([
-    (0, common_1.Post)('get-by-unique-id'),
-    (0, common_1.HttpCode)(200),
-    __param(0, (0, common_1.Body)()),
+    (0, common_2.Post)('get-by-unique-id'),
+    (0, common_2.HttpCode)(200),
+    __param(0, (0, common_2.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], GetApiCredentialsByUniqueIdController.prototype, "handle", null);
 exports.GetApiCredentialsByUniqueIdController = GetApiCredentialsByUniqueIdController = __decorate([
-    (0, common_1.Controller)('api-credentials'),
+    (0, common_2.Controller)('api-credentials'),
+    (0, common_1.UseGuards)(credential_access_guard_1.CredentialAccessGuard),
     __metadata("design:paramtypes", [get_api_credentials_by_unique_id_use_case_1.GetApiCredentialsByUniqueIdUseCase])
 ], GetApiCredentialsByUniqueIdController);
 //# sourceMappingURL=get-api-credentials-by-unique-id.controller.js.map

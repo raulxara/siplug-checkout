@@ -1,0 +1,144 @@
+import { BuildGatewaySettingService } from './build-gateway-setting.service';
+import { GatewayDefinitionService } from './gateway-definition.service';
+import { GatewaySettingSecurityService } from './gateway-setting-security.service';
+import { GatewaySettingViewService } from './gateway-setting-view.service';
+import { EncryptApiCredentialSecretService } from '../../../common/services/crypto/encrypt-api-credential-secret/encrypt-api-credential-secret.service';
+import { DecryptApiCredentialSecretService } from '../../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
+import type { ApiCredential, Gateway } from '@prisma/client';
+const definitions = new GatewayDefinitionService();
+const security = new GatewaySettingSecurityService(
+  new EncryptApiCredentialSecretService(),
+  new DecryptApiCredentialSecretService(),
+);
+describe('Hosted gateway credential boundary', () => {
+  beforeEach(() => {
+    process.env.CRYPT_KEY = 'a'.repeat(32);
+    process.env.CHECKOUT_PUBLIC_URL = 'https://checkout.example.test';
+    process.env.CHECKOUT_FRONTEND_URL = 'https://app.example.test';
+  });
+  it('encrypts secrets and preserves an existing token on blank replacement', () => {
+    const def = definitions.resolve('stripe');
+    const saved = security.fields(
+      def,
+      { token: 'sk_test_secret', webhookSecret: 'whsec_secret' },
+      {},
+    );
+    expect(saved.token).toMatch(/^enc::/);
+    expect(JSON.stringify(saved)).not.toContain('sk_test_secret');
+    expect(security.decrypt(saved.token as string)).toBe('sk_test_secret');
+    expect(security.fields(def, { token: '' }, saved).token).toBe(saved.token);
+  });
+  it('rejects injected URL/config fields and client-supplied ciphertext', () => {
+    const def = definitions.resolve('stripe');
+    expect(() =>
+      security.fields(def, { baseUrl: 'http://127.0.0.1' }, {}),
+    ).toThrow();
+    expect(() => security.fields(def, { token: 'enc::forged' }, {})).toThrow();
+  });
+  it('permits incomplete inactive draft but requires all fields before activation', () => {
+    expect(() =>
+      security.fields(definitions.resolve('paypal'), {}, {}, false),
+    ).not.toThrow();
+    expect(() =>
+      security.fields(
+        definitions.resolve('paypal'),
+        { token: 'secret', clientId: 'client' },
+        {},
+      ),
+    ).toThrow('Webhook');
+  });
+  it('only exposes hosted capabilities', () => {
+    expect(definitions.resolve('picpay').modes).toEqual([]);
+    expect(definitions.resolve('pagbank').modes).toEqual(['one_time']);
+    expect(definitions.resolve('stripe').modes).toContain('split_recurring');
+    expect(definitions.resolve('infinitepay').modes).not.toContain('recurring');
+  });
+  it('rejects retired gateways and unsafe application origins', () => {
+    for (const provider of ['picpay', 'infinitepay']) {
+      expect(() => security.urls(provider, 'production', 'uuid')).toThrow('Gateway não disponível');
+    }
+    process.env.CHECKOUT_PUBLIC_URL = 'https://user:password@evil.test';
+    expect(() => security.urls('stripe', 'sandbox', 'uuid')).toThrow();
+  });
+  it('never serializes stored secret, encrypted archive or history', () => {
+    const gateway = {
+      unique_id: 'gateway',
+      provider: 'stripe',
+      name: 'Stripe',
+    } as Gateway;
+    const row = {
+      unique_id: 'credential',
+      gateway_id: 'gateway',
+      environment: 'sandbox',
+      status: 'active',
+      token: 'raw-secret',
+      config: {
+        webhookSecret: 'webhook-secret',
+        previousConfigurationEncrypted: 'archive',
+        enabledModes: ['one_time'],
+        defaultModes: ['one_time'],
+      },
+      updated_at: new Date(),
+      changes_history: [{ password: 'leak' }],
+    } as unknown as ApiCredential;
+    const value = new GatewaySettingViewService(definitions, security).build(
+      gateway,
+      [row],
+    );
+    const json = JSON.stringify(value);
+    for (const secret of ['raw-secret', 'webhook-secret', 'archive', 'leak'])
+      expect(json).not.toContain(secret);
+    expect(value.credentials[0].configuredSecrets).toEqual([
+      'token',
+      'webhookSecret',
+    ]);
+  });
+});
+
+describe('editable webhook URL', () => {
+  const path = '/api/v1/webhooks/gateways/mercado-pago/credential';
+  it('accepts a public HTTPS callback with the owning credential', () => {
+    expect(security.notificationUrl('https://example.ngrok-free.dev'+path+'?source_news=webhooks','mercadopago','credential')).toContain(path);
+    expect(security.urls('mercadopago','sandbox','credential').webhookUrl).toContain(path);
+  });
+  it('rejects another credential, insecure URL, auth bypass and credentials in URL', () => {
+    for (const url of ['https://example.com'+path+'-other', 'http://example.com'+path, 'https://example.com'+path+'?devSkipSignature=true', 'https://user:pass@example.com'+path, 'https://127.0.0.1'+path]) {
+      expect(() => security.notificationUrl(url,'mercadopago','credential')).toThrow();
+    }
+  });
+});
+
+it('saves and exposes the custom URL instead of replacing it with the environment default', () => {
+  process.env.CHECKOUT_PUBLIC_URL = 'https://checkout.example.test';
+  process.env.CHECKOUT_FRONTEND_URL = 'https://app.example.test';
+  const gateway = {unique_id:'gateway',provider:'mercadopago',name:'Mercado Pago',config:{}} as Gateway;
+  const old = {unique_id:'credential',config:{},token:null,updated_at:new Date(),gateway_id:'gateway'} as unknown as ApiCredential;
+  const url = 'https://example.ngrok-free.dev/api/v1/webhooks/gateways/mercado-pago/credential';
+  const data = new BuildGatewaySettingService(security).exec(old,{officeId:'office',userCustomerId:'actor'},gateway,definitions.resolve('mercadopago'),{environment:'sandbox',status:'inactive',modes:[],defaultModes:[],fields:{},notificationUrl:url});
+  expect(data.config).toEqual(expect.objectContaining({notificationUrl:url,webhookUrl:url}));
+  const view = new GatewaySettingViewService(definitions,security).build(gateway,[{...old,...data} as ApiCredential]);
+  expect(view.credentials[0].urls.webhookUrl).toBe(url);
+});
+
+for (const supplied of [true, false]) {
+  it(`preserves the PagBank callback in both notification payload fields (supplied=${supplied})`, () => {
+    process.env.CHECKOUT_PUBLIC_URL = 'http://localhost:8085';
+    process.env.CHECKOUT_FRONTEND_URL = 'http://localhost:3000';
+    const url = 'https://example.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/credential';
+    const gateway = {unique_id:'gateway',provider:'pagseguro',name:'PagBank',config:{}} as Gateway;
+    const old = {unique_id:'credential',config:{notificationUrl:url},token:null,updated_at:new Date(),gateway_id:'gateway'} as unknown as ApiCredential;
+    const data = new BuildGatewaySettingService(security).exec(old,{officeId:'office',userCustomerId:'actor'},gateway,definitions.resolve('pagseguro'),{environment:'sandbox',status:'inactive',modes:[],defaultModes:[],fields:{},...(supplied ? {notificationUrl:url} : {})});
+    expect(data.config).toEqual(expect.objectContaining({notificationUrl:url,webhookUrl:url,checkoutNotificationUrl:url,paymentNotificationUrl:url}));
+    expect(() => security.notificationUrl(url.replace('/gateways/','/'),'pagseguro','credential')).toThrow('/api/v1/webhooks/gateways/pagseguro/credential');
+  });
+}
+
+it('shortens long PagBank callbacks without changing host or credential', () => {
+  const host = 'https://entrappingly-irreproachable-randal.ngrok-free.dev';
+  const id = '7d5a3462-851b-4bc4-9fd9-8aa43d6cd3b9';
+  const url = security.notificationUrl(`${host}/api/v1/webhooks/gateways/pagseguro/${id}`, 'pagseguro', id);
+  expect(url).toBe(`${host}/w/p/${id}`);
+  expect(url.length).toBeLessThanOrEqual(100);
+  expect(security.notificationUrl(url, 'pagseguro', id)).toBe(url);
+  expect(() => security.notificationUrl(url, 'pagseguro', 'another-credential')).toThrow();
+});

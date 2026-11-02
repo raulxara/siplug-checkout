@@ -1,3 +1,4 @@
+import { GetAuthContextModule } from '../get-auth-context/get-auth-context.module';
 import { Module } from '@nestjs/common';
 
 import { SecurityModule } from '../../modules/security/security.module';
@@ -6,7 +7,7 @@ import { ListSubscriptionPlansByOfficeIdController } from './list-subscription-p
 import { ListSubscriptionPlansByOfficeIdUseCase } from './list-subscription-plans-by-office-id.use-case';
 
 @Module({
-  imports: [SubscriptionPlansModule, SecurityModule],
+  imports: [GetAuthContextModule, SubscriptionPlansModule, SecurityModule],
   controllers: [ListSubscriptionPlansByOfficeIdController],
   providers: [ListSubscriptionPlansByOfficeIdUseCase],
   exports: [ListSubscriptionPlansByOfficeIdUseCase],

@@ -1,3 +1,6 @@
+import { PagSeguroReconciliationWorker } from './pagseguro-reconciliation.worker';
+import { PagSeguroVerificationService } from './pagseguro-verification.service';
+import { PagSeguroWebhookResourceRepository } from './pagseguro-webhook-resource.repository';
 import { Module } from '@nestjs/common';
 
 import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
@@ -27,9 +30,12 @@ import { ReceivePagSeguroShortWebhookController } from './receive-pagseguro-shor
     ReceivePagSeguroShortWebhookController,
   ],
   providers: [
+    PagSeguroReconciliationWorker,
+    PagSeguroVerificationService,
+    PagSeguroWebhookResourceRepository,
     DecryptApiCredentialSecretService,
     ReceivePagSeguroWebhookUseCase,
   ],
-  exports: [ReceivePagSeguroWebhookUseCase],
+  exports: [ReceivePagSeguroWebhookUseCase, PagSeguroReconciliationWorker],
 })
 export class ReceivePagSeguroWebhookModule {}

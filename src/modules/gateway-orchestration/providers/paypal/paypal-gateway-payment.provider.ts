@@ -1,3 +1,4 @@
+import { CheckoutGeneralSettingsService } from '../../../checkout-settings/services/checkout-general-settings.service';
 import { Injectable } from '@nestjs/common';
 
 import type { IGatewayPaymentProvider } from '../../contracts/gateway-payment-provider.interface';
@@ -358,6 +359,8 @@ export class PayPalGatewayPaymentProvider implements IGatewayPaymentProvider {
     );
 
     const returnUrl =
+      (transactionConfig.checkoutSettingsSnapshot ? CheckoutGeneralSettingsService.paypalCaptureUrl(dtoIn.apiCredential?._id ?? '') : null) ??
+      (apiCredentialConfig.managedHosted === true ? this.toNullableString(apiCredentialConfig.returnUrl) : null) ??
       this.toNullableString(transactionConfig.returnUrl) ??
       this.toNullableString(transactionConfig.return_url) ??
       this.toNullableString(transactionConfig.successUrl) ??

@@ -10,6 +10,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReceivePagSeguroWebhookUseCase = void 0;
+const pagseguro_verification_service_1 = require("./pagseguro-verification.service");
+const pagseguro_webhook_resource_repository_1 = require("./pagseguro-webhook-resource.repository");
 const common_1 = require("@nestjs/common");
 const decrypt_api_credential_secret_dto_in_1 = require("../../common/services/crypto/decrypt-api-credential-secret/dtos/decrypt-api-credential-secret.dto-in");
 const decrypt_api_credential_secret_service_1 = require("../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service");
@@ -19,12 +21,12 @@ const find_api_credential_by_unique_id_dto_in_1 = require("../../modules/api-cre
 const find_api_credential_by_unique_id_service_1 = require("../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service");
 const normalize_pagseguro_webhook_dto_in_1 = require("../../modules/payment-webhook-gateways/pagseguro/services/normalize-pagseguro-webhook/dtos/normalize-pagseguro-webhook.dto-in");
 const normalize_pagseguro_webhook_service_1 = require("../../modules/payment-webhook-gateways/pagseguro/services/normalize-pagseguro-webhook/normalize-pagseguro-webhook.service");
-const validate_pagseguro_webhook_dto_in_1 = require("../../modules/payment-webhook-gateways/pagseguro/services/validate-pagseguro-webhook/dtos/validate-pagseguro-webhook.dto-in");
 const validate_pagseguro_webhook_service_1 = require("../../modules/payment-webhook-gateways/pagseguro/services/validate-pagseguro-webhook/validate-pagseguro-webhook.service");
 const register_payment_webhook_event_dto_in_1 = require("../../modules/payment-webhook-events/services/register-payment-webhook-event/dtos/register-payment-webhook-event.dto-in");
 const register_payment_webhook_event_service_1 = require("../../modules/payment-webhook-events/services/register-payment-webhook-event/register-payment-webhook-event.service");
 const process_payment_webhook_event_dto_in_1 = require("../process-payment-webhook-event/dtos/process-payment-webhook-event.dto-in");
 const process_payment_webhook_event_use_case_1 = require("../process-payment-webhook-event/process-payment-webhook-event.use-case");
+const receive_pagseguro_webhook_dto_in_1 = require("./dtos/receive-pagseguro-webhook.dto-in");
 const receive_pagseguro_webhook_dto_out_1 = require("./dtos/receive-pagseguro-webhook.dto-out");
 const normalized_payment_webhook_event_dto_1 = require("../../modules/payment-webhook-events/dtos/normalized-payment-webhook-event.dto");
 const find_payment_transaction_by_gateway_transaction_id_dto_in_1 = require("../../modules/payment-transactions/services/find-payment-transaction-by-gateway-transaction-id/dtos/find-payment-transaction-by-gateway-transaction-id.dto-in");
@@ -44,7 +46,9 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
     processPaymentWebhookEventUseCase;
     processSubscriptionWebhookEventUseCase;
     handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePagSeguroWebhookService, normalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase, handleUseCaseExceptionService) {
+    resources;
+    verification;
+    constructor(findApiCredentialByUniqueIdService, decryptApiCredentialSecretService, validatePagSeguroWebhookService, normalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService, processPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase, handleUseCaseExceptionService, resources, verification) {
         this.findApiCredentialByUniqueIdService = findApiCredentialByUniqueIdService;
         this.decryptApiCredentialSecretService = decryptApiCredentialSecretService;
         this.validatePagSeguroWebhookService = validatePagSeguroWebhookService;
@@ -55,21 +59,38 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
         this.processPaymentWebhookEventUseCase = processPaymentWebhookEventUseCase;
         this.processSubscriptionWebhookEventUseCase = processSubscriptionWebhookEventUseCase;
         this.handleUseCaseExceptionService = handleUseCaseExceptionService;
+        this.resources = resources;
+        this.verification = verification;
     }
     async exec(dtoIn) {
         try {
-            const credentialData = await this.resolveCredentialData(dtoIn.apiCredentialId);
-            const validationDtoOut = this.validatePagSeguroWebhookService.exec(new validate_pagseguro_webhook_dto_in_1.ValidatePagSeguroWebhookDtoIn({
-                rawBody: dtoIn.rawBody,
-                token: credentialData.token,
-                xAuthenticityToken: dtoIn.xAuthenticityToken,
-                signatureMode: credentialData.signatureMode,
-            }));
+            const verified = await this.verification.verifyNotification(dtoIn);
+            if (verified.deferred) {
+                return new receive_pagseguro_webhook_dto_out_1.ReceivePagSeguroWebhookDtoOut({}, null, {
+                    deferred: true, processed: false, reason: 'awaiting_provider_verification',
+                    paymentTransactionId: verified.transactionId,
+                    nextAttemptAt: new Date(verified.nextAttemptAt).toISOString(),
+                }, false);
+            }
+            return await this.processVerified(new receive_pagseguro_webhook_dto_in_1.ReceivePagSeguroWebhookDtoIn({ ...dtoIn, payload: verified.payload }), verified.method);
+        }
+        catch (error) {
+            if (error instanceof common_1.HttpException)
+                throw error;
+            throw error;
+        }
+    }
+    async reconcileExistingPayment(transactionId, credentialId) {
+        const payload = await this.verification.reconcile(transactionId, credentialId);
+        return this.processVerified(new receive_pagseguro_webhook_dto_in_1.ReceivePagSeguroWebhookDtoIn({ apiCredentialId: credentialId, payload, rawBody: JSON.stringify(payload), headers: {} }), 'authenticated_provider_get');
+    }
+    async processVerified(dtoIn, verificationMethod) {
+        try {
             const normalizedDtoOut = this.normalizePagSeguroWebhookService.exec(new normalize_pagseguro_webhook_dto_in_1.NormalizePagSeguroWebhookDtoIn({
                 payload: dtoIn.payload,
                 headers: dtoIn.headers,
             }));
-            const enrichedNormalizedEvent = await this.enrichPagSeguroNormalizedEventWithInternalReferences(normalizedDtoOut.normalizedEvent);
+            const enrichedNormalizedEvent = await this.enrichPagSeguroNormalizedEventWithInternalReferences(await this.resources.bind(dtoIn.apiCredentialId, normalizedDtoOut.normalizedEvent));
             const normalizedEvents = this.buildPagSeguroWebhookEffects({
                 originalEvent: enrichedNormalizedEvent,
                 payload: dtoIn.payload,
@@ -120,7 +141,7 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
                         currency: eventToProcess.currency,
                     },
                     metadata: {
-                        source: 'ReceivePagSeguroWebhookUseCase',
+                        source: verificationMethod === 'authenticated_provider_get' ? 'PagBankApiReconciliation' : 'ReceivePagSeguroWebhookUseCase',
                         apiCredentialId: dtoIn.apiCredentialId,
                         effect: {
                             eventType: eventToProcess.eventType,
@@ -128,9 +149,9 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
                             canonicalStatus: eventToProcess.canonicalStatus,
                         },
                         signature: {
-                            valid: validationDtoOut.valid,
-                            skipped: validationDtoOut.skipped,
-                            reason: validationDtoOut.reason,
+                            valid: verificationMethod !== 'authenticated_provider_get',
+                            skipped: verificationMethod === 'authenticated_provider_get',
+                            method: verificationMethod,
                         },
                     },
                     config: null,
@@ -480,8 +501,8 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
     async resolveCredentialData(apiCredentialId) {
         const apiCredentialDtoOut = await this.findApiCredentialByUniqueIdService.exec(new find_api_credential_by_unique_id_dto_in_1.FindApiCredentialByUniqueIdDtoIn(apiCredentialId));
         const apiCredential = apiCredentialDtoOut.apiCredential;
-        if (apiCredential.status !== 'active') {
-            throw new Error('api credential is not active');
+        if (!['active', 'inactive'].includes(apiCredential.status)) {
+            throw new Error('api credential unavailable');
         }
         const normalizedProvider = this.normalizeProvider(apiCredential.provider);
         if (normalizedProvider !== 'pagseguro') {
@@ -505,7 +526,7 @@ let ReceivePagSeguroWebhookUseCase = class ReceivePagSeguroWebhookUseCase {
             throw new Error('PagSeguro decrypted token is required');
         }
         const config = this.toRecordOrNull(apiCredential.config);
-        const signatureMode = this.extractString(config, 'webhookSignatureMode') === 'required'
+        const signatureMode = apiCredential.status === 'inactive' || this.extractString(config, 'webhookSignatureMode') === 'required'
             ? 'required'
             : 'optional';
         return {
@@ -566,6 +587,8 @@ exports.ReceivePagSeguroWebhookUseCase = ReceivePagSeguroWebhookUseCase = __deco
         register_payment_webhook_event_service_1.RegisterPaymentWebhookEventService,
         process_payment_webhook_event_use_case_1.ProcessPaymentWebhookEventUseCase,
         process_subscription_webhook_event_use_case_1.ProcessSubscriptionWebhookEventUseCase,
-        handle_use_case_exception_service_1.HandleUseCaseExceptionService])
+        handle_use_case_exception_service_1.HandleUseCaseExceptionService,
+        pagseguro_webhook_resource_repository_1.PagSeguroWebhookResourceRepository,
+        pagseguro_verification_service_1.PagSeguroVerificationService])
 ], ReceivePagSeguroWebhookUseCase);
 //# sourceMappingURL=receive-pagseguro-webhook.use-case.js.map

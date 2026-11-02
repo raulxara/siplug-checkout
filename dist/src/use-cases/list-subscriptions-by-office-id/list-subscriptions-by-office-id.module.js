@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListSubscriptionsByOfficeIdModule = void 0;
+const get_auth_context_module_1 = require("../get-auth-context/get-auth-context.module");
 const common_1 = require("@nestjs/common");
 const security_module_1 = require("../../modules/security/security.module");
 const subscriptions_module_1 = require("../../modules/subscriptions/subscriptions.module");
@@ -17,7 +18,7 @@ let ListSubscriptionsByOfficeIdModule = class ListSubscriptionsByOfficeIdModule 
 exports.ListSubscriptionsByOfficeIdModule = ListSubscriptionsByOfficeIdModule;
 exports.ListSubscriptionsByOfficeIdModule = ListSubscriptionsByOfficeIdModule = __decorate([
     (0, common_1.Module)({
-        imports: [subscriptions_module_1.SubscriptionsModule, security_module_1.SecurityModule],
+        imports: [get_auth_context_module_1.GetAuthContextModule, subscriptions_module_1.SubscriptionsModule, security_module_1.SecurityModule],
         controllers: [list_subscriptions_by_office_id_controller_1.ListSubscriptionsByOfficeIdController],
         providers: [list_subscriptions_by_office_id_use_case_1.ListSubscriptionsByOfficeIdUseCase],
         exports: [list_subscriptions_by_office_id_use_case_1.ListSubscriptionsByOfficeIdUseCase],

@@ -1,3 +1,5 @@
+import { PagSeguroVerificationService } from './pagseguro-verification.service';
+import { PagSeguroWebhookResourceRepository } from './pagseguro-webhook-resource.repository';
 import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
 import { FindApiCredentialByUniqueIdService } from '../../modules/api-credentials/services/find-api-credential-by-unique-id/find-api-credential-by-unique-id.service';
@@ -21,8 +23,12 @@ export declare class ReceivePagSeguroWebhookUseCase {
     private readonly processPaymentWebhookEventUseCase;
     private readonly processSubscriptionWebhookEventUseCase;
     private readonly handleUseCaseExceptionService;
-    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validatePagSeguroWebhookService: ValidatePagSeguroWebhookService, normalizePagSeguroWebhookService: NormalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService);
+    private readonly resources;
+    private readonly verification;
+    constructor(findApiCredentialByUniqueIdService: FindApiCredentialByUniqueIdService, decryptApiCredentialSecretService: DecryptApiCredentialSecretService, validatePagSeguroWebhookService: ValidatePagSeguroWebhookService, normalizePagSeguroWebhookService: NormalizePagSeguroWebhookService, findPaymentTransactionByGatewayTransactionIdService: FindPaymentTransactionByGatewayTransactionIdService, findPaymentTransactionByUniqueIdService: FindPaymentTransactionByUniqueIdService, registerPaymentWebhookEventService: RegisterPaymentWebhookEventService, processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase, processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase, handleUseCaseExceptionService: HandleUseCaseExceptionService, resources: PagSeguroWebhookResourceRepository, verification: PagSeguroVerificationService);
     exec(dtoIn: ReceivePagSeguroWebhookDtoIn): Promise<ReceivePagSeguroWebhookDtoOut>;
+    reconcileExistingPayment(transactionId: string, credentialId: string): Promise<ReceivePagSeguroWebhookDtoOut>;
+    private processVerified;
     private enrichPagSeguroNormalizedEventWithInternalReferences;
     private resolvePaymentTransactionFromPagSeguroEvent;
     private buildPagSeguroWebhookEffects;

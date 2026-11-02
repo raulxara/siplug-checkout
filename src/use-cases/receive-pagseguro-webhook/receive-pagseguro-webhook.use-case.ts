@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { PagSeguroVerificationService } from './pagseguro-verification.service';
+import { PagSeguroWebhookResourceRepository } from './pagseguro-webhook-resource.repository';
+import { HttpException, Injectable } from '@nestjs/common';
 
 import { DecryptApiCredentialSecretDtoIn } from '../../common/services/crypto/decrypt-api-credential-secret/dtos/decrypt-api-credential-secret.dto-in';
 import { DecryptApiCredentialSecretService } from '../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service';
@@ -49,25 +51,36 @@ export class ReceivePagSeguroWebhookUseCase {
     private readonly processPaymentWebhookEventUseCase: ProcessPaymentWebhookEventUseCase,
     private readonly processSubscriptionWebhookEventUseCase: ProcessSubscriptionWebhookEventUseCase,
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
+    private readonly resources: PagSeguroWebhookResourceRepository,
+    private readonly verification: PagSeguroVerificationService,
   ) {}
 
   async exec(
     dtoIn: ReceivePagSeguroWebhookDtoIn,
   ): Promise<ReceivePagSeguroWebhookDtoOut> {
     try {
-      const credentialData = await this.resolveCredentialData(
-        dtoIn.apiCredentialId,
-      );
+      const verified = await this.verification.verifyNotification(dtoIn);
+      if (verified.deferred) {
+        return new ReceivePagSeguroWebhookDtoOut({}, null, {
+          deferred: true, processed: false, reason: 'awaiting_provider_verification',
+          paymentTransactionId: verified.transactionId,
+          nextAttemptAt: new Date(verified.nextAttemptAt).toISOString(),
+        }, false);
+      }
+      return await this.processVerified(new ReceivePagSeguroWebhookDtoIn({...dtoIn, payload: verified.payload}), verified.method);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw error;
+    }
+  }
 
-      const validationDtoOut = this.validatePagSeguroWebhookService.exec(
-        new ValidatePagSeguroWebhookDtoIn({
-          rawBody: dtoIn.rawBody,
-          token: credentialData.token,
-          xAuthenticityToken: dtoIn.xAuthenticityToken,
-          signatureMode: credentialData.signatureMode,
-        }),
-      );
+  async reconcileExistingPayment(transactionId: string, credentialId: string) {
+    const payload = await this.verification.reconcile(transactionId, credentialId);
+    return this.processVerified(new ReceivePagSeguroWebhookDtoIn({apiCredentialId: credentialId, payload, rawBody: JSON.stringify(payload), headers: {}}), 'authenticated_provider_get');
+  }
 
+  private async processVerified(dtoIn: ReceivePagSeguroWebhookDtoIn, verificationMethod: string): Promise<ReceivePagSeguroWebhookDtoOut> {
+    try {
       const normalizedDtoOut = this.normalizePagSeguroWebhookService.exec(
         new NormalizePagSeguroWebhookDtoIn({
           payload: dtoIn.payload,
@@ -77,7 +90,7 @@ export class ReceivePagSeguroWebhookUseCase {
 
       const enrichedNormalizedEvent =
         await this.enrichPagSeguroNormalizedEventWithInternalReferences(
-          normalizedDtoOut.normalizedEvent,
+          await this.resources.bind(dtoIn.apiCredentialId, normalizedDtoOut.normalizedEvent),
         );
 
       const normalizedEvents = this.buildPagSeguroWebhookEffects({
@@ -144,7 +157,7 @@ export class ReceivePagSeguroWebhookUseCase {
               },
 
               metadata: {
-                source: 'ReceivePagSeguroWebhookUseCase',
+                source: verificationMethod === 'authenticated_provider_get' ? 'PagBankApiReconciliation' : 'ReceivePagSeguroWebhookUseCase',
                 apiCredentialId: dtoIn.apiCredentialId,
                 effect: {
                   eventType: eventToProcess.eventType,
@@ -152,9 +165,9 @@ export class ReceivePagSeguroWebhookUseCase {
                   canonicalStatus: eventToProcess.canonicalStatus,
                 },
                 signature: {
-                  valid: validationDtoOut.valid,
-                  skipped: validationDtoOut.skipped,
-                  reason: validationDtoOut.reason,
+                  valid: verificationMethod !== 'authenticated_provider_get',
+                  skipped: verificationMethod === 'authenticated_provider_get',
+                  method: verificationMethod,
                 },
               },
               config: null,
@@ -687,8 +700,8 @@ export class ReceivePagSeguroWebhookUseCase {
 
     const apiCredential = apiCredentialDtoOut.apiCredential;
 
-    if (apiCredential.status !== 'active') {
-      throw new Error('api credential is not active');
+    if (!['active', 'inactive'].includes(apiCredential.status)) {
+      throw new Error('api credential unavailable');
     }
 
     const normalizedProvider = this.normalizeProvider(apiCredential.provider);
@@ -726,7 +739,7 @@ export class ReceivePagSeguroWebhookUseCase {
     const config = this.toRecordOrNull(apiCredential.config);
 
     const signatureMode =
-      this.extractString(config, 'webhookSignatureMode') === 'required'
+      apiCredential.status === 'inactive' || this.extractString(config, 'webhookSignatureMode') === 'required'
         ? 'required'
         : 'optional';
 

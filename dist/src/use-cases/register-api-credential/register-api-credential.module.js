@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegisterApiCredentialModule = void 0;
+const credential_access_module_1 = require("../../modules/gateway-settings/credential-access.module");
 const common_1 = require("@nestjs/common");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
 const api_credentials_module_1 = require("../../modules/api-credentials/api-credentials.module");
@@ -20,7 +21,7 @@ let RegisterApiCredentialModule = class RegisterApiCredentialModule {
 exports.RegisterApiCredentialModule = RegisterApiCredentialModule;
 exports.RegisterApiCredentialModule = RegisterApiCredentialModule = __decorate([
     (0, common_1.Module)({
-        imports: [
+        imports: [credential_access_module_1.CredentialAccessModule,
             api_credentials_module_1.ApiCredentialsModule,
             offices_module_1.OfficesModule,
             clients_module_1.ClientsModule,

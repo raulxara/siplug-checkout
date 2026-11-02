@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SyncPaymentTransactionStatusUseCase = void 0;
+const actual_payment_method_service_1 = require("../../modules/payment-transactions/services/actual-payment-method.service");
 const common_1 = require("@nestjs/common");
 const handle_use_case_exception_dto_in_1 = require("../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in");
 const handle_use_case_exception_service_1 = require("../../common/services/use-case-support/handle-use-case-exception.service");
@@ -93,6 +94,7 @@ let SyncPaymentTransactionStatusUseCase = class SyncPaymentTransactionStatusUseC
                 status: gatewayStatusDtoOut.status,
                 processStatus: gatewayStatusDtoOut.processStatus,
                 processMessage: gatewayStatusDtoOut.processMessage,
+                config: actual_payment_method_service_1.ActualPaymentMethodService.merge(paymentTransaction.config, resolvedGateway.provider, gatewayStatusDtoOut.providerResponse),
                 providerResponse: this.sanitizeSensitiveGatewayData(gatewayStatusDtoOut.providerResponse),
                 gatewayResponse: this.sanitizeSensitiveGatewayData(gatewayStatusDtoOut.gatewayResponse),
                 qrCode: gatewayStatusDtoOut.qrCode,

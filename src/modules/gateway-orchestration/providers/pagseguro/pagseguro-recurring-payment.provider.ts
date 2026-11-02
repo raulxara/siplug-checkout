@@ -28,6 +28,14 @@ type PagSeguroNotificationPreferencesResult = {
   processMessage: string | null;
 };
 
+type PagSeguroNativeSplit = {
+  method: 'PERCENTAGE' | 'FIXED';
+  receivers: Array<{
+    account: { id: string };
+    amount: { value: number };
+  }>;
+};
+
 @Injectable()
 export class PagSeguroRecurringPaymentProvider {
   async createSubscription(
@@ -352,8 +360,139 @@ export class PagSeguroRecurringPaymentProvider {
         pro_rata: false,
     };
 
+    const nativeSplit = this.buildNativeSplit(dtoIn);
+
+    if (nativeSplit !== null) {
+      this.assertSplitCompatibleSubscription(dtoIn);
+      request.split_enabled = true;
+      request.splits = nativeSplit;
+    }
+
     return request;
     }
+
+  private buildNativeSplit(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+  ): PagSeguroNativeSplit | null {
+    if (!dtoIn.paymentTransaction.hasSplit) {
+      return null;
+    }
+
+    const paymentSplit = this.asObject(dtoIn.providerPayload.split);
+    const recipients = this.asObjectsArray(paymentSplit.recipients);
+
+    if (recipients.length === 0) {
+      throw new Error(
+        'PagSeguro native recurring split requires calculated payment split recipients',
+      );
+    }
+
+    const calculationBase = this.toNullableString(paymentSplit.calculationBase);
+
+    if (calculationBase !== null && calculationBase !== 'gross_amount') {
+      throw new Error(
+        'PagSeguro native recurring split requires a split rule calculated from gross_amount',
+      );
+    }
+
+    const mappedRecipients = recipients.map((recipient) => {
+      const config = this.asObject(recipient.config);
+      const gatewayAccounts = this.asObject(config.gatewayAccounts);
+      const pagSeguroAccount = this.asObject(
+        gatewayAccounts.pagseguro ?? gatewayAccounts.pagbank,
+      );
+      const accountId = this.toNullableString(pagSeguroAccount.accountId);
+      const splitRecipientId =
+        this.toNullableString(recipient.splitRecipientId) ?? 'unknown';
+
+      if (accountId === null || !accountId.startsWith('ACCO_')) {
+        throw new Error(
+          `PagSeguro Account_ID is required for recurring split recipient ${splitRecipientId}`,
+        );
+      }
+
+      const amount = Number(recipient.amount);
+      const percentage = this.toNullableNumber(recipient.percentage);
+
+      if (!Number.isInteger(amount) || amount < 0) {
+        throw new Error(
+          'PagSeguro recurring split recipient amount must be a non-negative integer in cents',
+        );
+      }
+
+      return { accountId, amount, percentage };
+    });
+
+    const canUsePercentage = mappedRecipients.every(
+      (recipient) => recipient.percentage !== null,
+    );
+
+    if (canUsePercentage) {
+      const percentageTotal = mappedRecipients.reduce(
+        (total, recipient) => total + Number(recipient.percentage),
+        0,
+      );
+
+      if (Math.round(percentageTotal * 100) === 10000) {
+        return {
+          method: 'PERCENTAGE',
+          receivers: mappedRecipients.map((recipient) => ({
+            account: { id: recipient.accountId },
+            amount: { value: Number(recipient.percentage) },
+          })),
+        };
+      }
+    }
+
+    const totalAmount = mappedRecipients.reduce(
+      (total, recipient) => total + recipient.amount,
+      0,
+    );
+
+    if (totalAmount !== dtoIn.paymentTransaction.amount) {
+      throw new Error(
+        'PagSeguro FIXED recurring split recipients must allocate the full gross subscription amount',
+      );
+    }
+
+    return {
+      method: 'FIXED',
+      receivers: mappedRecipients.map((recipient) => ({
+        account: { id: recipient.accountId },
+        amount: { value: recipient.amount },
+      })),
+    };
+  }
+
+  private assertSplitCompatibleSubscription(
+    dtoIn: GatewayRecurringPaymentDtoIn,
+  ): void {
+    const planConfig = this.asObject(dtoIn.subscriptionPlan.config);
+    const subscriptionConfig = this.asObject(dtoIn.config.subscriptionConfig);
+    const configuredCoupon =
+      this.toNullableString(planConfig.couponId) ??
+      this.toNullableString(planConfig.coupon) ??
+      this.toNullableString(subscriptionConfig.couponId) ??
+      this.toNullableString(subscriptionConfig.coupon);
+    const setupFee =
+      this.toNullableNumber(planConfig.setupFee) ??
+      this.toNullableNumber(planConfig.setup_fee);
+
+    if (
+      configuredCoupon !== null ||
+      (Array.isArray(planConfig.coupons) && planConfig.coupons.length > 0)
+    ) {
+      throw new Error(
+        'PagSeguro native recurring split cannot be combined with coupons',
+      );
+    }
+
+    if (setupFee !== null && setupFee > 0) {
+      throw new Error(
+        'PagSeguro native recurring split cannot be combined with setup_fee',
+      );
+    }
+  }
 
     private async resolveCustomerForSubscription(params: {
     dtoIn: GatewayRecurringPaymentDtoIn;
@@ -1153,6 +1292,27 @@ export class PagSeguroRecurringPaymentProvider {
     }
 
     return value as Record<string, unknown>;
+  }
+
+  private asObjectsArray(value: unknown): Array<Record<string, unknown>> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === 'object' && !Array.isArray(item),
+    );
+  }
+
+  private toNullableNumber(value: unknown): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const numberValue = Number(value);
+
+    return Number.isFinite(numberValue) ? numberValue : null;
   }
 
   private async ensureRecurringNotificationPreferences(params: {

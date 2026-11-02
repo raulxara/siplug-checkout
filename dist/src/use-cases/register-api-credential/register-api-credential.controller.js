@@ -14,6 +14,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegisterApiCredentialController = void 0;
 const common_1 = require("@nestjs/common");
+const credential_access_guard_1 = require("../../modules/gateway-settings/services/credential-access.guard");
+const common_2 = require("@nestjs/common");
 const register_api_credential_dto_in_1 = require("./dtos/register-api-credential.dto-in");
 const register_api_credential_request_1 = require("./http/register-api-credential.request");
 const register_api_credential_use_case_1 = require("./register-api-credential.use-case");
@@ -53,7 +55,7 @@ let RegisterApiCredentialController = class RegisterApiCredentialController {
             const message = error instanceof Error
                 ? error.message
                 : 'error on register api credential controller';
-            throw new common_1.BadRequestException({
+            throw new common_2.BadRequestException({
                 status: 'error',
                 message,
             });
@@ -62,15 +64,16 @@ let RegisterApiCredentialController = class RegisterApiCredentialController {
 };
 exports.RegisterApiCredentialController = RegisterApiCredentialController;
 __decorate([
-    (0, common_1.Post)('register'),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Headers)('authorization')),
+    (0, common_2.Post)('register'),
+    __param(0, (0, common_2.Body)()),
+    __param(1, (0, common_2.Headers)('authorization')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [register_api_credential_request_1.RegisterApiCredentialRequest, String]),
     __metadata("design:returntype", Promise)
 ], RegisterApiCredentialController.prototype, "handle", null);
 exports.RegisterApiCredentialController = RegisterApiCredentialController = __decorate([
-    (0, common_1.Controller)('api-credentials'),
+    (0, common_2.Controller)('api-credentials'),
+    (0, common_1.UseGuards)(credential_access_guard_1.CredentialAccessGuard),
     __metadata("design:paramtypes", [register_api_credential_use_case_1.RegisterApiCredentialUseCase])
 ], RegisterApiCredentialController);
 //# sourceMappingURL=register-api-credential.controller.js.map

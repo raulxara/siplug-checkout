@@ -1,3 +1,4 @@
+import { ActualPaymentMethodService } from '../../modules/payment-transactions/services/actual-payment-method.service';
 import { Injectable } from '@nestjs/common';
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
@@ -121,6 +122,7 @@ export class SyncPaymentTransactionStatusUseCase {
             processStatus: gatewayStatusDtoOut.processStatus,
             processMessage: gatewayStatusDtoOut.processMessage,
 
+            config: ActualPaymentMethodService.merge(paymentTransaction.config, resolvedGateway.provider, gatewayStatusDtoOut.providerResponse),
             providerResponse: this.sanitizeSensitiveGatewayData(
               gatewayStatusDtoOut.providerResponse,
             ),

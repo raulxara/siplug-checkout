@@ -10,13 +10,14 @@ exports.SplitCalculationsModule = void 0;
 const common_1 = require("@nestjs/common");
 const split_rule_recipients_module_1 = require("../split-rule-recipients/split-rule-recipients.module");
 const split_rules_module_1 = require("../split-rules/split-rules.module");
+const split_recipients_module_1 = require("../split-recipients/split-recipients.module");
 const calculate_payment_split_service_1 = require("./services/calculate-payment-split/calculate-payment-split.service");
 let SplitCalculationsModule = class SplitCalculationsModule {
 };
 exports.SplitCalculationsModule = SplitCalculationsModule;
 exports.SplitCalculationsModule = SplitCalculationsModule = __decorate([
     (0, common_1.Module)({
-        imports: [split_rules_module_1.SplitRulesModule, split_rule_recipients_module_1.SplitRuleRecipientsModule],
+        imports: [split_rules_module_1.SplitRulesModule, split_rule_recipients_module_1.SplitRuleRecipientsModule, split_recipients_module_1.SplitRecipientsModule],
         providers: [calculate_payment_split_service_1.CalculatePaymentSplitService],
         exports: [calculate_payment_split_service_1.CalculatePaymentSplitService],
     })

@@ -31,6 +31,9 @@ let ReceivePagSeguroWebhookController = class ReceivePagSeguroWebhookController 
         }));
         return {
             status: 'success',
+            received: true,
+            processed: dtoOut.processingResult.deferred !== true,
+            queued: dtoOut.processingResult.deferred === true,
             message: 'pagseguro webhook received successfully',
             data: {
                 paymentWebhookEvent: dtoOut.paymentWebhookEvent,
@@ -44,7 +47,7 @@ let ReceivePagSeguroWebhookController = class ReceivePagSeguroWebhookController 
         if (request.rawBody instanceof Buffer) {
             return request.rawBody.toString('utf8');
         }
-        return JSON.stringify(body);
+        throw new Error('PAGBANK_RAW_BODY_REQUIRED');
     }
     resolveHeader(headers, key) {
         const value = headers[key];
@@ -56,7 +59,7 @@ let ReceivePagSeguroWebhookController = class ReceivePagSeguroWebhookController 
     normalizeHeaders(headers) {
         const normalized = {};
         for (const [key, value] of Object.entries(headers)) {
-            normalized[key] = Array.isArray(value) ? value[0] : value;
+            normalized[key] = value;
         }
         return normalized;
     }

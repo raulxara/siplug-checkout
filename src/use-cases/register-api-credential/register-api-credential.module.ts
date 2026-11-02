@@ -1,3 +1,4 @@
+import { CredentialAccessModule } from '../../modules/gateway-settings/credential-access.module';
 import { Module } from '@nestjs/common';
 import { UseCaseSupportModule } from '../../common/services/use-case-support/use-case-support.module';
 import { ApiCredentialsModule } from '../../modules/api-credentials/api-credentials.module';
@@ -8,7 +9,7 @@ import { RegisterApiCredentialController } from './register-api-credential.contr
 import { RegisterApiCredentialUseCase } from './register-api-credential.use-case';
 
 @Module({
-  imports: [
+  imports: [CredentialAccessModule,
     ApiCredentialsModule,
     OfficesModule,
     ClientsModule,

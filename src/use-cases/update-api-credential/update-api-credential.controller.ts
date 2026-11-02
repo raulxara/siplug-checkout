@@ -1,3 +1,5 @@
+import { UseGuards } from '@nestjs/common';
+import { CredentialAccessGuard } from '../../modules/gateway-settings/services/credential-access.guard';
 import {
   BadRequestException,
   Body,
@@ -10,6 +12,7 @@ import { UpdateApiCredentialRequest } from './http/update-api-credential.request
 import { UpdateApiCredentialUseCase } from './update-api-credential.use-case';
 
 @Controller('api-credentials')
+@UseGuards(CredentialAccessGuard)
 export class UpdateApiCredentialController {
   constructor(
     private readonly updateApiCredentialUseCase: UpdateApiCredentialUseCase,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, HttpException } from '@nestjs/common';
 import { FindUserCustomerByTokenDtoIn } from '../../../user-customers/services/find-user-customer-by-token/dtos/find-user-customer-by-token.dto-in';
 import { FindUserCustomerByTokenService } from '../../../user-customers/services/find-user-customer-by-token/find-user-customer-by-token.service';
 import { CheckUserPermissionDtoIn } from '../check-user-permission/dtos/check-user-permission.dto-in';
@@ -17,15 +17,14 @@ export class ResolveActorAuthorizationService {
     dtoIn: ResolveActorAuthorizationDtoIn,
   ): Promise<ResolveActorAuthorizationDtoOut> {
     try {
-      const userCustomerDtoOut =
-        await this.findUserCustomerByTokenService.exec(
-          new FindUserCustomerByTokenDtoIn(dtoIn.token),
-        );
+      const userCustomerDtoOut = await this.findUserCustomerByTokenService.exec(
+        new FindUserCustomerByTokenDtoIn(dtoIn.token),
+      );
 
       const actor = userCustomerDtoOut.userCustomer;
 
       if (actor.status !== 'active') {
-        throw new Error('actor is not active');
+        throw new ForbiddenException('ACTOR_INACTIVE');
       }
 
       const permissionDtoOut = await this.checkUserPermissionService.exec(
@@ -37,7 +36,7 @@ export class ResolveActorAuthorizationService {
       );
 
       if (!permissionDtoOut.allowed) {
-        throw new Error('actor does not have permission');
+        throw new ForbiddenException('ACTOR_PERMISSION_DENIED');
       }
 
       return new ResolveActorAuthorizationDtoOut(
@@ -51,6 +50,7 @@ export class ResolveActorAuthorizationService {
         permissionDtoOut.matchedPermission,
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       const message =
         error instanceof Error
           ? error.message

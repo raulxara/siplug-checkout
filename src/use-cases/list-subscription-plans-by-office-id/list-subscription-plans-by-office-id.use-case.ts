@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { GetAuthContextUseCase } from '../get-auth-context/get-auth-context.use-case';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 
 import { GetAllSubscriptionPlansByOfficeIdDtoIn } from '../../modules/subscription-plans/services/get-all-subscription-plans-by-office-id/dtos/get-all-subscription-plans-by-office-id.dto-in';
 import { GetAllSubscriptionPlansByOfficeIdService } from '../../modules/subscription-plans/services/get-all-subscription-plans-by-office-id/get-all-subscription-plans-by-office-id.service';
@@ -10,6 +11,7 @@ import { ListSubscriptionPlansByOfficeIdDtoOut } from './dtos/list-subscription-
 @Injectable()
 export class ListSubscriptionPlansByOfficeIdUseCase {
   constructor(
+    private readonly identity: GetAuthContextUseCase,
     private readonly getAllSubscriptionPlansByOfficeIdService: GetAllSubscriptionPlansByOfficeIdService,
     private readonly resolveActorAuthorizationService: ResolveActorAuthorizationService,
   ) {}
@@ -17,6 +19,8 @@ export class ListSubscriptionPlansByOfficeIdUseCase {
   async exec(
     dtoIn: ListSubscriptionPlansByOfficeIdDtoIn,
   ): Promise<ListSubscriptionPlansByOfficeIdDtoOut> {
+    const context = await this.identity.exec(dtoIn.token);
+    if(context.officeId !== dtoIn.officeId) throw new ForbiddenException('office not authorized');
     await this.resolveActorAuthorizationService.exec({
       token: dtoIn.token,
       requiredEntity: 'subscription_plans',

@@ -96,7 +96,7 @@ let RegisterApiCredentialUseCase = class RegisterApiCredentialUseCase {
                     'privateKey',
                     'private_key',
                     'webhookSecret',
-                    'webhook_secret',
+                    'webhook_secret', 'webhookToken', 'sellerRefreshToken', 'transparentToken',
                 ],
                 encryptedPrefix: 'enc::',
                 strict: false,

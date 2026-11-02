@@ -4,6 +4,8 @@ import { UseCaseSupportModule } from '../../common/services/use-case-support/use
 import { PaymentTransactionsModule } from '../../modules/payment-transactions/payment-transactions.module';
 import { PaymentWebhookEventsModule } from '../../modules/payment-webhook-events/payment-webhook-events.module';
 import { PaymentSplitsModule } from '../../modules/payment-splits/payment-splits.module';
+import { PaymentSplitRecipientsModule } from '../../modules/payment-split-recipients/payment-split-recipients.module';
+
 import { DispatchPaymentSplitToGatewayModule } from '../dispatch-payment-split-to-gateway/dispatch-payment-split-to-gateway.module';
 import { ProcessPaymentWebhookEventUseCase } from './process-payment-webhook-event.use-case';
 
@@ -13,6 +15,7 @@ import { ProcessPaymentWebhookEventUseCase } from './process-payment-webhook-eve
     PaymentWebhookEventsModule,
     PaymentTransactionsModule,
     PaymentSplitsModule,
+    PaymentSplitRecipientsModule,
     DispatchPaymentSplitToGatewayModule,
   ],
   providers: [ProcessPaymentWebhookEventUseCase],

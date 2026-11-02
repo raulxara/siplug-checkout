@@ -1,3 +1,4 @@
+import { CheckoutGeneralSettingsService } from '../../modules/checkout-settings/services/checkout-general-settings.service';
 import { Injectable } from '@nestjs/common';
 import { HandleUseCaseExceptionDtoIn } from '../../common/services/use-case-support/dtos/handle-use-case-exception.dto-in';
 import { HandleUseCaseExceptionService } from '../../common/services/use-case-support/handle-use-case-exception.service';
@@ -39,6 +40,8 @@ import { CreatePaymentSplitRecipientDtoIn } from '../../modules/payment-split-re
 import { CreatePaymentSplitRecipientService } from '../../modules/payment-split-recipients/services/create-payment-split-recipient/create-payment-split-recipient.service';
 import { CreatePaymentSplitDtoIn } from '../../modules/payment-splits/services/create-payment-split/dtos/create-payment-split.dto-in';
 import { CreatePaymentSplitService } from '../../modules/payment-splits/services/create-payment-split/create-payment-split.service';
+import { UpdatePaymentSplitDtoIn } from '../../modules/payment-splits/services/update-payment-split/dtos/update-payment-split.dto-in';
+import { UpdatePaymentSplitService } from '../../modules/payment-splits/services/update-payment-split/update-payment-split.service';
 import { CalculatePaymentSplitDtoIn } from '../../modules/split-calculations/services/calculate-payment-split/dtos/calculate-payment-split.dto-in';
 import { CalculatePaymentSplitService } from '../../modules/split-calculations/services/calculate-payment-split/calculate-payment-split.service';
 
@@ -63,6 +66,7 @@ export class ProcessPaymentUseCase {
 
     private readonly calculatePaymentSplitService: CalculatePaymentSplitService,
     private readonly createPaymentSplitService: CreatePaymentSplitService,
+    private readonly updatePaymentSplitService: UpdatePaymentSplitService,
     private readonly createPaymentSplitRecipientService: CreatePaymentSplitRecipientService,
 
     private readonly handleUseCaseExceptionService: HandleUseCaseExceptionService,
@@ -70,7 +74,7 @@ export class ProcessPaymentUseCase {
 
   async exec(dtoIn: ProcessPaymentDtoIn): Promise<ProcessPaymentDtoOut> {
     try {
-      await this.resolveActorAuthorizationService.exec(
+      const authorization = await this.resolveActorAuthorizationService.exec(
         new ResolveActorAuthorizationDtoIn({
           token: dtoIn.token,
           requiredAction: 'processPayment',
@@ -93,6 +97,8 @@ export class ProcessPaymentUseCase {
         );
 
       const checkoutSession = checkoutSessionDtoOut.checkoutSession;
+      if (authorization.actor.clientId !== checkoutSession.clientId) throw new Error('checkout session does not belong to authenticated actor');
+      CheckoutGeneralSettingsService.assertAvailable(checkoutSession, dtoIn.paymentMethod);
 
       if (!['created', 'processing'].includes(checkoutSession.status)) {
         throw new Error('checkout session is not available for payment');
@@ -181,6 +187,8 @@ export class ProcessPaymentUseCase {
       const resolvedGatewayCredentialDtoOut =
         await this.resolvePaymentGatewayCredentialService.exec(
           new ResolvePaymentGatewayCredentialDtoIn({
+            splitRequired:this.resolveSplitRequired(checkoutSession.config,dtoIn.config),
+            environment:checkoutSession.config?.environment==='production'?'production':'sandbox',
             officeId: checkoutSession.officeId,
             clientId: checkoutSession.clientId,
             paymentType: checkoutSession.paymentType,
@@ -214,6 +222,8 @@ export class ProcessPaymentUseCase {
           amount: checkoutSession.amount,
           currency: checkoutSession.currency,
           description: checkoutSession.description,
+          successUrl: checkoutSession.successUrl,
+          cancelUrl: checkoutSession.cancelUrl,
         },
         payer: dtoIn.payer,
         paymentData: dtoIn.paymentData,
@@ -290,10 +300,7 @@ export class ProcessPaymentUseCase {
             source: 'ProcessPaymentUseCase',
           },
 
-          config: {
-            ...(checkoutSession.config ?? {}),
-            ...(dtoIn.config ?? {}),
-          },
+          config: CheckoutGeneralSettingsService.transactionConfig(checkoutSession.config, dtoIn.config),
         }),
       );
 
@@ -370,6 +377,12 @@ export class ProcessPaymentUseCase {
             },
           }),
         );
+
+      await this.persistPagSeguroGatewaySplitId({
+        paymentSplitSnapshot,
+        gatewayProvider: resolvedGateway.provider,
+        providerResponse: gatewayPaymentDtoOut.providerResponse,
+      });
 
       const updatedTransactionDtoOut =
         await this.updatePaymentTransactionService.exec(
@@ -836,7 +849,10 @@ export class ProcessPaymentUseCase {
             String(paymentSplitDtoOut.paymentSplit._id),
             recipient.splitRecipientId,
 
-            null,
+            this.resolveGatewayRecipientId(
+              recipient.config,
+              params.gatewayProvider,
+            ),
             null,
 
             recipient.role,
@@ -888,6 +904,124 @@ export class ProcessPaymentUseCase {
     }
 
     return this.getStringFromConfig(checkoutSessionConfig, 'splitRuleId');
+  }
+
+  private async persistPagSeguroGatewaySplitId(params: {
+    paymentSplitSnapshot: Record<string, unknown> | null;
+    gatewayProvider: string;
+    providerResponse: Record<string, unknown> | null;
+  }): Promise<void> {
+    if (!this.isPagSeguroProvider(params.gatewayProvider)) {
+      return;
+    }
+
+    const paymentSplitId = this.getStringFromConfig(
+      params.paymentSplitSnapshot,
+      'paymentSplitId',
+    );
+    const gatewaySplitId = this.extractPagSeguroSplitId(
+      params.providerResponse,
+    );
+
+    if (paymentSplitId === null || gatewaySplitId === null) {
+      return;
+    }
+
+    await this.updatePaymentSplitService.exec(
+      new UpdatePaymentSplitDtoIn({
+        _id: paymentSplitId,
+        gatewaySplitId,
+        source: 'ProcessPaymentUseCase.persistPagSeguroGatewaySplitId',
+      }),
+    );
+  }
+
+  private extractPagSeguroSplitId(
+    providerResponse: Record<string, unknown> | null,
+  ): string | null {
+    const charges = Array.isArray(providerResponse?.charges)
+      ? providerResponse.charges
+      : [];
+
+    for (const charge of charges) {
+      if (!charge || typeof charge !== 'object' || Array.isArray(charge)) {
+        continue;
+      }
+
+      const links = (charge as Record<string, unknown>).links;
+
+      if (!Array.isArray(links)) {
+        continue;
+      }
+
+      for (const link of links) {
+        if (!link || typeof link !== 'object' || Array.isArray(link)) {
+          continue;
+        }
+
+        const linkData = link as Record<string, unknown>;
+
+        if (this.getStringFromConfig(linkData, 'rel') !== 'SPLIT') {
+          continue;
+        }
+
+        const href = this.getStringFromConfig(linkData, 'href');
+        const splitId = href?.split('/').pop()?.trim() ?? null;
+
+        if (splitId?.startsWith('SPLI_')) {
+          return splitId;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private resolveGatewayRecipientId(
+    recipientConfig: Record<string, unknown> | null,
+    gatewayProvider: string,
+  ): string | null {
+    if (recipientConfig === null) {
+      return null;
+    }
+
+    const gatewayAccounts = recipientConfig.gatewayAccounts;
+
+    if (
+      gatewayAccounts &&
+      typeof gatewayAccounts === 'object' &&
+      !Array.isArray(gatewayAccounts)
+    ) {
+      const normalizedGatewayProvider = gatewayProvider.trim().toLowerCase();
+      const gatewayAccountKey = this.isPagSeguroProvider(gatewayProvider)
+        ? 'pagseguro'
+        : normalizedGatewayProvider;
+      const account = (gatewayAccounts as Record<string, unknown>)[
+        gatewayAccountKey
+      ];
+
+      if (account && typeof account === 'object' && !Array.isArray(account)) {
+        const accountId = this.getStringFromConfig(
+          account as Record<string, unknown>,
+          'accountId',
+        );
+
+        if (accountId !== null) {
+          return accountId;
+        }
+      }
+    }
+
+    return (
+      this.getStringFromConfig(recipientConfig, 'gatewayRecipientId') ??
+      this.getStringFromConfig(recipientConfig, 'stripeAccountId')
+    );
+  }
+
+  private isPagSeguroProvider(provider: string): boolean {
+    return ['pagseguro', 'pagbank', 'pag_bank', 'pag-seguro'].includes(
+      provider.trim().toLowerCase(),
+    );
   }
 
   private getStringFromConfig(

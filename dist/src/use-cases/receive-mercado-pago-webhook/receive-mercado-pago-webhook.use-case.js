@@ -71,12 +71,14 @@ let ReceiveMercadoPagoWebhookUseCase = class ReceiveMercadoPagoWebhookUseCase {
                 payload: dtoIn.payload,
                 queryParams: dtoIn.queryParams,
             });
-            await this.validateMercadoPagoWebhookService.exec(new validate_mercado_pago_webhook_dto_in_1.ValidateMercadoPagoWebhookDtoIn({
-                xSignature: dtoIn.xSignature,
-                xRequestId: dtoIn.xRequestId,
-                dataId: this.resolveSignatureDataId(dtoIn.queryParams),
-                webhookSecret: credentialData.webhookSecret,
-            }));
+            if (this.shouldValidateMercadoPagoSignature(dtoIn)) {
+                await this.validateMercadoPagoWebhookService.exec(new validate_mercado_pago_webhook_dto_in_1.ValidateMercadoPagoWebhookDtoIn({
+                    xSignature: dtoIn.xSignature,
+                    xRequestId: dtoIn.xRequestId,
+                    dataId: this.resolveSignatureDataId(dtoIn.queryParams),
+                    webhookSecret: credentialData.webhookSecret,
+                }));
+            }
             const mercadoPagoResource = await this.resolveMercadoPagoResource({
                 resourceType,
                 resourceId,
@@ -189,6 +191,16 @@ let ReceiveMercadoPagoWebhookUseCase = class ReceiveMercadoPagoWebhookUseCase {
             throw new Error(message);
         }
     }
+    shouldValidateMercadoPagoSignature(dtoIn) {
+        if (dtoIn.devSkipSignature !== true) {
+            return true;
+        }
+        const appEnv = String(process.env.APP_ENV ?? process.env.NODE_ENV ?? '')
+            .trim()
+            .toLowerCase();
+        const isLocalEnvironment = ['local', 'development', 'dev', 'test'].includes(appEnv);
+        return !isLocalEnvironment;
+    }
     resolveResourceType(params) {
         const type = this.extractString(params.payload, 'type') ??
             this.extractString(params.queryParams, 'type') ??
@@ -199,10 +211,11 @@ let ReceiveMercadoPagoWebhookUseCase = class ReceiveMercadoPagoWebhookUseCase {
             .toLowerCase()
             .replace(/-/g, '_');
         if (normalized === 'preapproval' ||
-            normalized === 'subscription_preapproval' ||
-            normalized === 'authorized_payment') {
+            normalized === 'subscription_preapproval') {
             return 'preapproval';
         }
+        if (['authorized_payment', 'subscription_authorized_payment'].includes(normalized))
+            return 'authorized_payment';
         return 'payment';
     }
     resolveResourceId(params) {
@@ -227,6 +240,19 @@ let ReceiveMercadoPagoWebhookUseCase = class ReceiveMercadoPagoWebhookUseCase {
         throw new Error('Mercado Pago resource id was not found in webhook');
     }
     async resolveMercadoPagoResource(params) {
+        if (params.resourceType === 'authorized_payment') {
+            const response = await fetch(`${params.baseUrl}/authorized_payments/${encodeURIComponent(params.resourceId)}`, {
+                headers: { Authorization: `Bearer ${params.accessToken}` }, signal: AbortSignal.timeout(10000),
+            });
+            if (!response.ok)
+                throw new Error(`Mercado Pago invoice request failed: ${response.status}`);
+            const invoice = await response.json();
+            const paymentId = this.extractString(this.extractObject(invoice, 'payment'), 'id');
+            if (!paymentId)
+                throw new Error('Recurring invoice has no payment yet');
+            const result = await this.getMercadoPagoPaymentService.exec(new get_mercado_pago_payment_dto_in_1.GetMercadoPagoPaymentDtoIn({ paymentId, accessToken: params.accessToken }));
+            return { payment: { ...result.payment, preapproval_id: invoice.preapproval_id, invoice_id: String(invoice.id) }, preapproval: null, providerResponse: result.providerResponse };
+        }
         if (params.resourceType === 'payment') {
             const paymentDtoOut = await this.getMercadoPagoPaymentService.exec(new get_mercado_pago_payment_dto_in_1.GetMercadoPagoPaymentDtoIn({
                 paymentId: params.resourceId,
