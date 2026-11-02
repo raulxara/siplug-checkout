@@ -1,3 +1,4 @@
+import { PagSeguroReconciliationWorker } from '../receive-pagseguro-webhook/pagseguro-reconciliation.worker';
 import { ResolveActorAuthorizationService } from '../../modules/security/services/resolve-actor-authorization/resolve-actor-authorization.service';
 import { ResolveActorAuthorizationDtoIn } from '../../modules/security/services/resolve-actor-authorization/dtos/resolve-actor-authorization.dto-in';
 import { MixedBillingService } from '../../modules/hosted-orders/services/mixed-billing.service';
@@ -23,6 +24,7 @@ import { HostedOrderRequest } from './dtos/hosted-order.request';
 export class HostedOrdersUseCase {
   private readonly logger = new Logger(HostedOrdersUseCase.name);
   constructor(
+    private readonly reconciliation: PagSeguroReconciliationWorker,
     private readonly auth: GetAuthContextUseCase,
     private readonly orders: HostedOrdersRepository,
     private readonly sessions: RegisterCheckoutSessionUseCase,
@@ -33,6 +35,7 @@ export class HostedOrdersUseCase {
   ) {}
   async status(token: string, orderId: string) {
     const actor = await this.auth.exec(token);
+    await this.reconciliation.forOrder(actor.officeId, actor.clientId, orderId);
     const first = await this.orders.result(
       actor.officeId,
       actor.clientId,
@@ -45,6 +48,7 @@ export class HostedOrdersUseCase {
     );
     const config = session?.config as Record<string, unknown> | null;
     if (config?.mixedBilling === true) {
+      await this.reconciliation.forOrder(actor.officeId, actor.clientId, MixedBillingService.childId(orderId));
       const child = await this.orders.session(
         actor.officeId,
         actor.clientId,
@@ -209,6 +213,7 @@ export class HostedOrdersUseCase {
             items: input.items,
             config: {
               ...billingConfig,
+              ...(input.analytics ? { analytics: input.analytics } : {}),
               ...(subscriptionPlanId
                 ? { subscription: { subscriptionPlanId } }
                 : {}),

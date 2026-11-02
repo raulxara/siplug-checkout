@@ -37,26 +37,26 @@ describe('Hosted gateway credential boundary', () => {
   });
   it('permits incomplete inactive draft but requires all fields before activation', () => {
     expect(() =>
-      security.fields(definitions.resolve('picpay'), {}, {}, false),
+      security.fields(definitions.resolve('paypal'), {}, {}, false),
     ).not.toThrow();
     expect(() =>
       security.fields(
-        definitions.resolve('picpay'),
+        definitions.resolve('paypal'),
         { token: 'secret', clientId: 'client' },
         {},
       ),
-    ).toThrow('webhook');
+    ).toThrow('Webhook');
   });
   it('only exposes hosted capabilities', () => {
-    expect(definitions.resolve('picpay').modes).toEqual(['one_time']);
+    expect(definitions.resolve('picpay').modes).toEqual([]);
     expect(definitions.resolve('pagbank').modes).toEqual(['one_time']);
     expect(definitions.resolve('stripe').modes).toContain('split_recurring');
     expect(definitions.resolve('infinitepay').modes).not.toContain('recurring');
   });
-  it('uses official fixed PicPay production URL and refuses unsafe application origins', () => {
-    expect(security.urls('picpay', 'production', 'uuid').baseUrl).toBe(
-      'https://ecommerce-api.svc.picpay.com',
-    );
+  it('rejects retired gateways and unsafe application origins', () => {
+    for (const provider of ['picpay', 'infinitepay']) {
+      expect(() => security.urls(provider, 'production', 'uuid')).toThrow('Gateway não disponível');
+    }
     process.env.CHECKOUT_PUBLIC_URL = 'https://user:password@evil.test';
     expect(() => security.urls('stripe', 'sandbox', 'uuid')).toThrow();
   });
@@ -118,4 +118,27 @@ it('saves and exposes the custom URL instead of replacing it with the environmen
   expect(data.config).toEqual(expect.objectContaining({notificationUrl:url,webhookUrl:url}));
   const view = new GatewaySettingViewService(definitions,security).build(gateway,[{...old,...data} as ApiCredential]);
   expect(view.credentials[0].urls.webhookUrl).toBe(url);
+});
+
+for (const supplied of [true, false]) {
+  it(`preserves the PagBank callback in both notification payload fields (supplied=${supplied})`, () => {
+    process.env.CHECKOUT_PUBLIC_URL = 'http://localhost:8085';
+    process.env.CHECKOUT_FRONTEND_URL = 'http://localhost:3000';
+    const url = 'https://example.ngrok-free.dev/api/v1/webhooks/gateways/pagseguro/credential';
+    const gateway = {unique_id:'gateway',provider:'pagseguro',name:'PagBank',config:{}} as Gateway;
+    const old = {unique_id:'credential',config:{notificationUrl:url},token:null,updated_at:new Date(),gateway_id:'gateway'} as unknown as ApiCredential;
+    const data = new BuildGatewaySettingService(security).exec(old,{officeId:'office',userCustomerId:'actor'},gateway,definitions.resolve('pagseguro'),{environment:'sandbox',status:'inactive',modes:[],defaultModes:[],fields:{},...(supplied ? {notificationUrl:url} : {})});
+    expect(data.config).toEqual(expect.objectContaining({notificationUrl:url,webhookUrl:url,checkoutNotificationUrl:url,paymentNotificationUrl:url}));
+    expect(() => security.notificationUrl(url.replace('/gateways/','/'),'pagseguro','credential')).toThrow('/api/v1/webhooks/gateways/pagseguro/credential');
+  });
+}
+
+it('shortens long PagBank callbacks without changing host or credential', () => {
+  const host = 'https://entrappingly-irreproachable-randal.ngrok-free.dev';
+  const id = '7d5a3462-851b-4bc4-9fd9-8aa43d6cd3b9';
+  const url = security.notificationUrl(`${host}/api/v1/webhooks/gateways/pagseguro/${id}`, 'pagseguro', id);
+  expect(url).toBe(`${host}/w/p/${id}`);
+  expect(url.length).toBeLessThanOrEqual(100);
+  expect(security.notificationUrl(url, 'pagseguro', id)).toBe(url);
+  expect(() => security.notificationUrl(url, 'pagseguro', 'another-credential')).toThrow();
 });

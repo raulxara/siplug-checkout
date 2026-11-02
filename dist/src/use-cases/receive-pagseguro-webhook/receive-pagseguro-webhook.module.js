@@ -7,6 +7,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReceivePagSeguroWebhookModule = void 0;
+const pagseguro_reconciliation_worker_1 = require("./pagseguro-reconciliation.worker");
+const pagseguro_verification_service_1 = require("./pagseguro-verification.service");
+const pagseguro_webhook_resource_repository_1 = require("./pagseguro-webhook-resource.repository");
 const common_1 = require("@nestjs/common");
 const decrypt_api_credential_secret_service_1 = require("../../common/services/crypto/decrypt-api-credential-secret/decrypt-api-credential-secret.service");
 const use_case_support_module_1 = require("../../common/services/use-case-support/use-case-support.module");
@@ -38,10 +41,13 @@ exports.ReceivePagSeguroWebhookModule = ReceivePagSeguroWebhookModule = __decora
             receive_pagseguro_short_webhook_controller_1.ReceivePagSeguroShortWebhookController,
         ],
         providers: [
+            pagseguro_reconciliation_worker_1.PagSeguroReconciliationWorker,
+            pagseguro_verification_service_1.PagSeguroVerificationService,
+            pagseguro_webhook_resource_repository_1.PagSeguroWebhookResourceRepository,
             decrypt_api_credential_secret_service_1.DecryptApiCredentialSecretService,
             receive_pagseguro_webhook_use_case_1.ReceivePagSeguroWebhookUseCase,
         ],
-        exports: [receive_pagseguro_webhook_use_case_1.ReceivePagSeguroWebhookUseCase],
+        exports: [receive_pagseguro_webhook_use_case_1.ReceivePagSeguroWebhookUseCase, pagseguro_reconciliation_worker_1.PagSeguroReconciliationWorker],
     })
 ], ReceivePagSeguroWebhookModule);
 //# sourceMappingURL=receive-pagseguro-webhook.module.js.map

@@ -111,7 +111,7 @@ describe('Credential payment preferences', () => {
       updated_at: new Date(),
     } as unknown as ApiCredential;
     expect(
-      view.build({ ...gateway, provider: 'picpay' }, [row]).credentials[0]
+      view.build({ ...gateway, provider: 'pagseguro' }, [row]).credentials[0]
         .modes,
     ).toEqual(['one_time']);
   });

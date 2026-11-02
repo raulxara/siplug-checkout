@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
+const sync_team_module_1 = require("./use-cases/sync-team/sync-team.module");
 const order_refunds_module_1 = require("./modules/order-refunds/order-refunds.module");
 const fiscal_payments_module_1 = require("./modules/fiscal-payments/fiscal-payments.module");
 const sync_company_profile_module_1 = require("./use-cases/sync-company-profile/sync-company-profile.module");
@@ -73,7 +74,6 @@ const register_subscription_plan_module_1 = require("./use-cases/register-subscr
 const register_subscription_module_1 = require("./use-cases/register-subscription/register-subscription.module");
 const generate_subscription_invoice_module_1 = require("./use-cases/generate-subscription-invoice/generate-subscription-invoice.module");
 const process_recurring_payment_module_1 = require("./use-cases/process-recurring-payment/process-recurring-payment.module");
-const dev_picpay_temporary_card_token_page_module_1 = require("./use-cases/dev-picpay-temporary-card-token-page/dev-picpay-temporary-card-token-page.module");
 const get_subscription_plan_by_unique_id_module_1 = require("./use-cases/get-subscription-plan-by-unique-id/get-subscription-plan-by-unique-id.module");
 const list_subscription_plans_module_1 = require("./use-cases/list-subscription-plans/list-subscription-plans.module");
 const list_subscription_plans_by_office_id_module_1 = require("./use-cases/list-subscription-plans-by-office-id/list-subscription-plans-by-office-id.module");
@@ -106,10 +106,8 @@ const update_payment_split_lifecycle_module_1 = require("./use-cases/update-paym
 const process_payment_webhook_event_module_1 = require("./use-cases/process-payment-webhook-event/process-payment-webhook-event.module");
 const receive_stripe_webhook_module_1 = require("./use-cases/receive-stripe-webhook/receive-stripe-webhook.module");
 const receive_mercado_pago_webhook_module_1 = require("./use-cases/receive-mercado-pago-webhook/receive-mercado-pago-webhook.module");
-const receive_picpay_webhook_module_1 = require("./use-cases/receive-picpay-webhook/receive-picpay-webhook.module");
 const capture_paypal_order_return_module_1 = require("./use-cases/capture-paypal-order-return/capture-paypal-order-return.module");
 const receive_paypal_webhook_module_1 = require("./use-cases/receive-paypal-webhook/receive-paypal-webhook.module");
-const receive_infinitepay_webhook_module_1 = require("./use-cases/receive-infinitepay-webhook/receive-infinitepay-webhook.module");
 const list_api_credential_by_office_id_module_1 = require("./use-cases/list-api-credential-by-office-id/list-api-credential-by-office-id.module");
 const get_api_credentials_by_unique_id_module_1 = require("./use-cases/get-api-credentials-by-unique-id/get-api-credentials-by-unique-id.module");
 const list_position_by_office_id_module_1 = require("./use-cases/list-position-by-office-id/list-position-by-office-id.module");
@@ -135,6 +133,7 @@ exports.AppModule = AppModule = __decorate([
             order_refunds_module_1.OrderRefundsModule,
             fiscal_payments_module_1.FiscalPaymentsModule,
             sync_company_profile_module_1.SyncCompanyProfileModule,
+            sync_team_module_1.SyncTeamModule,
             sync_own_profile_module_1.SyncOwnProfileModule,
             hosted_orders_module_1.HostedOrdersModule,
             checkout_general_settings_module_1.CheckoutGeneralSettingsModule,
@@ -184,7 +183,6 @@ exports.AppModule = AppModule = __decorate([
             process_payment_module_1.ProcessPaymentModule,
             gateway_orchestration_module_1.GatewayOrchestrationModule,
             dispatch_payment_transaction_to_gateway_module_1.DispatchPaymentTransactionToGatewayModule,
-            receive_infinitepay_webhook_module_1.ReceiveInfinitePayWebhookModule,
             receive_gateway_webhook_module_1.ReceiveGatewayWebhookModule,
             create_gateway_card_token_module_1.CreateGatewayCardTokenModule,
             dev_pagseguro_encrypted_card_page_module_1.DevPagSeguroEncryptedCardPageModule,
@@ -197,7 +195,6 @@ exports.AppModule = AppModule = __decorate([
             register_subscription_module_1.RegisterSubscriptionModule,
             generate_subscription_invoice_module_1.GenerateSubscriptionInvoiceModule,
             process_recurring_payment_module_1.ProcessRecurringPaymentModule,
-            dev_picpay_temporary_card_token_page_module_1.DevPicPayTemporaryCardTokenPageModule,
             get_subscription_plan_by_unique_id_module_1.GetSubscriptionPlanByUniqueIdModule,
             list_subscription_plans_module_1.ListSubscriptionPlansModule,
             list_subscription_plans_by_office_id_module_1.ListSubscriptionPlansByOfficeIdModule,
@@ -231,7 +228,6 @@ exports.AppModule = AppModule = __decorate([
             receive_stripe_webhook_module_1.ReceiveStripeWebhookModule,
             receive_mercado_pago_webhook_module_1.ReceiveMercadoPagoWebhookModule,
             receive_pagseguro_webhook_module_1.ReceivePagSeguroWebhookModule,
-            receive_picpay_webhook_module_1.ReceivePicPayWebhookModule,
             capture_paypal_order_return_module_1.CapturePayPalOrderReturnModule,
             receive_paypal_webhook_module_1.ReceivePayPalWebhookModule,
             list_api_credential_by_office_id_module_1.ListApiCredentialByOfficeIdModule,

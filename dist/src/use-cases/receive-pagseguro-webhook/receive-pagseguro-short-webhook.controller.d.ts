@@ -9,6 +9,7 @@ export declare class ReceivePagSeguroShortWebhookController {
         provider: string;
         eventId: string | null;
         processed: boolean;
+        queued: boolean;
         wasAlreadyRegistered: boolean;
     }>;
     private resolveRawBody;

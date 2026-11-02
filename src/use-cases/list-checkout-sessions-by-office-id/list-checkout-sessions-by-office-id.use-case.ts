@@ -42,6 +42,7 @@ export class ListCheckoutSessionsByOfficeIdUseCase {
       const context = await this.identity.exec(dtoIn.token);
       if (context.officeId !== dtoIn.officeId)
         throw new ForbiddenException('office not authorized');
+      if (dtoIn.dashboard) return this.report.dashboard(context.officeId, context.clientId, dtoIn.filters);
       if (dtoIn.report)
         return this.report.list(
           context.officeId,

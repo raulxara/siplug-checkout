@@ -89,12 +89,6 @@ export class GatewaySettingSecurityService {
     for (const key of SECRET_KEYS)
       if (typeof result[key] === 'string' && result[key])
         result[key] = this.encrypt(result[key] as string);
-    if (
-      result.handle &&
-      def.provider === 'infinitepay' &&
-      !/^[a-zA-Z0-9._-]{1,100}$/.test(String(result.handle))
-    )
-      throw new BadRequestException('Handle inválido.');
     return result;
   }
   notificationUrl(value: string, provider: string, id: string): string {
@@ -115,7 +109,7 @@ export class GatewaySettingSecurityService {
       url.username ||
       url.password ||
       url.hash ||
-      url.pathname !== path ||
+      !(url.pathname === path || (provider === 'pagseguro' && url.pathname === `/w/p/${id}`)) ||
       url.port ||
       url.hostname === 'localhost' ||
       /^[0-9.]+$/.test(url.hostname) ||
@@ -125,11 +119,16 @@ export class GatewaySettingSecurityService {
       url.hostname.endsWith('.local')
     )
       throw new BadRequestException(
-        'Use HTTPS e o caminho de webhook desta credencial.',
+        `Use uma URL HTTPS pública com o caminho ${path}.`,
       );
     for (const key of url.searchParams.keys())
       if (key !== 'source_news')
         throw new BadRequestException('Parâmetro de webhook não permitido.');
+    if (provider === 'pagseguro' && url.toString().length > 100) {
+      url.pathname = `/w/p/${id}`;
+      if (url.toString().length > 100)
+        throw new BadRequestException('O PagBank aceita webhook de até 100 caracteres. Use um domínio mais curto.');
+    }
     return url.toString();
   }
 
@@ -143,7 +142,6 @@ export class GatewaySettingSecurityService {
     const sandbox = environment === 'sandbox';
     const base: Record<string, string> = {
       mercadopago: 'https://api.mercadopago.com',
-      infinitepay: 'https://api.checkout.infinitepay.io',
       pagseguro: sandbox
         ? 'https://sandbox.api.pagseguro.com'
         : 'https://api.pagseguro.com',
@@ -151,12 +149,12 @@ export class GatewaySettingSecurityService {
       paypal: sandbox
         ? 'https://api-m.sandbox.paypal.com'
         : 'https://api-m.paypal.com',
-      picpay: sandbox
-        ? 'https://api.ms.qa.limbo.work'
-        : 'https://ecommerce-api.svc.picpay.com',
     };
+    if (!base[provider]) throw new BadRequestException('Gateway não disponível.');
     const webhook =
-      provider === 'stripe'
+      provider === 'pagseguro'
+        ? `${root}/w/p/${id}`
+        : provider === 'stripe'
         ? `${root}/api/v1/webhooks/stripe/${id}`
         : `${root}/api/v1/webhooks/gateways/${provider === 'mercadopago' ? 'mercado-pago' : provider}/${id}`;
     const success = `${front}/pagamento/retorno`;
@@ -173,12 +171,6 @@ export class GatewaySettingSecurityService {
     };
     if (provider === 'paypal') {
       result.returnUrl = `${root}/api/v1/paypal/checkout/return/${id}`;
-    }
-    if (provider === 'picpay') {
-      result.apiPath = sandbox ? '/sandbox/v1' : '/v1';
-      result.tokenUrl = sandbox
-        ? 'https://api.ms.qa.limbo.work/oauth2/token'
-        : 'https://ecommerce-api.svc.picpay.com/oauth2/token';
     }
     if (provider === 'pagseguro') {
       result.checkoutNotificationUrl = webhook;

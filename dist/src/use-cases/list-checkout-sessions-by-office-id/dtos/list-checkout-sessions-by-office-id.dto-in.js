@@ -3,11 +3,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListCheckoutSessionsByOfficeIdDtoIn = void 0;
 class ListCheckoutSessionsByOfficeIdDtoIn {
     report;
+    dashboard;
     filters;
     token;
     officeId;
     constructor(params) {
         this.report = params.report === true;
+        this.dashboard = params.dashboard === true;
         this.filters = params.filters ?? {};
         this.token = params.token ?? '';
         this.officeId = params.officeId ?? '';

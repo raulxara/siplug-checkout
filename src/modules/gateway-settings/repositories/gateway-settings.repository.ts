@@ -11,7 +11,7 @@ export class GatewaySettingsRepository {
   constructor(private readonly db: PrismaService) {}
   gateways() {
     return this.db.gateway.findMany({
-      where: { status: 'active' },
+      where: { status: 'active', provider: { notIn: ['picpay', 'infinitepay', 'infinitypay', 'infinity_pay', 'infinite_pay'] } },
       orderBy: { name: 'asc' },
     });
   }

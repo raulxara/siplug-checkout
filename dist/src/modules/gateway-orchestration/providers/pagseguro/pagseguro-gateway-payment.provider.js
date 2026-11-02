@@ -665,7 +665,7 @@ let PagSeguroGatewayPaymentProvider = class PagSeguroGatewayPaymentProvider {
             return null;
         }
         if (normalizedUrl.length > 100) {
-            return null;
+            throw new Error('PagBank webhook URL exceeds 100 characters; configure the short callback route.');
         }
         return normalizedUrl;
     }

@@ -11,8 +11,6 @@ export class GatewaySettingConnectionService {
         ? 'production'
         : 'sandbox';
     const urls = this.security.urls(provider, env, row.unique_id);
-    // InfinitePay has no authenticated read-only validation endpoint in this adapter.
-    if (provider === 'infinitepay') return 'manual_validation_required';
     try {
       const token = this.security.decrypt(row.token ?? '');
       let url: string;
@@ -35,17 +33,6 @@ export class GatewaySettingConnectionService {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: 'grant_type=client_credentials',
-        };
-      } else if (provider === 'picpay') {
-        url = urls.tokenUrl;
-        options = {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            grant_type: 'client_credentials',
-            client_id: config.clientId,
-            client_secret: token,
-          }),
         };
       } else return 'manual_validation_required';
       const response = await fetch(url, {

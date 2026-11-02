@@ -11,26 +11,20 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResolveGatewayPaymentProviderService = void 0;
 const common_1 = require("@nestjs/common");
-const infinity_pay_gateway_payment_provider_1 = require("../../providers/infinity-pay/infinity-pay-gateway-payment.provider");
 const mercado_pago_gateway_payment_provider_1 = require("../../providers/mercado-pago/mercado-pago-gateway-payment.provider");
 const pagseguro_gateway_payment_provider_1 = require("../../providers/pagseguro/pagseguro-gateway-payment.provider");
 const paypal_gateway_payment_provider_1 = require("../../providers/paypal/paypal-gateway-payment.provider");
 const stripe_gateway_payment_provider_1 = require("../../providers/stripe/stripe-gateway-payment.provider");
-const picpay_gateway_payment_provider_1 = require("../../providers/picpay/picpay-gateway-payment.provider");
 let ResolveGatewayPaymentProviderService = class ResolveGatewayPaymentProviderService {
     mercadoPagoGatewayPaymentProvider;
     stripeGatewayPaymentProvider;
     pagSeguroGatewayPaymentProvider;
     paypalGatewayPaymentProvider;
-    infinityPayGatewayPaymentProvider;
-    picPayGatewayPaymentProvider;
-    constructor(mercadoPagoGatewayPaymentProvider, stripeGatewayPaymentProvider, pagSeguroGatewayPaymentProvider, paypalGatewayPaymentProvider, infinityPayGatewayPaymentProvider, picPayGatewayPaymentProvider) {
+    constructor(mercadoPagoGatewayPaymentProvider, stripeGatewayPaymentProvider, pagSeguroGatewayPaymentProvider, paypalGatewayPaymentProvider) {
         this.mercadoPagoGatewayPaymentProvider = mercadoPagoGatewayPaymentProvider;
         this.stripeGatewayPaymentProvider = stripeGatewayPaymentProvider;
         this.pagSeguroGatewayPaymentProvider = pagSeguroGatewayPaymentProvider;
         this.paypalGatewayPaymentProvider = paypalGatewayPaymentProvider;
-        this.infinityPayGatewayPaymentProvider = infinityPayGatewayPaymentProvider;
-        this.picPayGatewayPaymentProvider = picPayGatewayPaymentProvider;
     }
     exec(gatewayProvider) {
         const providers = [
@@ -38,8 +32,6 @@ let ResolveGatewayPaymentProviderService = class ResolveGatewayPaymentProviderSe
             this.stripeGatewayPaymentProvider,
             this.pagSeguroGatewayPaymentProvider,
             this.paypalGatewayPaymentProvider,
-            this.infinityPayGatewayPaymentProvider,
-            this.picPayGatewayPaymentProvider,
         ];
         const provider = providers.find((item) => item.supports(gatewayProvider));
         if (!provider) {
@@ -54,8 +46,6 @@ exports.ResolveGatewayPaymentProviderService = ResolveGatewayPaymentProviderServ
     __metadata("design:paramtypes", [mercado_pago_gateway_payment_provider_1.MercadoPagoGatewayPaymentProvider,
         stripe_gateway_payment_provider_1.StripeGatewayPaymentProvider,
         pagseguro_gateway_payment_provider_1.PagSeguroGatewayPaymentProvider,
-        paypal_gateway_payment_provider_1.PayPalGatewayPaymentProvider,
-        infinity_pay_gateway_payment_provider_1.InfinityPayGatewayPaymentProvider,
-        picpay_gateway_payment_provider_1.PicPayGatewayPaymentProvider])
+        paypal_gateway_payment_provider_1.PayPalGatewayPaymentProvider])
 ], ResolveGatewayPaymentProviderService);
 //# sourceMappingURL=resolve-gateway-payment-provider.service.js.map

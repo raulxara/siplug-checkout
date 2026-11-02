@@ -27,13 +27,6 @@ export class GatewayDefinitionService {
           shared +
           ' Split avulso usa comissão de marketplace; requer a credencial OAuth do vendedor.',
       },
-      infinitepay: {
-        provider: 'infinitepay',
-        fields: [field('handle', 'Identificador InfinitePay (handle)')],
-        modes: ['one_time'],
-        notice:
-          'Somente link avulso. Este adaptador usa o endpoint real da InfinitePay, sem sandbox isolado. Recorrência e split não estão implementados neste fluxo.',
-      },
       pagseguro: {
         provider: 'pagseguro',
         fields: [field('token', 'Token de acesso', true)],
@@ -61,21 +54,6 @@ export class GatewayDefinitionService {
         ],
         modes: ['one_time', 'recurring'],
         notice: shared + ' Split ainda não está implementado.',
-      },
-      picpay: {
-        provider: 'picpay',
-        fields: [
-          field('clientId', 'Client ID'),
-          field('token', 'Client Secret', true),
-          field(
-            'webhookToken',
-            'API Key do webhook (gerada no painel PicPay)',
-            true,
-          ),
-        ],
-        modes: ['one_time'],
-        notice:
-          'Link de pagamento avulso. A recorrência atual exige tokenização de cartão; não é oferecida neste checkout hospedado.',
       },
     };
     const canonical =

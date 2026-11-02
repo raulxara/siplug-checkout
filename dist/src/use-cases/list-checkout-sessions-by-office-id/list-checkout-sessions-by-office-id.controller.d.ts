@@ -6,7 +6,17 @@ export declare class ListCheckoutSessionsByOfficeIdController {
     handle(body: ListCheckoutSessionsByOfficeIdRequest, authorization?: string): Promise<{
         status: string;
         message: string;
-        data: import("./dtos/list-checkout-sessions-by-office-id.dto-out").ListCheckoutSessionsByOfficeIdDtoOut | {
+        data: {
+            products: {
+                quantity: number;
+                amount: number;
+            }[];
+            timezone: string;
+            from: string;
+            to: string;
+            currencies: Record<string, string | number>[];
+            asOf: string;
+        } | import("./dtos/list-checkout-sessions-by-office-id.dto-out").ListCheckoutSessionsByOfficeIdDtoOut | {
             items: {
                 createdAt: string;
                 lastActivityAt: string;

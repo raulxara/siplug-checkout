@@ -34,6 +34,7 @@ export class ListCheckoutSessionsByOfficeIdController {
           token,
           officeId: body.officeId,
           report: body.report,
+          dashboard: body.dashboard,
           filters: body.filters,
         }),
       );

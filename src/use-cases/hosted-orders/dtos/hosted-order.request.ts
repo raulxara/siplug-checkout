@@ -27,7 +27,14 @@ export class HostedOrderItem {
 export class HostedOrderIdentity {
   @IsUUID() orderId!: string;
 }
+export class HostedOrderAnalytics {
+  @IsUUID() siteId!: string;
+  @IsUUID() sessionKey!: string;
+  @IsUUID() visitorKey!: string;
+  @IsUUID() cartId!: string;
+}
 export class HostedOrderRequest extends HostedOrderIdentity {
+  @IsOptional() @ValidateNested() @Type(() => HostedOrderAnalytics) analytics?: HostedOrderAnalytics;
   @IsInt() @Min(1) @Max(999999999) amount!: number;
   @IsIn(['one_time', 'recurring', 'mixed']) paymentType!:
     | 'one_time'

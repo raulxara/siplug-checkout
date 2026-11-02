@@ -6,3 +6,20 @@ export function isMercadoPagoProvider(
     provider?.trim().toLowerCase() ?? '',
   );
 }
+
+export function supportsOrderRefund(provider?: string | null): boolean {
+  return (
+    isMercadoPagoProvider(provider) ||
+    ['pagseguro', 'pagbank', 'paypal', 'stripe'].includes(
+      provider?.trim().toLowerCase() ?? '',
+    )
+  );
+}
+export function supportsSubscriptionCancellation(
+  provider?: string | null,
+): boolean {
+  return (
+    isMercadoPagoProvider(provider) ||
+    ['paypal', 'stripe'].includes(provider?.trim().toLowerCase() ?? '')
+  );
+}

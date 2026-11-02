@@ -6,7 +6,7 @@ import {
   IsIn,
   IsString,
   Matches,
-} from "class-validator";
+} from 'class-validator';
 export class OrderRefundListDto {
   @IsUUID() orderId!: string;
 }
@@ -18,7 +18,7 @@ export class OrderRefundDto extends OrderRefundListDto {
 
 export class CancelOrderSubscriptionDto extends OrderRefundListDto {
   @IsUUID() subscriptionId!: string;
-  @IsIn(["paid_period", "immediate"]) access!: "paid_period" | "immediate";
+  @IsIn(['paid_period', 'immediate']) access!: 'paid_period' | 'immediate';
 }
 
 export class ReconcileOrderRefundDto extends OrderRefundDto {

@@ -47,6 +47,8 @@ let ListCheckoutSessionsByOfficeIdUseCase = class ListCheckoutSessionsByOfficeId
             const context = await this.identity.exec(dtoIn.token);
             if (context.officeId !== dtoIn.officeId)
                 throw new common_1.ForbiddenException('office not authorized');
+            if (dtoIn.dashboard)
+                return this.report.dashboard(context.officeId, context.clientId, dtoIn.filters);
             if (dtoIn.report)
                 return this.report.list(context.officeId, context.clientId, dtoIn.filters);
             const officeDtoOut = await this.findOfficeByUniqueIdService.exec(new find_office_by_unique_id_dto_in_1.FindOfficeByUniqueIdDtoIn(dtoIn.officeId));

@@ -6,6 +6,9 @@ export declare class ReceivePagSeguroWebhookController {
     constructor(receivePagSeguroWebhookUseCase: ReceivePagSeguroWebhookUseCase);
     handle(apiCredentialId: string, body: Record<string, unknown>, headers: Record<string, string | string[] | undefined>, request: RawBodyRequest<Request>): Promise<{
         status: string;
+        received: boolean;
+        processed: boolean;
+        queued: boolean;
         message: string;
         data: {
             paymentWebhookEvent: Record<string, unknown>;

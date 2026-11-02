@@ -76,6 +76,10 @@ export class BuildGatewaySettingService {
       config.notificationUrl = previous.notificationUrl;
       config.webhookUrl = previous.notificationUrl;
     }
+    if (definition.provider === 'pagseguro') {
+      config.checkoutNotificationUrl = config.notificationUrl;
+      config.paymentNotificationUrl = config.notificationUrl;
+    }
     // Preserve unrelated metadata without copying arbitrary URL/secret aliases into provider config.
     if (Object.keys(previous).length && !previous.managedHosted)
       config.previousConfigurationEncrypted = this.security.encrypt(

@@ -1,3 +1,4 @@
+import { ReceivePagSeguroWebhookModule } from '../receive-pagseguro-webhook/receive-pagseguro-webhook.module';
 import { SecurityModule } from '../../modules/security/security.module';
 import { CouponRenewalsRepository } from '../../modules/hosted-orders/repositories/coupon-renewals.repository';
 import { MercadoPagoRenewalService } from '../../modules/hosted-orders/services/mercado-pago-renewal.service';
@@ -14,6 +15,7 @@ import { HostedOrdersUseCase } from './hosted-orders.use-case';
 import { HostedOrdersController } from './hosted-orders.controller';
 @Module({
   imports: [
+    ReceivePagSeguroWebhookModule,
     SecurityModule,
     GetAuthContextModule,
     RegisterCheckoutSessionModule,

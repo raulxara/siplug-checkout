@@ -1,3 +1,4 @@
+import {SyncTeamModule} from './use-cases/sync-team/sync-team.module';
 import { OrderRefundsModule } from "./modules/order-refunds/order-refunds.module";
 import { FiscalPaymentsModule } from "./modules/fiscal-payments/fiscal-payments.module";
 import { SyncCompanyProfileModule } from "./use-cases/sync-company-profile/sync-company-profile.module";
@@ -65,7 +66,6 @@ import { RegisterSubscriptionModule } from "./use-cases/register-subscription/re
 import { GenerateSubscriptionInvoiceModule } from "./use-cases/generate-subscription-invoice/generate-subscription-invoice.module";
 import { ProcessRecurringPaymentModule } from "./use-cases/process-recurring-payment/process-recurring-payment.module";
 // import { DevMercadoPagoCardTokenPageModule } from './use-cases/dev-mercado-pago-card-token-page/dev-mercado-pago-card-token-page.module';
-import { DevPicPayTemporaryCardTokenPageModule } from "./use-cases/dev-picpay-temporary-card-token-page/dev-picpay-temporary-card-token-page.module";
 import { GetSubscriptionPlanByUniqueIdModule } from "./use-cases/get-subscription-plan-by-unique-id/get-subscription-plan-by-unique-id.module";
 import { ListSubscriptionPlansModule } from "./use-cases/list-subscription-plans/list-subscription-plans.module";
 import { ListSubscriptionPlansByOfficeIdModule } from "./use-cases/list-subscription-plans-by-office-id/list-subscription-plans-by-office-id.module";
@@ -98,10 +98,8 @@ import { UpdatePaymentSplitLifecycleModule } from "./use-cases/update-payment-sp
 import { ProcessPaymentWebhookEventModule } from "./use-cases/process-payment-webhook-event/process-payment-webhook-event.module";
 import { ReceiveStripeWebhookModule } from "./use-cases/receive-stripe-webhook/receive-stripe-webhook.module";
 import { ReceiveMercadoPagoWebhookModule } from "./use-cases/receive-mercado-pago-webhook/receive-mercado-pago-webhook.module";
-import { ReceivePicPayWebhookModule } from "./use-cases/receive-picpay-webhook/receive-picpay-webhook.module";
 import { CapturePayPalOrderReturnModule } from "./use-cases/capture-paypal-order-return/capture-paypal-order-return.module";
 import { ReceivePayPalWebhookModule } from "./use-cases/receive-paypal-webhook/receive-paypal-webhook.module";
-import { ReceiveInfinitePayWebhookModule } from "./use-cases/receive-infinitepay-webhook/receive-infinitepay-webhook.module";
 import { ListApiCredentialByOfficeIdModule } from "./use-cases/list-api-credential-by-office-id/list-api-credential-by-office-id.module";
 import { GetApiCredentialsByUniqueIdModule } from "./use-cases/get-api-credentials-by-unique-id/get-api-credentials-by-unique-id.module";
 import { ListPositionByOfficeIdModule } from "./use-cases/list-position-by-office-id/list-position-by-office-id.module";
@@ -124,6 +122,7 @@ import { SimulateMercadoPagoPaymentWebhookModule } from "./use-cases/simulate-me
     OrderRefundsModule,
     FiscalPaymentsModule,
     SyncCompanyProfileModule,
+    SyncTeamModule,
     SyncOwnProfileModule,
     HostedOrdersModule,
     CheckoutGeneralSettingsModule,
@@ -173,7 +172,6 @@ import { SimulateMercadoPagoPaymentWebhookModule } from "./use-cases/simulate-me
     ProcessPaymentModule,
     GatewayOrchestrationModule,
     DispatchPaymentTransactionToGatewayModule,
-    ReceiveInfinitePayWebhookModule,
     ReceiveGatewayWebhookModule,
     CreateGatewayCardTokenModule,
     DevPagSeguroEncryptedCardPageModule,
@@ -187,7 +185,6 @@ import { SimulateMercadoPagoPaymentWebhookModule } from "./use-cases/simulate-me
     GenerateSubscriptionInvoiceModule,
     ProcessRecurringPaymentModule,
     // DevMercadoPagoCardTokenPageModule,
-    DevPicPayTemporaryCardTokenPageModule,
     GetSubscriptionPlanByUniqueIdModule,
     ListSubscriptionPlansModule,
     ListSubscriptionPlansByOfficeIdModule,
@@ -221,7 +218,6 @@ import { SimulateMercadoPagoPaymentWebhookModule } from "./use-cases/simulate-me
     ReceiveStripeWebhookModule,
     ReceiveMercadoPagoWebhookModule,
     ReceivePagSeguroWebhookModule,
-    ReceivePicPayWebhookModule,
     CapturePayPalOrderReturnModule,
     ReceivePayPalWebhookModule,
     ListApiCredentialByOfficeIdModule,

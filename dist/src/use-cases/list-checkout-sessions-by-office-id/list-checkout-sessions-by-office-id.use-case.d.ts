@@ -14,7 +14,17 @@ export declare class ListCheckoutSessionsByOfficeIdUseCase {
     private readonly findOfficeByUniqueIdService;
     private readonly handleUseCaseExceptionService;
     constructor(identity: GetAuthContextUseCase, report: OrderReportRepository, resolveActorAuthorizationService: ResolveActorAuthorizationService, getAllCheckoutSessionsByOfficeIdService: GetAllCheckoutSessionsByOfficeIdService, findOfficeByUniqueIdService: FindOfficeByUniqueIdService, handleUseCaseExceptionService: HandleUseCaseExceptionService);
-    exec(dtoIn: ListCheckoutSessionsByOfficeIdDtoIn): Promise<ListCheckoutSessionsByOfficeIdDtoOut | {
+    exec(dtoIn: ListCheckoutSessionsByOfficeIdDtoIn): Promise<{
+        products: {
+            quantity: number;
+            amount: number;
+        }[];
+        timezone: string;
+        from: string;
+        to: string;
+        currencies: Record<string, string | number>[];
+        asOf: string;
+    } | ListCheckoutSessionsByOfficeIdDtoOut | {
         items: {
             createdAt: string;
             lastActivityAt: string;

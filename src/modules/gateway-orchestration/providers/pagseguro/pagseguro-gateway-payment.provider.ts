@@ -1066,15 +1066,8 @@ export class PagSeguroGatewayPaymentProvider
       return null;
     }
 
-    /**
-     * O endpoint /checkouts do PagSeguro rejeitou a URL longa do ngrok com
-     * invalid_list_element_length. Para não quebrar a criação do link em dev,
-     * omitimos URLs longas nesse fluxo.
-     *
-     * /orders continua usando notification_urls normalmente.
-     */
     if (normalizedUrl.length > 100) {
-      return null;
+      throw new Error('PagBank webhook URL exceeds 100 characters; configure the short callback route.');
     }
 
     return normalizedUrl;

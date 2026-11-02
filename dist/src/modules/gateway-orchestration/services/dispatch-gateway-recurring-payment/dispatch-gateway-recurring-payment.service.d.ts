@@ -4,14 +4,12 @@ import { MercadoPagoRecurringPaymentProvider } from '../../providers/mercado-pag
 import { StripeRecurringPaymentProvider } from '../../providers/stripe/stripe-recurring-payment.provider';
 import { PayPalRecurringPaymentProvider } from '../../providers/paypal/paypal-recurring-payment.provider';
 import { PagSeguroRecurringPaymentProvider } from '../../providers/pagseguro/pagseguro-recurring-payment.provider';
-import { PicPayRecurringPaymentProvider } from '../../providers/picpay/picpay-recurring-payment.provider';
 export declare class DispatchGatewayRecurringPaymentService {
     private readonly mercadoPagoRecurringPaymentProvider;
     private readonly stripeRecurringPaymentProvider;
     private readonly payPalRecurringPaymentProvider;
     private readonly pagSeguroRecurringPaymentProvider;
-    private readonly picPayRecurringPaymentProvider;
-    constructor(mercadoPagoRecurringPaymentProvider: MercadoPagoRecurringPaymentProvider, stripeRecurringPaymentProvider: StripeRecurringPaymentProvider, payPalRecurringPaymentProvider: PayPalRecurringPaymentProvider, pagSeguroRecurringPaymentProvider: PagSeguroRecurringPaymentProvider, picPayRecurringPaymentProvider: PicPayRecurringPaymentProvider);
+    constructor(mercadoPagoRecurringPaymentProvider: MercadoPagoRecurringPaymentProvider, stripeRecurringPaymentProvider: StripeRecurringPaymentProvider, payPalRecurringPaymentProvider: PayPalRecurringPaymentProvider, pagSeguroRecurringPaymentProvider: PagSeguroRecurringPaymentProvider);
     exec(dtoIn: GatewayRecurringPaymentDtoIn): Promise<GatewayRecurringPaymentDtoOut>;
     private buildPendingProviderImplementation;
     private extractGatewayPlanId;

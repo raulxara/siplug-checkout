@@ -10,7 +10,7 @@ class ReceivePagSeguroWebhookDtoIn {
     constructor(params) {
         this.apiCredentialId = String(params.apiCredentialId ?? '').trim();
         this.payload = this.toObject(params.payload, 'payload');
-        this.rawBody = String(params.rawBody ?? '').trim();
+        this.rawBody = String(params.rawBody ?? '');
         this.headers = this.toObject(params.headers, 'headers');
         this.xAuthenticityToken = this.toNullableString(params.xAuthenticityToken);
         if (this.apiCredentialId === '') {

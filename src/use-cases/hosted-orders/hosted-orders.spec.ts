@@ -33,6 +33,7 @@ describe('hosted purchases', () => {
     const recurring = { exec: jest.fn() };
     const authorization = { exec: jest.fn().mockResolvedValue({}) };
     const useCase = new HostedOrdersUseCase(
+      {forOrder: jest.fn().mockResolvedValue(undefined)} as never,
       {
         exec: jest
           .fn()
@@ -104,6 +105,7 @@ describe('hosted purchases', () => {
       result: jest.fn().mockResolvedValue({ transactionId: 'existing' }),
     };
     const u = new HostedOrdersUseCase(
+      {forOrder: jest.fn().mockResolvedValue(undefined)} as never,
       {
         exec: jest
           .fn()
@@ -150,6 +152,7 @@ describe('hosted purchases', () => {
       result: jest.fn().mockResolvedValue({ transactionId: 'existing' }),
     };
     const u = new HostedOrdersUseCase(
+      {forOrder: jest.fn().mockResolvedValue(undefined)} as never,
       {
         exec: jest
           .fn()

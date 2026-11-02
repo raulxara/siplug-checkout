@@ -1,4 +1,5 @@
-import { isMercadoPagoProvider } from './refund-provider';
+import { RefundPaymentContext } from './mercado-pago-refund.service';
+import { supportsOrderRefund } from './refund-provider';
 import {
   Injectable,
   NotFoundException,
@@ -62,13 +63,55 @@ export class OrderRefundsRepository {
       (c.client_id && c.client_id !== client) ||
       c.status !== 'active' ||
       !c.token ||
-      !isMercadoPagoProvider(c.provider)
+      !supportsOrderRefund(c.provider)
     )
       throw new BadRequestException('REFUND_PROVIDER_UNAVAILABLE');
     // Split refunds must pass through the split ledger; never silently bypass it.
     if (p.has_split || p.split_required)
       throw new BadRequestException('REFUND_SPLIT_REVIEW');
     return p;
+  }
+  async pinPaymentContext(
+    office: string,
+    client: string,
+    paymentId: string,
+    credentialId: string,
+    context: RefundPaymentContext,
+  ) {
+    await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM payment_transactions WHERE _id = ${paymentId} AND office_id = ${office} AND client_id = ${client} FOR UPDATE`;
+      const payment = await tx.paymentTransaction.findFirst({
+        where: {
+          unique_id: paymentId,
+          office_id: office,
+          client_id: client,
+          api_credential_id: credentialId,
+        },
+      });
+      if (!payment) throw new ConflictException('REFUND_CONTEXT_MISMATCH');
+      const config = (payment.config ?? {}) as Record<string, unknown>;
+      const old = config.refundPaymentContext as
+        | (RefundPaymentContext & { credentialId: string })
+        | undefined;
+      if (
+        old &&
+        (old.credentialId !== credentialId ||
+          old.paymentId !== context.paymentId ||
+          old.liveMode !== context.liveMode ||
+          old.collectorId !== context.collectorId ||
+          (old.applicationId && old.applicationId !== context.applicationId))
+      )
+        throw new ConflictException('REFUND_CONTEXT_MISMATCH');
+      await tx.paymentTransaction.update({
+        where: { unique_id: paymentId },
+        data: {
+          config: {
+            ...config,
+            refundPaymentContext: { ...context, credentialId },
+          } as never,
+        },
+      });
+    });
   }
   async projectConfirmed(office: string, client: string, paymentId: string) {
     await this.db.$transaction(async (tx) => {
@@ -128,12 +171,37 @@ export class OrderRefundsRepository {
       data: { status: 'submitted' },
     });
   }
-  async saveRefundResult(id: string, state: string, gatewayId?: string) {
+  async saveRefundResult(
+    id: string,
+    state: string,
+    gatewayId?: string,
+    failure?: {
+      code: string;
+      upstreamStatus: number | null;
+      providerCode: string | null;
+      providerRequestId?: string | null;
+      at: string;
+    },
+  ) {
+    const current = failure || gatewayId ? await this.requireRefund(id) : null;
+    const metadata = current
+      ? { ...((current.metadata as Record<string, unknown>) ?? {}) }
+      : null;
+    if (metadata) {
+      if (failure) metadata.lastFailure = failure;
+      else delete metadata.lastFailure;
+    }
+
     await this.db.paymentRefund.updateMany({
-      where: { unique_id: id, status: { notIn: ['succeeded', 'failed'] } },
+      where: {
+        unique_id: id,
+        status:
+          state === 'created' ? 'created' : { notIn: ['succeeded', 'failed'] },
+      },
       data: {
         status: state,
         ...(gatewayId ? { gateway_refund_id: gatewayId } : {}),
+        ...(metadata ? { metadata: metadata as never } : {}),
       },
     });
     return this.requireRefund(id);
@@ -216,6 +284,7 @@ export class OrderRefundsRepository {
     client: string,
     d: OrderRefundDto,
     externalRefunded: number,
+    gatewayPaymentId?: string,
   ) {
     return this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM payment_transactions WHERE _id = ${d.paymentId} AND office_id = ${office} AND client_id = ${client} FOR UPDATE`;
@@ -268,6 +337,7 @@ export class OrderRefundsRepository {
           metadata: {
             orderId: d.orderId,
             providerRefundedBefore: externalRefunded,
+            ...(gatewayPaymentId ? { gatewayPaymentId } : {}),
           },
         },
       });

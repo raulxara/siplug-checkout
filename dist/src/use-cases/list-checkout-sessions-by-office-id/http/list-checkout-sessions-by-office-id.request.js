@@ -13,6 +13,7 @@ exports.ListCheckoutSessionsByOfficeIdRequest = void 0;
 const class_validator_1 = require("class-validator");
 class ListCheckoutSessionsByOfficeIdRequest {
     report;
+    dashboard;
     filters;
     token;
     officeId;
@@ -23,6 +24,11 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], ListCheckoutSessionsByOfficeIdRequest.prototype, "report", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], ListCheckoutSessionsByOfficeIdRequest.prototype, "dashboard", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsObject)(),

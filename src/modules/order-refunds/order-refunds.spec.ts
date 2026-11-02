@@ -1,3 +1,4 @@
+import { RefundContextException } from './mercado-pago-refund.service';
 import { OrderRefundsUseCase } from './order-refunds.use-case';
 import { OrderRefundsRepository } from './order-refunds.repository';
 import { OrderRefundDto } from './order-refunds.dto';
@@ -14,7 +15,7 @@ describe('Order refund safety', () => {
     amount: 1000,
     currency: 'BRL',
     gateway_transaction_id: '123',
-    api_credential: { token: 'secret' },
+    api_credential: { token: 'secret', provider: 'mercadopago' },
   };
   const refund = {
     unique_id: 'refund',
@@ -58,13 +59,22 @@ describe('Order refund safety', () => {
       completeSubscription: jest.fn(),
       attachRefund: jest.fn(),
       projectConfirmed: jest.fn(),
+      pinPaymentContext: jest.fn(),
       payment: jest.fn(async () => payment),
       reserve: jest.fn(async () => {
         current = { ...refund };
         return current;
       }),
     };
-    const gateway = { request: jest.fn(), cancelSubscription: jest.fn() };
+    const gateway = {
+      preflight: jest.fn().mockResolvedValue({
+        paymentId: '123',
+        liveMode: true,
+        collectorId: 'seller',
+      }),
+      request: jest.fn(),
+      cancelSubscription: jest.fn(),
+    };
     const auth = { exec: jest.fn() },
       identity = { exec: jest.fn(async () => actor) };
     const uc = new OrderRefundsUseCase(
@@ -75,6 +85,36 @@ describe('Order refund safety', () => {
     );
     return { uc, repo, gateway, db };
   }
+  it('never dispatches or freezes a request when credential preflight fails', async () => {
+    const { uc, gateway, repo } = setup({ ...refund, status: 'created' });
+    gateway.preflight.mockRejectedValue(
+      new RefundContextException('REFUND_ENVIRONMENT_MISMATCH'),
+    );
+    expect((await uc.exec('token', input)).state).toBe('created');
+    expect(gateway.request).not.toHaveBeenCalled();
+    expect(repo.pinPaymentContext).not.toHaveBeenCalled();
+  });
+  it('selects full-refund semantics only for the entire original payment', async () => {
+    const { uc, gateway } = setup({ ...refund, amount: 1000 });
+    gateway.request.mockResolvedValue({
+      id: 12,
+      payment_id: 123,
+      amount: 10,
+      status: 'approved',
+    });
+    expect((await uc.exec('token', { ...input, amount: 1000 })).state).toBe(
+      'succeeded',
+    );
+    expect(gateway.request).toHaveBeenCalledWith(
+      'secret',
+      '123',
+      'POST',
+      'refund',
+      1000,
+      undefined,
+      true,
+    );
+  });
   it('returns confirmed refund without making another gateway request', async () => {
     const { uc, gateway } = setup({ ...refund, status: 'succeeded' });
     expect((await uc.exec('token', input)).state).toBe('succeeded');
@@ -89,6 +129,7 @@ describe('Order refund safety', () => {
     const { uc, repo, gateway } = setup();
     gateway.request
       .mockResolvedValueOnce({
+        id: 123,
         status: 'approved',
         currency_id: 'BRL',
         transaction_amount: 10,
@@ -101,14 +142,82 @@ describe('Order refund safety', () => {
         status: 'approved',
       });
     expect((await uc.exec('token', input)).state).toBe('succeeded');
-    expect(repo.reserve).toHaveBeenCalledWith('office', 'client', input, 0);
+    expect(repo.reserve).toHaveBeenCalledWith(
+      'office',
+      'client',
+      input,
+      0,
+      '123',
+    );
     expect(gateway.request.mock.calls[1]).toEqual([
       'secret',
       '123',
       'POST',
       'refund',
       400,
+      undefined,
+      false,
     ]);
+  });
+  it('refunds a legacy Checkout Pro preference through its verified webhook payment ID', async () => {
+    const { uc, repo, gateway } = setup();
+    repo.payment.mockResolvedValue({
+      ...payment,
+      gateway_transaction_id: 'merchant-preference',
+      provider_response: { latestWebhookPayload: { payment: { id: 123 } } },
+      external_reference: 'order',
+    } as typeof payment);
+    gateway.request
+      .mockResolvedValueOnce({
+        id: 123,
+        external_reference: 'order',
+        status: 'approved',
+        currency_id: 'BRL',
+        transaction_amount: 10,
+        transaction_amount_refunded: 0,
+      })
+      .mockResolvedValueOnce({
+        id: 12,
+        payment_id: 123,
+        amount: 4,
+        status: 'approved',
+      });
+    expect((await uc.exec('token', input)).state).toBe('succeeded');
+    expect(gateway.request.mock.calls[1]).toEqual([
+      'secret',
+      '123',
+      'POST',
+      'refund',
+      400,
+      undefined,
+      false,
+    ]);
+    expect(repo.reserve).toHaveBeenCalledWith(
+      'office',
+      'client',
+      input,
+      0,
+      '123',
+    );
+  });
+  it('rejects a provider payment belonging to another order before reservation', async () => {
+    const { uc, repo, gateway } = setup();
+    repo.payment.mockResolvedValue({
+      ...payment,
+      external_reference: 'order',
+    } as typeof payment);
+    gateway.request.mockResolvedValue({
+      id: 123,
+      external_reference: 'other',
+      status: 'approved',
+      currency_id: 'BRL',
+      transaction_amount: 10,
+    });
+    await expect(uc.exec('token', input)).rejects.toThrow(
+      'REFUND_PAYMENT_REVIEW',
+    );
+    expect(repo.reserve).not.toHaveBeenCalled();
+    expect(gateway.request).toHaveBeenCalledTimes(1);
   });
   it('retains an unknown result and never dispatches again on retry', async () => {
     const { uc, gateway } = setup({ ...refund, status: 'created' });
@@ -336,15 +445,55 @@ describe('Refund credential provider aliases', () => {
     async ({ provider, status, office_id, split }) => {
       const repo = new OrderRefundsRepository({
         paymentTransaction: {
-          findFirst: jest
-            .fn()
-            .mockResolvedValue({
-              has_split: split,
-              api_credential: { ...credential, provider, status, office_id },
-            }),
+          findFirst: jest.fn().mockResolvedValue({
+            has_split: split,
+            api_credential: { ...credential, provider, status, office_id },
+          }),
         },
       } as never);
       await expect(repo.payment('office', 'client', input)).rejects.toThrow();
     },
   );
+});
+
+describe('Refund failure persistence', () => {
+  it('preserves the original payment binding while recording a provider refusal', async () => {
+    let current: any = {
+      unique_id: 'refund',
+      status: 'submitted',
+      metadata: { gatewayPaymentId: '123', orderId: 'order' },
+    };
+    const db = {
+      paymentRefund: {
+        findUniqueOrThrow: jest.fn(async () => current),
+        updateMany: jest.fn(async ({ data }) => {
+          current = { ...current, ...data };
+          return { count: 1 };
+        }),
+      },
+    };
+    const repo = new OrderRefundsRepository(db as never);
+    const failure = {
+      code: 'gateway_rejected_request',
+      upstreamStatus: 404,
+      providerCode: 'not_found',
+      at: new Date().toISOString(),
+    };
+    const result = await repo.saveRefundResult(
+      'refund',
+      'reconciliation_required',
+      undefined,
+      failure,
+    );
+    expect(result.metadata).toEqual({
+      gatewayPaymentId: '123',
+      orderId: 'order',
+      lastFailure: failure,
+    });
+    await repo.saveRefundResult('refund', 'succeeded', '77');
+    expect(current.metadata).toEqual({
+      gatewayPaymentId: '123',
+      orderId: 'order',
+    });
+  });
 });

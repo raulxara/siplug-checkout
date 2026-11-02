@@ -1,3 +1,4 @@
+import { mercadoPagoRefundBody, pagbankRefundBody } from '../../modules/order-refunds/refund-request-body';
 import { Injectable } from '@nestjs/common';
 
 import {
@@ -778,9 +779,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
     );
 
     const isFullRefund = params.reversalAmount >= params.paymentSplitAmount;
-    const requestBody = isFullRefund
-      ? {}
-      : { amount: this.convertCentsToAmount(params.reversalAmount) };
+    const requestBody = mercadoPagoRefundBody(params.reversalAmount, isFullRefund);
 
     const response = await fetch(
       `https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}/refunds`,
@@ -882,13 +881,7 @@ export class ReversePaymentSplitWithGatewayUseCase {
     }
 
     const isFullRefund = params.reversalAmount >= params.paymentSplitAmount;
-    const requestBody = {
-      amount: { value: params.reversalAmount },
-      splits: {
-        method: 'FIXED',
-        receivers,
-      },
-    };
+    const requestBody = pagbankRefundBody(params.reversalAmount, { method: 'FIXED', receivers });
     const baseUrl = this.resolvePagSeguroBaseUrl(params.apiCredentialConfig);
     const endpoint = `/charges/${chargeId}/cancel`;
 

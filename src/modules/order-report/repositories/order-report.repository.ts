@@ -1,3 +1,4 @@
+import { DashboardMetricsRepository } from './dashboard-metrics.repository';
 import {
   reportScope,
   transactionPriority,
@@ -14,6 +15,7 @@ import { validateOrderFilters } from '../services/order-report-policy';
 @Injectable()
 export class OrderReportRepository {
   constructor(private readonly db: PrismaService) {}
+  async dashboard(officeId: string, clientId: string, filters: OrderReportFilters) { return new DashboardMetricsRepository(this.db).read(officeId, clientId, filters); }
   async list(officeId: string, clientId: string, input: OrderReportFilters) {
     const f = validateOrderFilters(input);
     // Both the session and related transaction/customer are scoped to the authorized tenant.
@@ -29,8 +31,8 @@ export class OrderReportRepository {
       FROM payment_transactions t WHERE office_id = ${officeId} AND client_id = ${clientId}
     ), report AS (
       SELECT s._id AS id, COALESCE(NULLIF(s.code,''),s._id) AS code,
-        COALESCE(NULLIF(pc.name,''), NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.name')),'null'), NULLIF(TRIM(CONCAT_WS(' ',NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.first_name')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.last_name')),'null'))),''),'Não informado') AS customer,
-        COALESCE(pc.email,NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.email')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer_email')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.customer_email')),'null')) AS email,
+        COALESCE(NULLIF(TRIM(pc.name),''), NULLIF(NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.customer.name'))),'null'),''), NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.name')),'null'), NULLIF(TRIM(CONCAT_WS(' ',NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.first_name')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.last_name')),'null'))),''),'Não informado') AS customer,
+        COALESCE(NULLIF(TRIM(pc.email),''),NULLIF(NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.customer.email'))),'null'),''),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer.email')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.payer_email')),'null'),NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.provider_payload,'$.customer_email')),'null')) AS email,
         pc.phone AS phone, pc._id AS paymentCustomerId,
         COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(s.config,'$.parentOrderId')),'null'),s.external_reference,s._id) AS orderRef,
         COALESCE(t.ever_paid,0) AS everPaid, t.historical_paid_at AS paidAt,

@@ -5,7 +5,6 @@ import { MercadoPagoRecurringPaymentProvider } from '../../providers/mercado-pag
 import { StripeRecurringPaymentProvider } from '../../providers/stripe/stripe-recurring-payment.provider';
 import { PayPalRecurringPaymentProvider } from '../../providers/paypal/paypal-recurring-payment.provider';
 import { PagSeguroRecurringPaymentProvider } from '../../providers/pagseguro/pagseguro-recurring-payment.provider';
-import { PicPayRecurringPaymentProvider } from '../../providers/picpay/picpay-recurring-payment.provider';
 
 @Injectable()
 export class DispatchGatewayRecurringPaymentService {
@@ -14,7 +13,6 @@ export class DispatchGatewayRecurringPaymentService {
     private readonly stripeRecurringPaymentProvider: StripeRecurringPaymentProvider,
     private readonly payPalRecurringPaymentProvider: PayPalRecurringPaymentProvider,
     private readonly pagSeguroRecurringPaymentProvider: PagSeguroRecurringPaymentProvider,
-    private readonly picPayRecurringPaymentProvider: PicPayRecurringPaymentProvider,
   ) {}
 
   async exec(
@@ -44,14 +42,6 @@ export class DispatchGatewayRecurringPaymentService {
       return await this.pagSeguroRecurringPaymentProvider.createSubscription(
         dtoIn,
       );
-    }
-
-    if (provider === 'picpay') {
-      return await this.picPayRecurringPaymentProvider.createSubscription(dtoIn);
-    }
-
-    if (provider === 'infinitypay' || provider === 'infinitepay') {
-      return this.buildPendingProviderImplementation(dtoIn, 'infinitypay');
     }
 
     return new GatewayRecurringPaymentDtoOut(

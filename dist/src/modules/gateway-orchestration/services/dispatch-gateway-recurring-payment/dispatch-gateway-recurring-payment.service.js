@@ -16,19 +16,16 @@ const mercado_pago_recurring_payment_provider_1 = require("../../providers/merca
 const stripe_recurring_payment_provider_1 = require("../../providers/stripe/stripe-recurring-payment.provider");
 const paypal_recurring_payment_provider_1 = require("../../providers/paypal/paypal-recurring-payment.provider");
 const pagseguro_recurring_payment_provider_1 = require("../../providers/pagseguro/pagseguro-recurring-payment.provider");
-const picpay_recurring_payment_provider_1 = require("../../providers/picpay/picpay-recurring-payment.provider");
 let DispatchGatewayRecurringPaymentService = class DispatchGatewayRecurringPaymentService {
     mercadoPagoRecurringPaymentProvider;
     stripeRecurringPaymentProvider;
     payPalRecurringPaymentProvider;
     pagSeguroRecurringPaymentProvider;
-    picPayRecurringPaymentProvider;
-    constructor(mercadoPagoRecurringPaymentProvider, stripeRecurringPaymentProvider, payPalRecurringPaymentProvider, pagSeguroRecurringPaymentProvider, picPayRecurringPaymentProvider) {
+    constructor(mercadoPagoRecurringPaymentProvider, stripeRecurringPaymentProvider, payPalRecurringPaymentProvider, pagSeguroRecurringPaymentProvider) {
         this.mercadoPagoRecurringPaymentProvider = mercadoPagoRecurringPaymentProvider;
         this.stripeRecurringPaymentProvider = stripeRecurringPaymentProvider;
         this.payPalRecurringPaymentProvider = payPalRecurringPaymentProvider;
         this.pagSeguroRecurringPaymentProvider = pagSeguroRecurringPaymentProvider;
-        this.picPayRecurringPaymentProvider = picPayRecurringPaymentProvider;
     }
     async exec(dtoIn) {
         const provider = this.normalizeProvider(dtoIn.gatewayProvider);
@@ -43,12 +40,6 @@ let DispatchGatewayRecurringPaymentService = class DispatchGatewayRecurringPayme
         }
         if (provider === 'pagseguro' || provider === 'pagbank') {
             return await this.pagSeguroRecurringPaymentProvider.createSubscription(dtoIn);
-        }
-        if (provider === 'picpay') {
-            return await this.picPayRecurringPaymentProvider.createSubscription(dtoIn);
-        }
-        if (provider === 'infinitypay' || provider === 'infinitepay') {
-            return this.buildPendingProviderImplementation(dtoIn, 'infinitypay');
         }
         return new gateway_recurring_payment_dto_out_1.GatewayRecurringPaymentDtoOut(false, dtoIn.gatewayProvider, null, null, null, null, 'provider_not_supported', 'failed', 'gateway_recurring_provider_not_supported', `recurring payment provider not supported: ${dtoIn.gatewayProvider}`, this.sanitizePayload(dtoIn.providerPayload), null, {
             provider: dtoIn.gatewayProvider,
@@ -160,7 +151,6 @@ exports.DispatchGatewayRecurringPaymentService = DispatchGatewayRecurringPayment
     __metadata("design:paramtypes", [mercado_pago_recurring_payment_provider_1.MercadoPagoRecurringPaymentProvider,
         stripe_recurring_payment_provider_1.StripeRecurringPaymentProvider,
         paypal_recurring_payment_provider_1.PayPalRecurringPaymentProvider,
-        pagseguro_recurring_payment_provider_1.PagSeguroRecurringPaymentProvider,
-        picpay_recurring_payment_provider_1.PicPayRecurringPaymentProvider])
+        pagseguro_recurring_payment_provider_1.PagSeguroRecurringPaymentProvider])
 ], DispatchGatewayRecurringPaymentService);
 //# sourceMappingURL=dispatch-gateway-recurring-payment.service.js.map
