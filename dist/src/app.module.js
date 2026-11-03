@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
+const billing_module_1 = require("./modules/billing/billing.module");
 const sync_team_module_1 = require("./use-cases/sync-team/sync-team.module");
 const order_refunds_module_1 = require("./modules/order-refunds/order-refunds.module");
 const fiscal_payments_module_1 = require("./modules/fiscal-payments/fiscal-payments.module");
@@ -131,6 +132,7 @@ exports.AppModule = AppModule = __decorate([
         providers: [app_service_1.AppService],
         imports: [
             order_refunds_module_1.OrderRefundsModule,
+            billing_module_1.BillingModule,
             fiscal_payments_module_1.FiscalPaymentsModule,
             sync_company_profile_module_1.SyncCompanyProfileModule,
             sync_team_module_1.SyncTeamModule,

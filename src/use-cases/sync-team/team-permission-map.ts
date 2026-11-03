@@ -1,4 +1,9 @@
 const map: Record<string, [string, string][]> = {
+  'billing.read': [['billing','read']],
+  'billing.create': [['billing','create']],
+  'billing.issue': [['billing','issue'],['payment_transactions','processPayment']],
+  'billing.receive': [['billing','receive']],
+  'billing.cancel': [['billing','cancel']],
   'checkout.plans-list': [
     ['subscription_plans', 'listSubscriptionPlansByOfficeId'],
   ],

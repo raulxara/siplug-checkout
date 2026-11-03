@@ -1,3 +1,4 @@
+import { BillingModule } from './modules/billing/billing.module';
 import {SyncTeamModule} from './use-cases/sync-team/sync-team.module';
 import { OrderRefundsModule } from "./modules/order-refunds/order-refunds.module";
 import { FiscalPaymentsModule } from "./modules/fiscal-payments/fiscal-payments.module";
@@ -120,6 +121,7 @@ import { SimulateMercadoPagoPaymentWebhookModule } from "./use-cases/simulate-me
   providers: [AppService],
   imports: [
     OrderRefundsModule,
+    BillingModule,
     FiscalPaymentsModule,
     SyncCompanyProfileModule,
     SyncTeamModule,
